@@ -15,10 +15,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { stl_id, suggested_title, suggested_description, flagged_issues } = await request.json()
+    const { stl_id, suggested_title, suggested_description, suggested_tags, suggested_categories, flagged_issues } = await request.json()
 
     if (!stl_id) {
       return NextResponse.json({ error: 'Missing stl_id' }, { status: 400 })
+    }
+
+    // Require at least one field to be filled
+    const hasContent = suggested_title || suggested_description || flagged_issues ||
+      (Array.isArray(suggested_tags) && suggested_tags.length > 0) ||
+      (Array.isArray(suggested_categories) && suggested_categories.length > 0)
+
+    if (!hasContent) {
+      return NextResponse.json({ error: 'Suggestion must have at least one field' }, { status: 400 })
     }
 
     // Insert suggestion
@@ -27,9 +36,11 @@ export async function POST(request: NextRequest) {
       .insert({
         stl_id,
         auditor_id: user.id,
-        suggested_title: suggested_title || null,
+        suggested_title:       suggested_title       || null,
         suggested_description: suggested_description || null,
-        flagged_issues: flagged_issues || null,
+        suggested_tags:        Array.isArray(suggested_tags)       ? suggested_tags       : [],
+        suggested_categories:  Array.isArray(suggested_categories) ? suggested_categories : [],
+        flagged_issues:        flagged_issues        || null,
         status: 'pending',
       })
       .select()

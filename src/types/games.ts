@@ -43,6 +43,19 @@ export interface AuditQuestion {
   issues?: string[]
 }
 
+export interface AuditSuggestion {
+  id: string
+  auditor_id: string
+  suggested_title:       string | null
+  suggested_description: string | null
+  suggested_tags:        string[]
+  suggested_categories:  string[]
+  flagged_issues:        string | null
+  upvote_count:          number
+  has_upvoted:           boolean
+  created_at:            string
+}
+
 export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'diamond'
 
 export interface Badge {
