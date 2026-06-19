@@ -5,7 +5,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Zap, LogOut, User, ChevronDown, LayoutDashboard, Folder, ShieldAlert, Star } from 'lucide-react'
+import { Zap, LogOut, User, ChevronDown, LayoutDashboard, Folder, ShieldAlert } from 'lucide-react'
 import { useConfiguratorStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
