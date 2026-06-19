@@ -42,3 +42,8 @@ next-env.d.ts
 
 # telegram scraper temp files
 telegram-scraper/.temp/
+
+# local credentials and tooling config (never commit)
+.mcp.json
+run_migration.js
+.claude/settings.local.json
