@@ -69,32 +69,38 @@
 }
 
 .dark {
-  /* ── Dark Theme ─────────────────────────────────────────────── */
-  --background: #0A0C1A;
-  --foreground: #F0F1FA;
-  --card: #111327;
-  --card-foreground: #F0F1FA;
-  --border: #1E2240;
-  --input: #1E2240;
+  /* ── Dark Theme — Liquid Glass ──────────────────────────────── */
+  --background: #08080F;
+  --foreground: #FFFFFF;
+  --card: rgba(255,255,255,0.04);
+  --card-foreground: #FFFFFF;
+  --border: rgba(255,255,255,0.10);
+  --input: rgba(255,255,255,0.08);
 
-  --primary: #22D3EE;
-  --primary-foreground: #0D0F1A;
+  /* Primary = white — Liquid Glass uses luminance, not hue */
+  --primary: #FFFFFF;
+  --primary-foreground: #08080F;
 
-  --muted: #111327;
-  --muted-foreground: #8892B0;
+  --muted: rgba(255,255,255,0.04);
+  --muted-foreground: rgba(255,255,255,0.45);
 
-  --accent: #2D1B4E;
-  --accent-foreground: #E9D5FF;
+  --accent: rgba(255,255,255,0.06);
+  --accent-foreground: rgba(255,255,255,0.85);
 
   --success: #34D399;
-  --success-foreground: #0D0F1A;
+  --success-foreground: #08080F;
   --warning: #FBBF24;
-  --warning-foreground: #0D0F1A;
+  --warning-foreground: #08080F;
   --destructive: #F87171;
-  --destructive-foreground: #0D0F1A;
+  --destructive-foreground: #08080F;
 
-  --sidebar-bg: #0D1023;
-  --sidebar-border: #1A1E35;
+  /* Glass sidebar — very low opacity so backdrop-filter works */
+  --sidebar-bg: rgba(255,255,255,0.05);
+  --sidebar-border: rgba(255,255,255,0.12);
+
+  /* Override shadows for glass context */
+  --shadow-primary: 0 8px 24px -4px rgba(255,255,255,0.08);
+  --shadow-glow:    0 0 0 3px rgba(255,255,255,0.08);
 }
 
 /* ── Global Reset ──────────────────────────────────────────────── */
@@ -178,6 +184,24 @@ input[type="color"] {
 input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
 
+/* ── Liquid Glass — Mesh Blob Animations ───────────────────────── */
+@keyframes blob-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(5%, 8%) scale(1.1); }
+}
+@keyframes blob-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(-6%, -5%) scale(1.08); }
+}
+@keyframes blob-3 {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(3%, -7%); }
+}
+
+@utility animate-blob-1 { animation: blob-1 12s ease-in-out infinite alternate; }
+@utility animate-blob-2 { animation: blob-2 15s ease-in-out infinite alternate; }
+@utility animate-blob-3 { animation: blob-3 18s ease-in-out infinite alternate; }
+
 /* ── Animations ────────────────────────────────────────────────── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
@@ -224,8 +248,8 @@ details > summary::-webkit-details-marker { display: none; }
 
 /* ── Badge Pulse ───────────────────────────────────────────────── */
 @keyframes badge-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.5); }
-  50% { box-shadow: 0 0 0 5px rgba(6, 182, 212, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 50%, transparent); }
+  50%       { box-shadow: 0 0 0 5px transparent; }
 }
 .badge-pulse { animation: badge-pulse 2s infinite; }
 
@@ -280,9 +304,15 @@ details > summary::-webkit-details-marker { display: none; }
 /* ── Glass Panel ───────────────────────────────────────────────── */
 @utility glass-panel {
   background: color-mix(in srgb, var(--card) 80%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+/* ── Glass Sidebar ─────────────────────────────────────────────── */
+@utility glass-sidebar {
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
 }
 
 /* ── Spin slow ─────────────────────────────────────────────────── */
