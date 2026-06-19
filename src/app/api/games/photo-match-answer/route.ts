@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Record game action and get rewards (only if correct)
     let creditsEarned = 0
+    let xpResult: any = null
     if (is_correct) {
       const { data: actionResult, error: actionError } = await supabase
         .rpc('record_game_action', {
@@ -40,6 +41,20 @@ export async function POST(request: NextRequest) {
       }
 
       creditsEarned = actionResult?.credits_earned || 0
+
+      // Award XP
+      const { data: xpData, error: xpError } = await supabase
+        .rpc('award_xp', {
+          p_user_id: user.id,
+          p_game_type: 'photo-match',
+          p_xp_amount: 10,
+        })
+        .single() as any
+      if (xpError) {
+        console.error('[PHOTO-MATCH] XP error (non-fatal):', xpError)
+      } else {
+        xpResult = xpData
+      }
     }
 
     // 2. Insert the answer
@@ -58,6 +73,10 @@ export async function POST(request: NextRequest) {
         success: true,
         credits_earned: creditsEarned,
         is_correct,
+        xp_earned: xpResult?.xp_earned ?? 0,
+        level_up: xpResult?.level_up ?? false,
+        new_level: xpResult?.new_level ?? null,
+        xp_credits_awarded: xpResult?.credits_awarded ?? 0,
         warning: 'Answer recorded locally but may not be stored',
       })
     }
@@ -66,6 +85,10 @@ export async function POST(request: NextRequest) {
       success: true,
       credits_earned: creditsEarned,
       is_correct,
+      xp_earned: xpResult?.xp_earned ?? 0,
+      level_up: xpResult?.level_up ?? false,
+      new_level: xpResult?.new_level ?? null,
+      xp_credits_awarded: xpResult?.credits_awarded ?? 0,
     })
   } catch (error) {
     console.error('[PHOTO-MATCH] Error:', error)

@@ -38,6 +38,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Limite diário atingido' }, { status: 429 })
     }
 
+    // Award XP
+    const { data: xpData, error: xpError } = await supabase
+      .rpc('award_xp', {
+        p_user_id: user.id,
+        p_game_type: 'category-sort',
+        p_xp_amount: 8,
+      })
+      .single() as any
+    if (xpError) console.error('[CATEGORY-VOTE] XP error (non-fatal):', xpError)
+
     // Insert vote
     const { error: insertError } = await supabase.from('category_votes').insert({
       user_id: user.id,
@@ -50,7 +60,13 @@ export async function POST(request: NextRequest) {
       console.error('[CATEGORY-VOTE] Insert error:', insertError)
     }
 
-    return NextResponse.json({ success: true, credits_earned: creditsEarned })
+    return NextResponse.json({
+      success: true,
+      credits_earned: creditsEarned,
+      xp_earned: xpData?.xp_earned ?? 0,
+      level_up: xpData?.level_up ?? false,
+      new_level: xpData?.new_level ?? null,
+    })
   } catch (error) {
     console.error('[CATEGORY-VOTE] Error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
