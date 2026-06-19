@@ -7,6 +7,8 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { User } from '@supabase/supabase-js'
 import type { Profile, CatalogItem, ConfigState } from '@/lib/supabase'
+import { getSupabaseBrowser } from '@/lib/supabase'
+import type { XpSummary } from '@/types/xp'
 
 // ─── Auth Slice ──────────────────────────────────────────────────
 
@@ -196,9 +198,17 @@ interface FeatureFlagsSlice {
   isFeatureEnabled: (key: string) => boolean
 }
 
+// ─── XP Slice ────────────────────────────────────────────────────
+
+interface XpSlice {
+  xpSummary: XpSummary | null
+  setXpSummary: (summary: XpSummary | null) => void
+  refreshXpSummary: () => Promise<void>
+}
+
 // ─── Combined Store ──────────────────────────────────────────────
 
-type Store = AuthSlice & CatalogSlice & ParametricSlice & ImageToStlSlice & UiSlice & PricingSlice & FeatureFlagsSlice
+type Store = AuthSlice & CatalogSlice & ParametricSlice & ImageToStlSlice & UiSlice & PricingSlice & FeatureFlagsSlice & XpSlice
 
 export const useConfiguratorStore = create<Store>()(
   persist(
@@ -243,6 +253,22 @@ export const useConfiguratorStore = create<Store>()(
           s.user = null
           s.profile = null
         }),
+
+      // ── XP ───────────────────────────────────────────────────────
+      xpSummary: null,
+      setXpSummary: (summary) =>
+        set((s) => {
+          s.xpSummary = summary
+        }),
+      refreshXpSummary: async () => {
+        const supabase = getSupabaseBrowser()
+        const { data, error } = await supabase.rpc('get_xp_summary')
+        if (!error && data) {
+          set((s) => {
+            s.xpSummary = data as XpSummary
+          })
+        }
+      },
 
       // ── Catalog ───────────────────────────────────────────────
       currentItem: null,
