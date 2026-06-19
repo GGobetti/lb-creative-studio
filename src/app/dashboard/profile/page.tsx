@@ -387,10 +387,11 @@ export default function ProfilePage() {
                   <select
                     value={langPref}
                     onChange={(e) => setLangPref(e.target.value as 'pt' | 'en' | 'es')}
-                    className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow text-foreground cursor-pointer"
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                   >
-                    <option value="pt">Português (Brasil)</option>
-                    <option value="en">English (United States)</option>
+                    <option value="pt">🇧🇷 Português (Brasil)</option>
+                    <option value="en">🇺🇸 English (United States)</option>
+                    <option value="es">🇪🇸 Español</option>
                   </select>
                 </div>
               </div>
