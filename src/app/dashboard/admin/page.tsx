@@ -31,12 +31,13 @@ import { FlagsTab } from "@/components/admin/FlagsTab"
 import { AnalyticsTab } from "@/components/admin/AnalyticsTab"
 import { ScraperTab } from "@/components/admin/ScraperTab"
 import { AcervoTab } from "@/components/admin/AcervoTab"
+import { XpConfigPanel } from "@/components/admin/XpConfigPanel"
 // import { GameAdminShortcuts } from "@/components/admin/GameAdminShortcuts"
 
 export default function AdminPage() {
   const { profile } = useConfiguratorStore()
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "scraper" | "analytics" | "tickets" | "flags" | "acervo">("features")
+  const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "scraper" | "analytics" | "tickets" | "flags" | "acervo" | "xp">("features")
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null)
@@ -388,6 +389,7 @@ export default function AdminPage() {
     { key: "analytics", icon: Activity,     label: t('admin.tabAnalytics', "Uso da Plataforma") },
     { key: "tickets",   icon: LifeBuoy,     label: t('admin.tabTickets', "Chamados") },
     { key: "flags",     icon: ToggleRight,  label: t('admin.tabFlags', "Feature Flags") },
+    { key: "xp",        icon: Zap,          label: "XP & Badges" },
   ]
 
   return (
@@ -607,6 +609,16 @@ export default function AdminPage() {
           {/* TAB 7: FEATURE FLAGS */}
           {activeTab === "flags" && (
             <FlagsTab featureFlags={featureFlags} onToggle={handleToggleFlag} />
+          )}
+
+          {/* TAB 8: XP & BADGES CONFIG */}
+          {activeTab === "xp" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <XpConfigPanel />
+            </motion.div>
           )}
 
         </div>
