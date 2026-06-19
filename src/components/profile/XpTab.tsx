@@ -4,6 +4,8 @@ import { useConfiguratorStore } from '@/store/store'
 import { XpHeroCard } from './XpHeroCard'
 import { XpLevelTrail } from './XpLevelTrail'
 import { XpChart } from './XpChart'
+import { XpRedeemCard } from './XpRedeemCard'
+import { XpBadgesGrid } from './XpBadgesGrid'
 import { Loader2 } from 'lucide-react'
 
 export function XpTab() {
@@ -23,6 +25,8 @@ export function XpTab() {
       <XpHeroCard summary={xpSummary} />
       <XpLevelTrail summary={xpSummary} />
       <XpChart />
+      <XpRedeemCard summary={xpSummary} />
+      <XpBadgesGrid summary={xpSummary} />
     </div>
   )
 }
