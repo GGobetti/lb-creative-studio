@@ -32,9 +32,11 @@ export function Navbar() {
 
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-primary
-                        flex items-center justify-center shadow-lg shadow-primary/30">
-          <span className="text-primary-foreground font-black text-sm">LB</span>
+        <div className="w-8 h-8 rounded-lg
+                        bg-gradient-to-br from-violet-500/90 to-blue-500/80
+                        dark:border dark:border-white/20
+                        flex items-center justify-center shadow-lg">
+          <span className="text-white font-black text-sm">LB</span>
         </div>
         <span className="font-bold text-foreground text-sm tracking-tight hidden sm:inline">
           Creative <span className="text-primary">Studio</span>

@@ -65,21 +65,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }[profile?.plan || "free"] ?? "text-muted-foreground"
 
   return (
-    <div className="flex h-screen bg-background dark:bg-transparent transition-colors overflow-hidden print:h-auto print:overflow-visible">
+    <div className="flex h-screen bg-background transition-colors overflow-hidden relative print:h-auto print:overflow-visible">
 
-      {/* Liquid Glass — mesh gradient behind all glass panels */}
-      <div aria-hidden className="fixed inset-0 -z-10 overflow-hidden pointer-events-none dark:block hidden">
+      {/* Liquid Glass — animated mesh, absolute inside wrapper so backdrop-filter blurs it */}
+      <div aria-hidden className="absolute inset-0 z-0 overflow-hidden pointer-events-none dark:block hidden">
         <div
           className="absolute -top-[20%] -left-[10%] w-[60%] h-[80%] animate-blob-1 rounded-full"
-          style={{ background: 'radial-gradient(ellipse, rgba(120,80,255,0.20) 0%, transparent 65%)' }}
+          style={{ background: 'radial-gradient(ellipse, rgba(120,80,255,0.22) 0%, transparent 65%)' }}
         />
         <div
           className="absolute -bottom-[20%] -right-[10%] w-[55%] h-[75%] animate-blob-2 rounded-full"
-          style={{ background: 'radial-gradient(ellipse, rgba(0,160,255,0.15) 0%, transparent 65%)' }}
+          style={{ background: 'radial-gradient(ellipse, rgba(0,160,255,0.16) 0%, transparent 65%)' }}
         />
         <div
           className="absolute top-[30%] left-[40%] w-[40%] h-[50%] animate-blob-3 rounded-full"
-          style={{ background: 'radial-gradient(ellipse, rgba(255,80,120,0.09) 0%, transparent 65%)' }}
+          style={{ background: 'radial-gradient(ellipse, rgba(255,80,120,0.10) 0%, transparent 65%)' }}
         />
       </div>
 
@@ -91,13 +91,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* Sidebar */}
-      <div className="print:hidden">
+      {/* Sidebar — relative z-10 so it sits above the z-0 mesh */}
+      <div className="print:hidden relative z-10">
         <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:h-auto print:overflow-visible">
+      {/* Main — relative z-10 so it sits above the z-0 mesh */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10 print:h-auto print:overflow-visible">
 
         {/* Top Header */}
         <header className="h-14 flex items-center justify-between px-5 border-b border-border/60 bg-card/60 backdrop-blur-xl saturate-150 print:hidden z-20 relative shrink-0 overflow-hidden

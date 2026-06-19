@@ -91,29 +91,31 @@ function LoginContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070A1A] flex items-center justify-center p-6">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/8 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-violet-600/5 blur-[100px]" />
-        {/* Subtle dot grid */}
+    <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Liquid Glass mesh background */}
+      <div aria-hidden className="absolute inset-0 z-0 overflow-hidden pointer-events-none dark:block hidden">
         <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(6,182,212,0.35) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
+          className="absolute -top-[20%] -left-[10%] w-[70%] h-[80%] animate-blob-1 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(120,80,255,0.22) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute -bottom-[10%] -right-[10%] w-[55%] h-[70%] animate-blob-2 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(0,160,255,0.16) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute top-[35%] left-[35%] w-[40%] h-[45%] animate-blob-3 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(255,80,120,0.10) 0%, transparent 65%)' }}
         />
       </div>
 
-      <div className="w-full max-w-sm relative">
+      <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-indigo-700 shadow-primary mb-5">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500/80 to-blue-500/70 dark:border dark:border-white/20 shadow-primary mb-5">
             <span className="text-white font-black text-xl">LB</span>
           </div>
-          <h1 className="text-heading text-2xl text-white">
-            LB Creative <span className="text-primary">Studio</span>
+          <h1 className="text-heading text-2xl text-foreground">
+            LB Creative <span className="text-foreground/60">Studio</span>
           </h1>
           <p className="text-sm text-white/40 mt-1.5">
             {mode === 'login' ? 'Acesse sua conta de Maker' : 'Crie sua conta gratuita'}
@@ -285,7 +287,7 @@ function LoginContent() {
         </div>
 
         {/* Footer note */}
-        <p className="text-center text-xs text-white/20 mt-6">
+        <p className="text-center text-xs text-foreground/20 mt-6">
           LB Creative Studio · Para Makers Brasileiros
         </p>
       </div>
@@ -296,8 +298,8 @@ function LoginContent() {
 export function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#070A1A] flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary w-8 h-8" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-foreground/40 w-8 h-8" />
       </div>
     }>
       <LoginContent />
