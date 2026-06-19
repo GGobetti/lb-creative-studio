@@ -95,8 +95,8 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     {
       title: t("sidebar.discover", "Descobrir"),
       items: [
-        { name: t("sidebar.stlSearch", "Busca de STLs"), href: "/dashboard/stl-search", icon: Search, highlight: true },
-        { name: t("sidebar.curation", "Arena de Curação"), href: "/dashboard/games", icon: Swords, highlight: true },
+        { name: t("sidebar.stlSearch", "Garimpo 3D"), href: "/dashboard/stl-search", icon: Search, highlight: true },
+        { name: t("sidebar.curation", "Gaming Lab XP"), href: "/dashboard/games", icon: Swords, highlight: true },
         { name: t("sidebar.makerHub", "Hub Maker"), href: "/dashboard/hub", icon: BookOpen },
       ],
     },

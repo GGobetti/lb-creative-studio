@@ -172,9 +172,9 @@ export default function DashboardPage() {
               <Search size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-display text-xl leading-tight">Busca de Modelos STL</h2>
+              <h2 className="text-display text-xl leading-tight">Garimpo 3D</h2>
               <p className="text-sm text-white/75 mt-1 leading-relaxed max-w-sm">
-                Pesquise e baixe arquivos STL de grupos do Telegram indexados e moderados.
+                Sua mina de STLs prontos para impressão. Descubra, baixe e imprima milhares de modelos.
               </p>
             </div>
           </div>
