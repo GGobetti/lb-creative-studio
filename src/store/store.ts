@@ -15,10 +15,10 @@ import type { XpSummary } from '@/types/xp'
 interface AuthSlice {
   user: User | null
   profile: Profile | null
-  language: 'pt' | 'en'
+  language: 'pt' | 'en' | 'es'
   setUser: (user: User | null) => void
   setProfile: (profile: Profile | null) => void
-  setLanguage: (lang: 'pt' | 'en') => void
+  setLanguage: (lang: 'pt' | 'en' | 'es') => void
   refreshCredits: (credits: number) => void
   logout: () => void
 }

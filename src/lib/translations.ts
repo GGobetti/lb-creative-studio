@@ -458,10 +458,10 @@ export const translations = {
 
 export function useTranslation() {
   const language = useConfiguratorStore((s) => s.language) || 'pt'
-  
+
   const t = (key: string, fallback?: string): string => {
     const keys = key.split('.')
-    let current: any = translations[language as 'pt' | 'en']
+    let current: any = translations[language as 'pt' | 'en' | 'es']
     for (const k of keys) {
       if (current && current[k] !== undefined) {
         current = current[k]

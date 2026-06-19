@@ -76,7 +76,7 @@ export interface Profile {
   full_name?: string | null
   avatar_url?: string | null
   address?: string | null
-  language?: 'pt' | 'en' | null
+  language?: 'pt' | 'en' | 'es' | null
 }
 
 export interface CatalogItem {

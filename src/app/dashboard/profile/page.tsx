@@ -28,7 +28,7 @@ export default function ProfilePage() {
   // Local state for inputs
   const [fullName, setFullName] = useState("")
   const [address, setAddress] = useState("")
-  const [langPref, setLangPref] = useState<'pt' | 'en'>("pt")
+  const [langPref, setLangPref] = useState<'pt' | 'en' | 'es'>("pt")
   
   // Loading states
   const [isSaving, setIsSaving] = useState(false)
@@ -41,7 +41,7 @@ export default function ProfilePage() {
     if (profile) {
       setFullName(profile.full_name || "")
       setAddress(profile.address || "")
-      setLangPref((profile.language as 'pt' | 'en') || "pt")
+      setLangPref((profile.language as 'pt' | 'en' | 'es') || "pt")
     }
   }, [profile])
 
@@ -386,7 +386,7 @@ export default function ProfilePage() {
                   </div>
                   <select
                     value={langPref}
-                    onChange={(e) => setLangPref(e.target.value as 'pt' | 'en')}
+                    onChange={(e) => setLangPref(e.target.value as 'pt' | 'en' | 'es')}
                     className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow text-foreground cursor-pointer"
                   >
                     <option value="pt">Português (Brasil)</option>
