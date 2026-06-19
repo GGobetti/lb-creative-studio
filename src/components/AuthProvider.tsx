@@ -137,7 +137,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false
       supabase.removeChannel(profileChannel)
     }
-  }, [user?.id, setProfile, setPricingSettings, refreshXpSummary])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, setProfile, setPricingSettings])
 
   // 3. Sincronizar pricingSettings alterados com o banco (Debounced)
   useEffect(() => {

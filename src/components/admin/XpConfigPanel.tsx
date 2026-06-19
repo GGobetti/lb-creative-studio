@@ -88,8 +88,8 @@ export function XpConfigPanel() {
               <label className="text-xs text-muted-foreground block mb-1">{label}</label>
               <input
                 type="number"
-                value={config[field] as number}
-                onChange={(e) => setConfig((c) => c ? { ...c, [field]: parseFloat(e.target.value) } : c)}
+                value={(config[field] as number) ?? 0}
+                onChange={(e) => setConfig((c) => c ? { ...c, [field]: parseFloat(e.target.value) || 0 } : c)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <p className="text-xs text-muted-foreground/50 mt-0.5">{hint}</p>
@@ -117,8 +117,8 @@ export function XpConfigPanel() {
               </span>
               <input
                 type="number"
-                value={gc.xp_per_action}
-                onChange={(e) => updateGame(i, parseInt(e.target.value))}
+                value={gc.xp_per_action ?? 0}
+                onChange={(e) => updateGame(i, parseInt(e.target.value) || 0)}
                 className="w-24 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <span className="text-xs text-muted-foreground">XP / ação</span>
@@ -152,8 +152,8 @@ export function XpConfigPanel() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground block mb-0.5">XP necessário</label>
-                <input type="number" value={level.xp_required}
-                  onChange={(e) => updateLevel(i, 'xp_required', parseInt(e.target.value))}
+                <input type="number" value={level.xp_required ?? 0}
+                  onChange={(e) => updateLevel(i, 'xp_required', parseInt(e.target.value) || 0)}
                   disabled={level.level === 1}
                   className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
@@ -165,8 +165,8 @@ export function XpConfigPanel() {
               </div>
               <div>
                 <label className="text-xs text-muted-foreground block mb-0.5">Créditos reward</label>
-                <input type="number" value={level.credits_reward}
-                  onChange={(e) => updateLevel(i, 'credits_reward', parseInt(e.target.value))}
+                <input type="number" value={level.credits_reward ?? 0}
+                  onChange={(e) => updateLevel(i, 'credits_reward', parseInt(e.target.value) || 0)}
                   disabled={level.level === 1}
                   className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
