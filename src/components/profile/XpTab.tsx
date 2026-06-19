@@ -3,6 +3,7 @@
 import { useConfiguratorStore } from '@/store/store'
 import { XpHeroCard } from './XpHeroCard'
 import { XpLevelTrail } from './XpLevelTrail'
+import { XpChart } from './XpChart'
 import { Loader2 } from 'lucide-react'
 
 export function XpTab() {
@@ -21,6 +22,7 @@ export function XpTab() {
     <div className="flex flex-col gap-6">
       <XpHeroCard summary={xpSummary} />
       <XpLevelTrail summary={xpSummary} />
+      <XpChart />
     </div>
   )
 }
