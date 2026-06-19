@@ -23,6 +23,7 @@ import { getSupabaseBrowser, PortfolioItem } from "@/lib/supabase"
 import { formatBRL } from "@/lib/format"
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader"
 import { EmptyState } from "@/components/ui/EmptyState"
+import { useTranslation } from "@/lib/translations"
 
 const cardVariants = {
   hidden: { opacity: 0, y: 14 },
@@ -31,6 +32,7 @@ const cardVariants = {
 
 export default function DashboardPage() {
   const { profile } = useConfiguratorStore()
+  const { t } = useTranslation()
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -81,7 +83,7 @@ export default function DashboardPage() {
 
   const userName = profile?.full_name || profile?.email?.split("@")[0] || "Maker"
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite"
+  const greeting = hour < 12 ? t("dashboard.goodMorning") : hour < 18 ? t("dashboard.goodAfternoon") : t("dashboard.goodEvening")
 
   return (
     <div className="space-y-8 pb-16">
@@ -97,7 +99,7 @@ export default function DashboardPage() {
           {greeting}, {userName}! 👋
         </h1>
         <p className="text-sm text-muted-foreground">
-          Bem-vindo de volta ao seu estúdio 3D.
+          {t("dashboard.welcomeBack")}
         </p>
       </motion.div>
 
@@ -108,7 +110,7 @@ export default function DashboardPage() {
             icon: Zap,
             iconBg: "bg-primary/10",
             iconColor: "text-primary",
-            label: "Créditos Disponíveis",
+            label: t("dashboard.availableCredits"),
             value: `${profile?.credits ?? 0}`,
             unit: "crd",
             onClick: undefined as (() => void) | undefined,
@@ -117,15 +119,15 @@ export default function DashboardPage() {
             icon: Folder,
             iconBg: "bg-indigo-500/10",
             iconColor: "text-indigo-500",
-            label: "Modelos no Portfólio",
+            label: t("dashboard.portfolioModels"),
             value: `${totalPortfolioCount}`,
-            unit: "itens",
+            unit: t("dashboard.items"),
           },
           {
             icon: TrendingUp,
             iconBg: "bg-success/10",
             iconColor: "text-success",
-            label: "Valor Acumulado",
+            label: t("dashboard.accumulatedValue"),
             value: formatBRL(totalValue),
             unit: "",
           },
@@ -172,22 +174,22 @@ export default function DashboardPage() {
               <Search size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-display text-xl leading-tight">Garimpo 3D</h2>
+              <h2 className="text-display text-xl leading-tight">{t("dashboard.stlSearchTitle")}</h2>
               <p className="text-sm text-white/80 font-medium mt-1 leading-relaxed max-w-sm">
-                Sua mina de STLs prontos para impressão. Descubra, baixe e imprima milhares de modelos.
+                {t("dashboard.stlSearchDesc")}
               </p>
             </div>
           </div>
 
           <div className="mt-6 flex items-center justify-between relative z-10">
             <span className="text-xs font-semibold bg-white/10 border border-white/15 px-3 py-1.5 rounded-full backdrop-blur-md">
-              🔍 {totalStlsCount.toLocaleString("pt-BR")} modelos
+              🔍 {totalStlsCount.toLocaleString()} {t("dashboard.stlModels")}
             </span>
             <Link
               href="/dashboard/stl-search"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-indigo-700 font-bold text-sm rounded-xl hover:bg-white/90 transition-all shadow-md"
             >
-              Explorar
+              {t("dashboard.explore")}
               <ArrowRight size={14} />
             </Link>
           </div>
@@ -211,9 +213,9 @@ export default function DashboardPage() {
               <Calculator size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-display text-xl leading-tight">Calculadora de Precificação</h2>
+              <h2 className="text-display text-xl leading-tight">{t("dashboard.calculatorTitle")}</h2>
               <p className="text-sm text-white/80 font-medium mt-1 leading-relaxed max-w-sm">
-                Calcule o preço real incluindo filamento, energia, margem e taxas de marketplace.
+                {t("dashboard.calculatorDesc")}
               </p>
             </div>
           </div>
@@ -226,7 +228,7 @@ export default function DashboardPage() {
               href="/dashboard/calculator"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-purple-700 font-bold text-sm rounded-xl hover:bg-white/90 transition-all shadow-md"
             >
-              Calcular
+              {t("dashboard.calculate")}
               <ArrowRight size={14} />
             </Link>
           </div>
@@ -235,7 +237,7 @@ export default function DashboardPage() {
 
       {/* Quick shortcuts */}
       <div className="space-y-3">
-        <h2 className="text-heading text-base text-foreground">Atalhos Rápidos</h2>
+        <h2 className="text-heading text-base text-foreground">{t("dashboard.quickActions")}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             {
@@ -302,7 +304,7 @@ export default function DashboardPage() {
       {/* Recent Portfolio */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-heading text-base text-foreground">Portfólio Recente</h2>
+          <h2 className="text-heading text-base text-foreground">{t("dashboard.recentModels")}</h2>
           <Link
             href="/dashboard/portfolio"
             className="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-0.5 transition-colors"
