@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Check, X, Image as ImageIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { loadPhotoMatchQuestions } from '@/lib/gameDataLoader'
+import { getSupabaseBrowser } from '@/lib/supabase'
 import type { PhotoMatchQuestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
 import { TimerBar } from './shared/TimerBar'
@@ -19,6 +20,7 @@ const POINTS_PER_ACTION = 10
 
 export function PhotoMatch() {
   const router = useRouter()
+  const accessTokenRef = useRef<string | null>(null)
 
   const [questions, setQuestions] = useState<PhotoMatchQuestion[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +36,9 @@ export function PhotoMatch() {
     loadPhotoMatchQuestions(SESSION_SIZE).then((data) => {
       setQuestions(data.sort(() => Math.random() - 0.5))
       setLoading(false)
+    })
+    getSupabaseBrowser().auth.getSession().then((res: { data: { session: { access_token: string } | null } }) => {
+      accessTokenRef.current = res.data.session?.access_token ?? null
     })
   }, [])
 
@@ -53,14 +58,62 @@ export function PhotoMatch() {
     }, 900)
   }, [currentIdx])
 
-  const handleAnswer = useCallback(() => {
-    if (!buttonsEnabled) return
-    advance()
-  }, [buttonsEnabled, advance])
+  const handleAnswer = useCallback(
+    async (userAnswer: boolean) => {
+      if (!buttonsEnabled) return
+
+      const currentQuestion = questions[currentIdx]
+      const isCorrect = userAnswer === currentQuestion.isMatch
+
+      // Record the answer asynchronously (don't block UI)
+      fetch('/api/games/photo-match-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessTokenRef.current}`,
+        },
+        body: JSON.stringify({
+          stl_id: currentQuestion.id,
+          user_answer: userAnswer,
+          correct_answer: currentQuestion.isMatch,
+          is_correct: isCorrect,
+        }),
+      }).catch(console.error)
+
+      // Only award points if user answered correctly
+      if (isCorrect) {
+        setPointsEarned((p) => p + POINTS_PER_ACTION)
+        setShowPointsPopup(true)
+        setTimeout(() => setShowPointsPopup(false), 1600)
+      }
+
+      setActionsCount((a) => a + 1)
+
+      setTimeout(() => {
+        if (currentIdx + 1 >= SESSION_SIZE) {
+          setSessionComplete(true)
+        } else {
+          setCurrentIdx((i) => i + 1)
+          setTimerKey((k) => k + 1)
+        }
+      }, 900)
+    },
+    [buttonsEnabled, currentIdx, questions]
+  )
 
   const handleTimeout = useCallback(() => {
-    advance()
-  }, [advance])
+    // No points for timeout - just advance without recording answer
+    setActionsCount((a) => a + 1)
+
+    setTimeout(() => {
+      if (currentIdx + 1 >= SESSION_SIZE) {
+        setSessionComplete(true)
+      } else {
+        setCurrentIdx((i) => i + 1)
+        setTimerKey((k) => k + 1)
+      }
+    }, 900)
+  }, [currentIdx])
 
   const handleSkip = useCallback(() => {
     if (!buttonsEnabled) return
@@ -159,7 +212,7 @@ export function PhotoMatch() {
 
         <div className="grid grid-cols-2 gap-3">
           <motion.button
-            onClick={handleAnswer}
+            onClick={() => handleAnswer(true)}
             disabled={!buttonsEnabled}
             whileTap={{ scale: 0.97 }}
             className={cn(
@@ -173,7 +226,7 @@ export function PhotoMatch() {
           </motion.button>
 
           <motion.button
-            onClick={handleAnswer}
+            onClick={() => handleAnswer(false)}
             disabled={!buttonsEnabled}
             whileTap={{ scale: 0.97 }}
             className={cn(

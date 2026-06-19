@@ -68,6 +68,70 @@ const cancelledJobs = new Set<string>();
 // Mapeamento em memória de progresso dos downloads (jobId -> percent)
 const activeDownloads = new Map<string, number>();
 
+// Cache global de hashes de fotos: hash -> entityId ("stl:<id>" ou "job:<id>")
+// Usado para detectar fotos que já pertencem a outro arquivo na sessão atual
+const globalPhotoHashCache = new Map<string, string>();
+
+// Cache por entidade: entityId -> Set<hash> de fotos já conhecidas
+// Evita re-download das fotos existentes de um mesmo STL quando ele aparece como duplicata
+const entityPhotoHashCache = new Map<string, Set<string>>();
+
+// Caminho do arquivo de persistência do cache de hashes entre reinicializações
+const PHOTO_HASH_CACHE_FILE = path.join(__dirname, "../.temp/photo_hash_cache.json");
+
+// Timeout por tarefa na fila de processamento (10 minutos)
+const QUEUE_TASK_TIMEOUT_MS = 10 * 60 * 1000;
+
+// Promise com timeout — disponível em todo o módulo
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
+  let tid: NodeJS.Timeout;
+  const timeout = new Promise<never>((_, reject) => {
+    tid = setTimeout(() => reject(new Error(errorMsg)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(tid)) as Promise<T>;
+}
+
+// fetch() com AbortController para evitar hangs em downloads de fotos
+// Sem anotação de retorno explícita para evitar conflito com o tipo Response do express
+async function fetchWithTimeout(url: string, ms = 30_000) {
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+// Carrega o cache de hashes de fotos do disco (sobrevive a reinicializações)
+function loadHashCache(): void {
+  try {
+    if (fs.existsSync(PHOTO_HASH_CACHE_FILE)) {
+      const data = JSON.parse(fs.readFileSync(PHOTO_HASH_CACHE_FILE, "utf-8")) as Record<string, string>;
+      for (const [hash, entityId] of Object.entries(data)) {
+        globalPhotoHashCache.set(hash, entityId);
+      }
+      console.log(`[Cache] ${globalPhotoHashCache.size} hashes de fotos carregados do disco.`);
+    }
+  } catch (err: any) {
+    console.warn("[Cache] Não foi possível carregar cache de hashes:", err.message);
+  }
+}
+
+// Salva o cache de hashes em disco para sobreviver a reinicializações
+function saveHashCache(): void {
+  try {
+    const dir = path.dirname(PHOTO_HASH_CACHE_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const data: Record<string, string> = {};
+    for (const [hash, entityId] of globalPhotoHashCache) data[hash] = entityId;
+    fs.writeFileSync(PHOTO_HASH_CACHE_FILE, JSON.stringify(data));
+    console.log(`[Cache] ${globalPhotoHashCache.size} hashes salvos em disco.`);
+  } catch (err: any) {
+    console.warn("[Cache] Não foi possível salvar cache de hashes:", err.message);
+  }
+}
+
 // Watchdog: timestamp do último update/evento recebido do Telegram
 let lastEventTimestamp = Date.now();
 
@@ -78,13 +142,110 @@ async function triggerQueue() {
     const task = queue.shift();
     if (task) {
       try {
-        await task();
+        await withTimeout(
+          task(),
+          QUEUE_TASK_TIMEOUT_MS,
+          `Tarefa da fila excedeu ${QUEUE_TASK_TIMEOUT_MS / 60000} minutos sem concluir`
+        );
       } catch (e: any) {
         console.error("[Queue Processor] Erro ao processar tarefa da fila:", e.message);
       }
     }
   }
   isProcessingQueue = false;
+}
+
+// Constrói (e cacheia por sessão) o conjunto de hashes das fotos já vinculadas a uma entidade.
+// entityId: "stl:<id>" ou "job:<id>"
+async function buildEntityPhotoHashSet(entityId: string, photoUrls: string[], tempDir: string): Promise<Set<string>> {
+  if (entityPhotoHashCache.has(entityId)) return entityPhotoHashCache.get(entityId)!;
+
+  const hashSet = new Set<string>();
+  for (const url of photoUrls) {
+    try {
+      if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+      const tempPath = path.join(tempDir, `hashbuild_${Date.now()}_${Math.random()}.jpg`);
+      const res = await fetchWithTimeout(url, 30_000);
+      if (!res.ok) continue;
+      fs.writeFileSync(tempPath, Buffer.from(await res.arrayBuffer()));
+      const h = await getPerceptualHash(tempPath);
+      try { fs.unlinkSync(tempPath); } catch {}
+      hashSet.add(h);
+      globalPhotoHashCache.set(h, entityId);
+    } catch {}
+  }
+  entityPhotoHashCache.set(entityId, hashSet);
+  return hashSet;
+}
+
+// Filtra candidatas a novas fotos removendo: banidas, duplicadas no mesmo arquivo,
+// e fotos que já pertencem a outro arquivo na sessão atual (cross-file).
+// Retorna apenas fotos genuinamente novas e atualiza os caches.
+async function deduplicatePhotos(
+  candidateUrls: string[],
+  photoHashByUrl: Map<string, string>,
+  existingHashSet: Set<string>,
+  entityId: string,
+  bannedHashes: string[],
+  tempDir: string,
+  logPrefix: string
+): Promise<string[]> {
+  const result: string[] = [];
+
+  for (const url of candidateUrls) {
+    let hash = photoHashByUrl.get(url);
+    if (!hash) {
+      try {
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+        const tempPath = path.join(tempDir, `hashcheck_${Date.now()}_${Math.random()}.jpg`);
+        const res = await fetchWithTimeout(url, 30_000);
+        if (!res.ok) { result.push(url); continue; }
+        fs.writeFileSync(tempPath, Buffer.from(await res.arrayBuffer()));
+        hash = await getPerceptualHash(tempPath);
+        try { fs.unlinkSync(tempPath); } catch {}
+        photoHashByUrl.set(url, hash);
+      } catch {
+        result.push(url);
+        continue;
+      }
+    }
+
+    // 1. Verifica blacklist
+    const isBanned = bannedHashes.some(banned => hammingDistance(hash!, banned) <= 10);
+    if (isBanned) {
+      console.log(`${logPrefix} Foto BANIDA (propaganda), ignorando.`);
+      continue;
+    }
+
+    // 2. Verifica duplicata dentro do mesmo arquivo (comparação visual por hash)
+    let isDupSameFile = false;
+    for (const h of existingHashSet) {
+      if (hammingDistance(hash!, h) <= 10) { isDupSameFile = true; break; }
+    }
+    if (isDupSameFile) {
+      console.log(`${logPrefix} Foto visualmente igual a uma já existente no mesmo arquivo, ignorando.`);
+      continue;
+    }
+
+    // 3. Verifica cross-file: foto já pertence a outro arquivo nesta sessão
+    let crossOwner: string | null = null;
+    for (const [cachedHash, cachedEntityId] of globalPhotoHashCache) {
+      if (cachedEntityId !== entityId && hammingDistance(hash!, cachedHash) <= 10) {
+        crossOwner = cachedEntityId;
+        break;
+      }
+    }
+    if (crossOwner) {
+      console.log(`${logPrefix} Foto parece pertencer a outro arquivo (${crossOwner}), ignorando cross-file.`);
+      continue;
+    }
+
+    result.push(url);
+    existingHashSet.add(hash!);
+    globalPhotoHashCache.set(hash!, entityId);
+  }
+
+  return result;
 }
 
 // Wrapper para downloadMedia com limite de tempo por inatividade
@@ -169,6 +330,9 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
 
   console.log(`[Scraper Buffer] Processando lote para ${key}: ${docs.length} documentos, ${photos.length} fotos.`);
 
+  // Mapa local: url da foto -> hash perceptual (populado durante o upload das fotos)
+  const photoHashByUrl = new Map<string, string>();
+
   // 0. Fetch banned hashes to avoid uploading ads
   let bannedHashes: string[] = [];
   try {
@@ -197,12 +361,13 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
 
       if (downloadedPath && typeof downloadedPath === "string" && fs.existsSync(downloadedPath)) {
         // 1.5. Calculate perceptual hash and check blacklist
+        let photoHash: string | null = null;
         try {
-          const hash = await getPerceptualHash(downloadedPath);
-          const isBanned = bannedHashes.some(banned => hammingDistance(hash, banned) <= 10);
-          
+          photoHash = await getPerceptualHash(downloadedPath);
+          const isBanned = bannedHashes.some(banned => hammingDistance(photoHash!, banned) <= 10);
+
           if (isBanned) {
-            console.log(`[Scraper Buffer] Foto Msg ID ${photoMsg.id} IGNORADA (Detectada como propaganda pela Blacklist, dHash: ${hash}).`);
+            console.log(`[Scraper Buffer] Foto Msg ID ${photoMsg.id} IGNORADA (Detectada como propaganda pela Blacklist, dHash: ${photoHash}).`);
             try { fs.unlinkSync(downloadedPath); } catch (e) {}
             continue; // Pula o upload e não adiciona no photoUrlsMap
           }
@@ -230,6 +395,7 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
             .from("portfolio")
             .getPublicUrl(uploadPath);
           photoUrlsMap.set(photoMsg.id, publicUrl);
+          if (photoHash) photoHashByUrl.set(publicUrl, photoHash); // salva hash para dedup posterior
           console.log(`[Scraper Buffer] Foto Msg ID ${photoMsg.id} disponível em: ${publicUrl}`);
         }
 
@@ -324,62 +490,39 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
 
           if (matchedPhotos.length > 0) {
             const existingPhotos = existingStl.photos || [];
-            let newPhotos = matchedPhotos.filter(p => !existingPhotos.includes(p));
+            const entityId = `stl:${existingStl.id}`;
+            const tempDir = path.join(__dirname, "../.temp");
 
-            // Filtrar fotos banidas mesmo quando adicionando a STL já existente
-            if (newPhotos.length > 0 && bannedHashes.length > 0) {
-              const filteredPhotos: string[] = [];
-              for (const photoUrl of newPhotos) {
-                try {
-                  const tempDir = path.join(__dirname, "../.temp");
-                  if (!fs.existsSync(tempDir)) {
-                    fs.mkdirSync(tempDir, { recursive: true });
-                  }
-                  const tempPhotoPath = path.join(tempDir, `photo_check_${Date.now()}_${Math.random()}.jpg`);
+            // Remove duplicatas exatas de URL como primeiro passo rápido
+            const urlDeduped = matchedPhotos.filter(p => !existingPhotos.includes(p));
 
-                  // Baixar foto temporariamente para calcular hash
-                  const response = await fetch(photoUrl);
-                  if (!response.ok) {
-                    filteredPhotos.push(photoUrl);
-                    continue;
-                  }
-                  const arrayBuffer = await response.arrayBuffer();
-                  const buffer = Buffer.from(arrayBuffer);
-                  fs.writeFileSync(tempPhotoPath, buffer);
+            if (urlDeduped.length > 0) {
+              // Constrói/recupera o conjunto de hashes das fotos já existentes neste STL
+              const existingHashSet = await buildEntityPhotoHashSet(entityId, existingPhotos, tempDir);
 
-                  const hash = await getPerceptualHash(tempPhotoPath);
-                  const isBanned = bannedHashes.some(banned => hammingDistance(hash, banned) <= 10);
+              // Aplica dedup por hash: ban + mesmo arquivo + cross-file
+              const trulyNewPhotos = await deduplicatePhotos(
+                urlDeduped, photoHashByUrl, existingHashSet, entityId,
+                bannedHashes, tempDir, `[Photo Filter STL ${existingStl.id}]`
+              );
 
-                  if (isBanned) {
-                    console.log(`[Scraper Buffer] Foto ${photoUrl} ignorada ao adicionar ao STL ${existingStl.id} (detectada como propaganda).`);
-                  } else {
-                    filteredPhotos.push(photoUrl);
-                  }
+              if (trulyNewPhotos.length > 0) {
+                console.log(`[Scraper Buffer] Adicionando ${trulyNewPhotos.length} foto(s) genuinamente nova(s) ao registro existente ${existingStl.id}`);
+                const updatedPhotos = [...existingPhotos, ...trulyNewPhotos];
+                const thumbnail_url = updatedPhotos.length > 0 ? updatedPhotos[0] : null;
 
-                  try { fs.unlinkSync(tempPhotoPath); } catch (e) {}
-                } catch (hashErr) {
-                  console.error(`[Scraper Buffer] Aviso: falha ao verificar hash da foto ao adicionar ao STL, mantendo foto:`, hashErr);
-                  filteredPhotos.push(photoUrl); // Se falhar, mantem a foto
+                const updatePayload: any = { photos: updatedPhotos, has_appended_photos: true };
+                if (thumbnail_url && existingPhotos.length === 0) {
+                  updatePayload.thumbnail_url = thumbnail_url;
                 }
+
+                await supabase
+                  .from("telegram_indexed_stls")
+                  .update(updatePayload)
+                  .eq("id", existingStl.id);
+              } else {
+                console.log(`[Scraper Buffer] Nenhuma foto genuinamente nova para STL ${existingStl.id}. Sem revisão necessária.`);
               }
-              newPhotos = filteredPhotos;
-            }
-
-            if (newPhotos.length > 0) {
-              console.log(`[Scraper Buffer] Adicionando ${newPhotos.length} nova(s) foto(s) ao registro existente ${existingStl.id}`);
-              const updatedPhotos = [...existingPhotos, ...newPhotos];
-              const thumbnail_url = updatedPhotos.length > 0 ? updatedPhotos[0] : null;
-
-              const updatePayload: any = { photos: updatedPhotos, has_appended_photos: true };
-              // Se antes não tinha fotos (consequentemente não tinha um thumb real), atualizamos o thumbnail
-              if (thumbnail_url && existingPhotos.length === 0) {
-                updatePayload.thumbnail_url = thumbnail_url;
-              }
-
-              await supabase
-                .from("telegram_indexed_stls")
-                .update(updatePayload)
-                .eq("id", existingStl.id);
             }
           }
           continue; // Pula o processamento deste arquivo
@@ -400,55 +543,30 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
 
           if (matchedPhotos.length > 0) {
             const existingPhotos = existingJob.photos || [];
-            let newPhotos = matchedPhotos.filter(p => !existingPhotos.includes(p));
+            const entityId = `job:${existingJob.id}`;
+            const tempDir = path.join(__dirname, "../.temp");
 
-            // Filtrar fotos banidas mesmo quando adicionando a job já existente
-            if (newPhotos.length > 0 && bannedHashes.length > 0) {
-              const filteredPhotos: string[] = [];
-              for (const photoUrl of newPhotos) {
-                try {
-                  const tempDir = path.join(__dirname, "../.temp");
-                  if (!fs.existsSync(tempDir)) {
-                    fs.mkdirSync(tempDir, { recursive: true });
-                  }
-                  const tempPhotoPath = path.join(tempDir, `photo_check_${Date.now()}_${Math.random()}.jpg`);
+            const urlDeduped = matchedPhotos.filter(p => !existingPhotos.includes(p));
 
-                  // Baixar foto temporariamente para calcular hash
-                  const response = await fetch(photoUrl);
-                  if (!response.ok) {
-                    filteredPhotos.push(photoUrl);
-                    continue;
-                  }
-                  const arrayBuffer = await response.arrayBuffer();
-                  const buffer = Buffer.from(arrayBuffer);
-                  fs.writeFileSync(tempPhotoPath, buffer);
+            if (urlDeduped.length > 0) {
+              const existingHashSet = await buildEntityPhotoHashSet(entityId, existingPhotos, tempDir);
 
-                  const hash = await getPerceptualHash(tempPhotoPath);
-                  const isBanned = bannedHashes.some(banned => hammingDistance(hash, banned) <= 10);
+              const trulyNewPhotos = await deduplicatePhotos(
+                urlDeduped, photoHashByUrl, existingHashSet, entityId,
+                bannedHashes, tempDir, `[Photo Filter Job ${existingJob.id}]`
+              );
 
-                  if (isBanned) {
-                    console.log(`[Scraper Buffer] Foto ${photoUrl} ignorada ao adicionar ao job ${existingJob.id} (detectada como propaganda).`);
-                  } else {
-                    filteredPhotos.push(photoUrl);
-                  }
+              if (trulyNewPhotos.length > 0) {
+                console.log(`[Scraper Buffer] Adicionando ${trulyNewPhotos.length} foto(s) genuinamente nova(s) ao job existente ${existingJob.id}`);
+                const updatedPhotos = [...existingPhotos, ...trulyNewPhotos];
 
-                  try { fs.unlinkSync(tempPhotoPath); } catch (e) {}
-                } catch (hashErr) {
-                  console.error(`[Scraper Buffer] Aviso: falha ao verificar hash da foto ao adicionar ao job, mantendo foto:`, hashErr);
-                  filteredPhotos.push(photoUrl); // Se falhar, mantem a foto
-                }
+                await supabase
+                  .from("telegram_scraper_jobs")
+                  .update({ photos: updatedPhotos })
+                  .eq("id", existingJob.id);
+              } else {
+                console.log(`[Scraper Buffer] Nenhuma foto genuinamente nova para job ${existingJob.id}.`);
               }
-              newPhotos = filteredPhotos;
-            }
-
-            if (newPhotos.length > 0) {
-              console.log(`[Scraper Buffer] Adicionando ${newPhotos.length} nova(s) foto(s) ao job existente ${existingJob.id}`);
-              const updatedPhotos = [...existingPhotos, ...newPhotos];
-
-              await supabase
-                .from("telegram_scraper_jobs")
-                .update({ photos: updatedPhotos })
-                .eq("id", existingJob.id);
             }
           }
           continue; // Pula
@@ -559,11 +677,15 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
       await updateJobStatus("uploading_vault");
       console.log(`[Scraper Buffer] Enviando cópia do documento para o Vault...`);
       const toUpload = new CustomFile(fileName, Number(doc.size), mediaData);
-      const vaultEntity = await client.getEntity(vaultChannelId);
-      const sentMessage = await client.sendFile(vaultEntity, {
-        file: toUpload,
-        caption: `LB Vault: ${titleFormatted}\nOrigem: ${buffer.chatTitle}${hashtagStr ? `\n\n${hashtagStr}` : ""}`,
-      });
+      const vaultEntity = await withTimeout(client.getEntity(vaultChannelId), 20_000, "Timeout ao obter entidade do Vault");
+      const sentMessage = await withTimeout(
+        client.sendFile(vaultEntity, {
+          file: toUpload,
+          caption: `LB Vault: ${titleFormatted}\nOrigem: ${buffer.chatTitle}${hashtagStr ? `\n\n${hashtagStr}` : ""}`,
+        }),
+        25 * 60_000,
+        "Timeout ao enviar arquivo para o Vault (25 min)"
+      );
 
       // C. Limpar arquivo temporário do documento
       try {
@@ -580,7 +702,7 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
       const thumbnail_url = hasPhotos ? matchedPhotos[0] : "https://images.unsplash.com/photo-1612404730960-5c71577fca11?w=500&q=80";
       const finalPhotos = hasPhotos ? matchedPhotos : [];
 
-      const { error } = await supabase.from("telegram_indexed_stls").insert({
+      const { data: insertedStl, error } = await supabase.from("telegram_indexed_stls").insert({
         title: titleFormatted,
         description: `Modelo 3D "${fileName}" indexado automaticamente do Telegram.`,
         telegram_group_id: String(docMsg.chatId),
@@ -592,7 +714,7 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
         thumbnail_url: thumbnail_url,
         photos: finalPhotos,
         printer_type: groupPrinterTypes.get(String(docMsg.chatId)) || "fdm"
-      });
+      }).select("id").single();
 
       if (error) {
         console.error(`[Scraper Buffer] Erro ao salvar no banco:`, error.message);
@@ -600,6 +722,21 @@ async function processBufferedEntry(client: TelegramClient, key: string) {
       } else {
         console.log(`[Scraper Buffer] Modelo "${fileName}" indexado com sucesso com ${finalPhotos.length} fotos!`);
         await updateJobStatus("completed");
+
+        // Registra hashes das fotos do novo STL nos caches para
+        // que futuras postagens do mesmo arquivo não as re-adicionem
+        if (insertedStl?.id && finalPhotos.length > 0) {
+          const stlEntityId = `stl:${insertedStl.id}`;
+          const hashSet = new Set<string>();
+          for (const url of finalPhotos) {
+            const h = photoHashByUrl.get(url);
+            if (h) {
+              globalPhotoHashCache.set(h, stlEntityId);
+              hashSet.add(h);
+            }
+          }
+          if (hashSet.size > 0) entityPhotoHashCache.set(stlEntityId, hashSet);
+        }
       }
 
     } catch (err: any) {
@@ -643,9 +780,11 @@ async function processApprovedJob(client: TelegramClient, job: any) {
     await updateJobStatus("downloading_file");
 
     const targetChat = String(telegram_group_id);
-    const messages = await client.getMessages(targetChat, {
-      ids: [parseInt(String(telegram_message_id), 10)],
-    });
+    const messages = await withTimeout(
+      client.getMessages(targetChat, { ids: [parseInt(String(telegram_message_id), 10)] }),
+      30_000,
+      "Timeout ao buscar mensagem do Telegram (30s)"
+    );
 
     if (!messages || messages.length === 0 || !messages[0].media) {
       throw new Error("Mensagem ou mídia do Telegram não encontrada.");
@@ -676,11 +815,15 @@ async function processApprovedJob(client: TelegramClient, job: any) {
     await updateJobStatus("uploading_vault");
     console.log(`[Scraper Approved] Enviando para o Vault...`);
     const toUpload = new CustomFile(file_name, Number(doc.size), mediaData);
-    const vaultEntity = await client.getEntity(vaultChannelId);
-    const sentMessage = await client.sendFile(vaultEntity, {
-      file: toUpload,
-      caption: `LB Vault: ${file_name.replace(/\.[^/.]+$/, "").replace(/[_\-]+/g, " ")}\nOrigem: ${chat_title}`,
-    });
+    const vaultEntity = await withTimeout(client.getEntity(vaultChannelId), 20_000, "Timeout ao obter entidade do Vault");
+    const sentMessage = await withTimeout(
+      client.sendFile(vaultEntity, {
+        file: toUpload,
+        caption: `LB Vault: ${file_name.replace(/\.[^/.]+$/, "").replace(/[_\-]+/g, " ")}\nOrigem: ${chat_title}`,
+      }),
+      25 * 60_000,
+      "Timeout ao enviar arquivo para o Vault (25 min)"
+    );
 
     // C. Limpar arquivo temporário do documento
     try {
@@ -894,6 +1037,14 @@ async function startScraper() {
 
   // --- Resolver IDs de grupos monitorados de forma dinâmica e reativa ---
   await loadDynamicSettings(client, dialogs);
+
+  // Carrega cache de hashes de fotos do disco (sobrevive a reinicializações)
+  loadHashCache();
+
+  // Salva cache a cada 10 minutos e também ao encerrar o processo
+  setInterval(saveHashCache, 10 * 60_000);
+  process.on("SIGINT", () => { saveHashCache(); process.exit(0); });
+  process.on("SIGTERM", () => { saveHashCache(); process.exit(0); });
 
   // Intervalo periódico de 60 segundos para recarregar configurações do banco
   setInterval(async () => {
@@ -1289,19 +1440,6 @@ async function startScraper() {
     console.log(`Servidor de download proxy rodando na porta ${port}`);
   });
 
-  // Helper para impor timeout em Promises e evitar travamentos no health check
-  const promiseWithTimeout = (promise: Promise<any>, ms: number, timeoutErrorMsg: string) => {
-    let timeoutId: NodeJS.Timeout;
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error(timeoutErrorMsg));
-      }, ms);
-    });
-    return Promise.race([promise, timeoutPromise]).finally(() => {
-      clearTimeout(timeoutId);
-    });
-  };
-
   // Processador compartilhado de mensagens de mídia
   const handleIncomingMessage = async (client: TelegramClient, message: any) => {
     try {
@@ -1505,7 +1643,7 @@ async function startScraper() {
         await client.connect();
         lastEventTimestamp = Date.now(); // Reseta o watchdog após reconectar
       } else {
-        await promiseWithTimeout(client.getMe(), 15000, "Timeout ao obter getMe()");
+        await withTimeout(client.getMe(), 15_000, "Timeout ao obter getMe()");
         console.log("[Health Check] Ping OK. Última atualidade recebida há", Math.round((Date.now() - lastEventTimestamp) / 1000), "segundos.");
       }
     } catch (err: any) {
