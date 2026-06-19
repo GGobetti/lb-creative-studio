@@ -6,6 +6,7 @@ import { Image as ImageIcon, Plus, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { loadCategorySortItems } from '@/lib/gameDataLoader'
 import { getSupabaseBrowser } from '@/lib/supabase'
+import { useConfiguratorStore } from '@/store/store'
 import { STL_CATEGORIES } from '@/types/games'
 import type { SortableStl } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
@@ -101,6 +102,19 @@ export function CategorySort() {
         categories: standardCategories,
         suggested_categories: suggestedCategories,
       }),
+    }).then(async (res) => {
+      try {
+        const data = await res.json()
+        if (data.level_up) {
+          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          refreshXpSummary()
+          const { data: profileData } = await getSupabaseBrowser()
+            .from('profiles')
+            .select('credits')
+            .single()
+          if (profileData) refreshCredits(profileData.credits)
+        }
+      } catch (_) { /* non-fatal */ }
     }).catch(console.error)
 
     setPointsEarned((p) => p + POINTS_PER_ROUND)

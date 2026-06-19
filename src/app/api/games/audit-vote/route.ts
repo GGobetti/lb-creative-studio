@@ -63,12 +63,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Read xp_per_action from config
+    const { data: xpConfig } = await supabase
+      .from('game_rewards_config')
+      .select('xp_per_action')
+      .eq('game_type', game_type)
+      .single() as any
+    const xpPerAction = xpConfig?.xp_per_action ?? 15
+
     // Award XP
     const { data: xpData, error: xpError } = await supabase
       .rpc('award_xp', {
         p_user_id: user.id,
         p_game_type: game_type,
-        p_xp_amount: 15,
+        p_xp_amount: xpPerAction,
       })
       .single() as any
     if (xpError) console.error('[AUDIT-VOTE] XP error (non-fatal):', xpError)

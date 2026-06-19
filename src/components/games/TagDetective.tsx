@@ -6,6 +6,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { loadTagDetectiveQuestions } from '@/lib/gameDataLoader'
 import { getSupabaseBrowser } from '@/lib/supabase'
+import { useConfiguratorStore } from '@/store/store'
 import type { TagDetectiveQuestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
 import { SessionProgress } from './shared/SessionProgress'
@@ -80,6 +81,19 @@ export function TagDetective() {
         irrelevant_tags: markedTags,
         all_tags: allTags.map((t) => t.text),
       }),
+    }).then(async (res) => {
+      try {
+        const data = await res.json()
+        if (data.level_up) {
+          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          refreshXpSummary()
+          const { data: profileData } = await getSupabaseBrowser()
+            .from('profiles')
+            .select('credits')
+            .single()
+          if (profileData) refreshCredits(profileData.credits)
+        }
+      } catch (_) { /* non-fatal */ }
     }).catch(console.error)
 
     advance(POINTS_PER_ACTION)

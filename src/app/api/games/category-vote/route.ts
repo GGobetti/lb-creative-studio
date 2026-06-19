@@ -38,12 +38,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Limite diário atingido' }, { status: 429 })
     }
 
+    // Read xp_per_action from config
+    const { data: xpConfig } = await supabase
+      .from('game_rewards_config')
+      .select('xp_per_action')
+      .eq('game_type', 'category-sort')
+      .single() as any
+    const xpPerAction = xpConfig?.xp_per_action ?? 8
+
     // Award XP
     const { data: xpData, error: xpError } = await supabase
       .rpc('award_xp', {
         p_user_id: user.id,
         p_game_type: 'category-sort',
-        p_xp_amount: 8,
+        p_xp_amount: xpPerAction,
       })
       .single() as any
     if (xpError) console.error('[CATEGORY-VOTE] XP error (non-fatal):', xpError)

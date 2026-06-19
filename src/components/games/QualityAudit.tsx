@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { loadAuditQuestions } from '@/lib/gameDataLoader'
 import { getSupabaseBrowser } from '@/lib/supabase'
+import { useConfiguratorStore } from '@/store/store'
 import { STL_CATEGORIES } from '@/types/games'
 import type { AuditQuestion, AuditSuggestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
@@ -460,7 +461,19 @@ export function QualityAudit() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessTokenRef.current}` },
         body: JSON.stringify({ stl_id: questions[currentIdx]?.id, approved: true, game_type: 'quality-audit' }),
       })
-      if (!res.ok) throw new Error((await res.json()).error)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      if (data.level_up) {
+        try {
+          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          refreshXpSummary()
+          const { data: profileData } = await getSupabaseBrowser()
+            .from('profiles')
+            .select('credits')
+            .single()
+          if (profileData) refreshCredits(profileData.credits)
+        } catch (_) { /* non-fatal */ }
+      }
       advance()
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'Erro ao votar')
@@ -495,7 +508,19 @@ export function QualityAudit() {
           game_type: 'quality-audit',
         }),
       })
-      if (!voteRes.ok) throw new Error((await voteRes.json()).error)
+      const voteData = await voteRes.json()
+      if (!voteRes.ok) throw new Error(voteData.error)
+      if (voteData.level_up) {
+        try {
+          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          refreshXpSummary()
+          const { data: profileData } = await getSupabaseBrowser()
+            .from('profiles')
+            .select('credits')
+            .single()
+          if (profileData) refreshCredits(profileData.credits)
+        } catch (_) { /* non-fatal */ }
+      }
 
       // 2. Save suggestion if anything was changed
       const hasChanges = payload.suggested_title || payload.suggested_description ||
