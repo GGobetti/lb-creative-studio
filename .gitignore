@@ -47,3 +47,6 @@ telegram-scraper/.temp/
 .mcp.json
 run_migration.js
 .claude/settings.local.json
+
+# PM2 logs
+logs/

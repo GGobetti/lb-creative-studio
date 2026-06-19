@@ -64,20 +64,32 @@ export async function loadPhotoMatchQuestions(limit = 10): Promise<PhotoMatchQue
 export async function loadTagDetectiveQuestions(limit = 8): Promise<TagDetectiveQuestion[]> {
   const supabase = getSupabaseBrowser()
 
+  // Load extra STLs so we can borrow tags from others as decoys
   const { data, error } = await supabase
     .from('telegram_indexed_stls')
     .select('id, title, photos, tags')
-    .limit(limit)
+    .limit(limit + 10)
 
-  if (error || !data) {
+  if (error || !data || data.length < 2) {
     console.error('Error loading STLs:', error)
     return []
   }
 
-  return data.map((stl: any) => {
-    const existingTags = (stl.tags || []).slice(0, 4)
-    const fakeTag = `#fake-tag-${Math.random().toString(36).slice(2, 9)}`
-    const allTags = [...existingTags, fakeTag].sort(() => Math.random() - 0.5)
+  // Collect all tags from all STLs to use as cross-STL decoys
+  const allTagPool: string[] = data.flatMap((stl: any) => stl.tags || [])
+
+  const subjects = data.slice(0, limit)
+
+  return subjects.map((stl: any) => {
+    const realTags: string[] = (stl.tags || []).slice(0, 5)
+
+    // Pick decoy tags from OTHER STLs' real tags (not random strings)
+    const foreignTags = allTagPool
+      .filter((t) => !realTags.includes(t))
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 2)
+
+    const allTags = [...realTags, ...foreignTags].sort(() => Math.random() - 0.5)
 
     return {
       id: stl.id,
@@ -85,21 +97,30 @@ export async function loadTagDetectiveQuestions(limit = 8): Promise<TagDetective
       imageUrl: stl.photos?.[0] || '',
       tags: allTags.map((tag: string) => ({
         text: tag,
-        isRelevant: existingTags.includes(tag),
+        isRelevant: realTags.includes(tag),
       })),
     }
   })
 }
 
-// ─── Category Sort: Load real STLs ──────────────────────────────────────────
+// ─── Category Sort: Load real STLs (1 per round, multi-category) ────────────
 
-export async function loadCategorySortItems(limit = 15): Promise<SortableStl[]> {
+export async function loadCategorySortItems(limit = 10): Promise<SortableStl[]> {
   const supabase = getSupabaseBrowser()
+
+  // Random offset so users see different STLs each session
+  const { count: totalCount } = await supabase
+    .from('telegram_indexed_stls')
+    .select('id', { count: 'exact', head: true })
+
+  const offset = totalCount && totalCount > limit
+    ? Math.floor(Math.random() * (totalCount - limit))
+    : 0
 
   const { data, error } = await supabase
     .from('telegram_indexed_stls')
-    .select('id, title, photos')
-    .limit(limit)
+    .select('id, title, photos, description')
+    .range(offset, offset + limit - 1)
 
   if (error || !data) {
     console.error('Error loading STLs:', error)
@@ -110,7 +131,7 @@ export async function loadCategorySortItems(limit = 15): Promise<SortableStl[]> 
     id: stl.id,
     title: stl.title,
     imageUrl: stl.photos?.[0] || '',
-    correctCategory: STL_CATEGORIES[Math.floor(Math.random() * STL_CATEGORIES.length)],
+    description: stl.description || '',
   }))
 }
 

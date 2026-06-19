@@ -21,6 +21,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
     "framer-motion": "^12.38.0",
     "imagetracerjs": "^1.2.6",
     "immer": "^11.1.4",
@@ -30,8 +32,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "stripe": "^22.2.1",
-    "three": "^0.177.0",
     "tailwind-merge": "^3.5.0",
+    "three": "^0.177.0",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

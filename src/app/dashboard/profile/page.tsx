@@ -3,9 +3,11 @@
 import { useConfiguratorStore } from "@/store/store"
 import { User, Mail, MapPin, Camera, Save, Loader2, Globe, Zap, ArrowUpRight, ArrowDownLeft, Receipt } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { useToast } from "@/components/ui/Toast"
 import { useTranslation } from "@/lib/translations"
+import { XpTab } from "@/components/profile/XpTab"
 
 interface Transaction {
   id: string
@@ -19,11 +21,14 @@ export default function ProfilePage() {
   const { toast } = useToast()
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const activeTab = (searchParams.get('tab') || 'profile') as 'profile' | 'xp'
 
   // Local state for inputs
   const [fullName, setFullName] = useState("")
   const [address, setAddress] = useState("")
-  const [langPref, setLangPref] = useState<'pt' | 'en'>("pt")
+  const [langPref, setLangPref] = useState<'pt' | 'en' | 'es'>("pt")
   
   // Loading states
   const [isSaving, setIsSaving] = useState(false)
@@ -36,7 +41,7 @@ export default function ProfilePage() {
     if (profile) {
       setFullName(profile.full_name || "")
       setAddress(profile.address || "")
-      setLangPref((profile.language as 'pt' | 'en') || "pt")
+      setLangPref((profile.language as 'pt' | 'en' | 'es') || "pt")
     }
   }, [profile])
 
@@ -160,6 +165,26 @@ export default function ProfilePage() {
         </p>
       </div>
 
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 rounded-xl bg-muted border border-border mb-6">
+        {(['profile', 'xp'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => router.push(`/dashboard/profile?tab=${tab}`)}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === tab
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab === 'profile' ? 'Perfil' : '⭐ XP & Badges'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'xp' && <XpTab />}
+
+      {activeTab === 'profile' && (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Avatar Sidebar */}
@@ -361,11 +386,12 @@ export default function ProfilePage() {
                   </div>
                   <select
                     value={langPref}
-                    onChange={(e) => setLangPref(e.target.value as 'pt' | 'en')}
-                    className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow text-foreground cursor-pointer"
+                    onChange={(e) => setLangPref(e.target.value as 'pt' | 'en' | 'es')}
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                   >
-                    <option value="pt">Português (Brasil)</option>
-                    <option value="en">English (United States)</option>
+                    <option value="pt">🇧🇷 Português (Brasil)</option>
+                    <option value="en">🇺🇸 English (United States)</option>
+                    <option value="es">🇪🇸 Español</option>
                   </select>
                 </div>
               </div>
@@ -391,6 +417,7 @@ export default function ProfilePage() {
         </div>
 
       </div>
+      )}
     </div>
   )
 }

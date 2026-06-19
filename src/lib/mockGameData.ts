@@ -120,35 +120,25 @@ export const mockTagDetectiveQuestions: TagDetectiveQuestion[] = [
 // ─── Category Sort ───────────────────────────────────────────────────────────
 
 export const mockSortableStls: SortableStl[] = [
-  { id: 'cs-1',  imageUrl: BASE + '1578749014140-36f6e9f8d58a?w=300&h=300&fit=crop', title: 'Dragão Articulado',        correctCategory: 'Figurines'   },
-  { id: 'cs-2',  imageUrl: BASE + '1610701596007-11502861dffa?w=300&h=300&fit=crop', title: 'Porta Talheres',           correctCategory: 'Funcional'   },
-  { id: 'cs-3',  imageUrl: BASE + '1599643478518-a784e5dc4c8f?w=300&h=300&fit=crop', title: 'Anel Solitário',           correctCategory: 'Joalheria'   },
-  { id: 'cs-4',  imageUrl: BASE + '1568602471122-7832951cc4c5?w=300&h=300&fit=crop', title: 'Bola de Futebol Decorativa',correctCategory: 'Esportes'   },
-  { id: 'cs-5',  imageUrl: BASE + '1578500494198-246f612d08d7?w=300&h=300&fit=crop', title: 'Vaso Geométrico',          correctCategory: 'Decoração'   },
-  { id: 'cs-6',  imageUrl: BASE + '1607623814075-e51df1bdc82f?w=300&h=300&fit=crop', title: 'Chave Inglesa Didática',   correctCategory: 'Ferramentas' },
-  { id: 'cs-7',  imageUrl: BASE + '1569163139394-de4798aa62b1?w=300&h=300&fit=crop', title: 'Letras do Alfabeto',       correctCategory: 'Educação'    },
-  { id: 'cs-8',  imageUrl: BASE + '1611273426858-e6df10bdc866?w=300&h=300&fit=crop', title: 'Polvo Articulado',         correctCategory: 'Figurines'   },
-  { id: 'cs-9',  imageUrl: BASE + '1591195853828-11db59a44f6b?w=300&h=300&fit=crop', title: 'Suporte Celular',          correctCategory: 'Funcional'   },
-  { id: 'cs-10', imageUrl: BASE + '1599643478518-a784e5dc4c8f?w=300&h=300&fit=crop', title: 'Brinco Geométrico',        correctCategory: 'Joalheria'   },
-  { id: 'cs-11', imageUrl: BASE + '1568602471122-7832951cc4c5?w=300&h=300&fit=crop', title: 'Cone de Treinamento Mini', correctCategory: 'Esportes'    },
-  { id: 'cs-12', imageUrl: BASE + '1578500494198-246f612d08d7?w=300&h=300&fit=crop', title: 'Abajur Losangular',        correctCategory: 'Decoração'   },
-  { id: 'cs-13', imageUrl: BASE + '1607623814075-e51df1bdc82f?w=300&h=300&fit=crop', title: 'Testador de Nozzle',       correctCategory: 'Ferramentas' },
-  { id: 'cs-14', imageUrl: BASE + '1569163139394-de4798aa62b1?w=300&h=300&fit=crop', title: 'Quebra-cabeça Geométrico', correctCategory: 'Educação'    },
-  { id: 'cs-15', imageUrl: BASE + '1579783902614-e3fb3f4e46a2?w=300&h=300&fit=crop', title: 'Capacete Samurai',         correctCategory: 'Figurines'   },
+  { id: 'cs-1',  imageUrl: BASE + '1578749014140-36f6e9f8d58a?w=300&h=300&fit=crop', title: 'Dragão Articulado',         description: 'Figura articulada de dragão para impressão 3D' },
+  { id: 'cs-2',  imageUrl: BASE + '1610701596007-11502861dffa?w=300&h=300&fit=crop', title: 'Porta Talheres',            description: 'Organizador de talheres para cozinha'           },
+  { id: 'cs-3',  imageUrl: BASE + '1599643478518-a784e5dc4c8f?w=300&h=300&fit=crop', title: 'Anel Solitário',            description: 'Anel com pedra central para joalheria'          },
+  { id: 'cs-4',  imageUrl: BASE + '1568602471122-7832951cc4c5?w=300&h=300&fit=crop', title: 'Bola de Futebol Decorativa', description: 'Minibola de futebol decorativa'                 },
+  { id: 'cs-5',  imageUrl: BASE + '1578500494198-246f612d08d7?w=300&h=300&fit=crop', title: 'Vaso Geométrico',           description: 'Vaso com design geométrico moderno'             },
+  { id: 'cs-6',  imageUrl: BASE + '1607623814075-e51df1bdc82f?w=300&h=300&fit=crop', title: 'Chave Inglesa Didática',    description: 'Réplica de chave inglesa para ensino'          },
+  { id: 'cs-7',  imageUrl: BASE + '1569163139394-de4798aa62b1?w=300&h=300&fit=crop', title: 'Letras do Alfabeto',        description: 'Conjunto de letras para uso educacional'        },
+  { id: 'cs-8',  imageUrl: BASE + '1611273426858-e6df10bdc866?w=300&h=300&fit=crop', title: 'Polvo Articulado',          description: 'Polvo articulado com tentáculos móveis'        },
+  { id: 'cs-9',  imageUrl: BASE + '1591195853828-11db59a44f6b?w=300&h=300&fit=crop', title: 'Suporte Celular',           description: 'Suporte de mesa para smartphone'               },
+  { id: 'cs-10', imageUrl: BASE + '1599643478518-a784e5dc4c8f?w=300&h=300&fit=crop', title: 'Brinco Geométrico',         description: 'Par de brincos com design geométrico'          },
+  { id: 'cs-11', imageUrl: BASE + '1568602471122-7832951cc4c5?w=300&h=300&fit=crop', title: 'Cone de Treinamento Mini',  description: 'Mini cone para treinos e marcações'           },
+  { id: 'cs-12', imageUrl: BASE + '1578500494198-246f612d08d7?w=300&h=300&fit=crop', title: 'Abajur Losangular',         description: 'Abajur com padrão de losangos'                },
+  { id: 'cs-13', imageUrl: BASE + '1607623814075-e51df1bdc82f?w=300&h=300&fit=crop', title: 'Testador de Nozzle',        description: 'Ferramenta para testar e calibrar nozzles'    },
+  { id: 'cs-14', imageUrl: BASE + '1569163139394-de4798aa62b1?w=300&h=300&fit=crop', title: 'Quebra-cabeça Geométrico',  description: 'Peças de quebra-cabeça geométrico'            },
+  { id: 'cs-15', imageUrl: BASE + '1579783902614-e3fb3f4e46a2?w=300&h=300&fit=crop', title: 'Capacete Samurai',          description: 'Miniatura de capacete de samurai'             },
 ]
 
 export function getCategorySortRounds() {
-  const shuffled = [...mockSortableStls].sort(() => Math.random() - 0.5)
-  const rounds = []
-  for (let i = 0; i < 5; i++) {
-    const batch = shuffled.slice(i * 3, i * 3 + 3)
-    const categories = [...new Set(batch.map((s) => s.correctCategory))]
-    // pad to 4 unique categories if needed
-    const extras = ['Outros', 'Decoração', 'Funcional', 'Figurines'].filter((c) => !categories.includes(c))
-    while (categories.length < 4) categories.push(extras.shift()!)
-    rounds.push({ items: batch, categories: categories.sort(() => Math.random() - 0.5) })
-  }
-  return rounds
+  return [...mockSortableStls].sort(() => Math.random() - 0.5).slice(0, 8)
 }
 
 // ─── Quality Audit ───────────────────────────────────────────────────────────

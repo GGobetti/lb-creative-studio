@@ -27,12 +27,13 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags } = useConfiguratorStore(
+  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags, xpSummary } = useConfiguratorStore(
     useShallow((s) => ({
       profile: s.profile,
       creditModalOpen: s.creditModalOpen,
       setCreditModalOpen: s.setCreditModalOpen,
       setFeatureFlags: s.setFeatureFlags,
+      xpSummary: s.xpSummary,
     }))
   )
   const handleLogout = useLogout()
@@ -65,7 +66,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }[profile?.plan || "free"] ?? "text-muted-foreground"
 
   return (
-    <div className="flex h-screen bg-background transition-colors overflow-hidden print:h-auto print:overflow-visible">
+    <div className="flex h-screen bg-background transition-colors overflow-hidden relative print:h-auto print:overflow-visible">
+
+      {/* Liquid Glass — animated mesh, absolute inside wrapper so backdrop-filter blurs it */}
+      <div aria-hidden className="absolute inset-0 z-0 overflow-hidden pointer-events-none dark:block hidden">
+        <div
+          className="absolute -top-[20%] -left-[10%] w-[60%] h-[80%] animate-blob-1 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(120,80,255,0.22) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute -bottom-[20%] -right-[10%] w-[55%] h-[75%] animate-blob-2 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(0,160,255,0.16) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute top-[30%] left-[40%] w-[40%] h-[50%] animate-blob-3 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(255,80,120,0.10) 0%, transparent 65%)' }}
+        />
+      </div>
+
       {/* Mobile Backdrop */}
       {sidebarOpen && (
         <div
@@ -74,16 +92,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* Sidebar */}
-      <div className="print:hidden">
+      {/* Sidebar — relative z-10 so it sits above the z-0 mesh */}
+      <div className="print:hidden relative z-10">
         <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden print:h-auto print:overflow-visible">
+      {/* Main — relative z-10 so it sits above the z-0 mesh */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10 print:h-auto print:overflow-visible">
 
         {/* Top Header */}
-        <header className="h-14 flex items-center justify-between px-5 border-b border-border/60 bg-card/80 backdrop-blur-md print:hidden z-20 relative shrink-0
+        <header className="h-14 flex items-center justify-between px-5 border-b border-border/60 bg-card/60 backdrop-blur-xl saturate-150 print:hidden z-20 relative shrink-0 overflow-hidden
                            lg:mt-4 lg:mr-4 lg:rounded-2xl lg:border lg:border-border/60 lg:shadow-card lg:ml-0 transition-all duration-300">
 
           {/* Mobile hamburger */}
@@ -116,6 +134,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span>{profile.credits}</span>
                 <span className="text-primary/60 font-normal">crd</span>
               </button>
+            )}
+
+            {/* XP pill */}
+            {profile && xpSummary && (
+              <Link
+                href="/dashboard/profile?tab=xp"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                           bg-amber-500/10 border border-amber-500/20 text-xs font-bold
+                           hover:bg-amber-500/20 hover:scale-105 active:scale-95
+                           transition-all shadow-sm"
+              >
+                <span>{xpSummary.current_level.badge_icon}</span>
+                <span className="text-amber-500">{xpSummary.xp_total.toLocaleString('pt-BR')} XP</span>
+                <span className="text-amber-500/60 font-normal hidden sm:inline">· {xpSummary.current_level.name}</span>
+              </Link>
             )}
 
             <LanguageSwitcher />

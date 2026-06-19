@@ -18,8 +18,8 @@ export function Hero() {
 
       {/* Ambient blobs */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[15%] right-[10%] w-[35vw] h-[35vw] max-w-[600px] max-h-[600px] bg-primary/15 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-[20%] left-[5%] w-[28vw] h-[28vw] max-w-[480px] max-h-[480px] bg-violet-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "2s" }} />
+        <div className="absolute top-[15%] right-[10%] w-[35vw] h-[35vw] max-w-[600px] max-h-[600px] bg-violet-500/12 dark:bg-violet-500/20 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-[20%] left-[5%] w-[28vw] h-[28vw] max-w-[480px] max-h-[480px] bg-blue-500/8 dark:bg-blue-500/14 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: "2s" }} />
       </div>
 
       <div className="container mx-auto px-6 relative z-10 py-20">
@@ -98,7 +98,7 @@ export function Hero() {
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-primary">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/90 to-blue-500/80 dark:border dark:border-white/20 flex items-center justify-center">
                       <span className="text-white font-black text-xs">LB</span>
                     </div>
                     <div>

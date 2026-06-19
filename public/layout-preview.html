@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LB Creative Studio — Style Directions</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;overflow:hidden}
+
+/* ══════════════════════════════════════════════════════════════
+   TEMA A — PRETO + PRATA
+   Sem cor. OLED puro. Hierarquia em prata/chumbo/branco.
+   Pensa: Apple Watch Ultra, Porsche, Leica.
+   Acento de ação: branco/prata nos interativos — sem azul, sem laranja.
+══════════════════════════════════════════════════════════════ */
+.t-prata {
+  --bg:        #050505;
+  --bg2:       #0C0C0C;
+  --sb:        rgba(10,10,10,0.90);
+  --sb-br:     rgba(255,255,255,0.07);
+  --card:      rgba(255,255,255,0.03);
+  --card-br:   rgba(255,255,255,0.07);
+  --fg:        #F0F0F0;
+  --fg2:       #606060;
+  --p:         #D4D4D4;   /* prata */
+  --p-dim:     rgba(212,212,212,0.08);
+  --p-br:      rgba(212,212,212,0.18);
+  --acc:       #888888;
+  --acc-dim:   rgba(136,136,136,0.10);
+  --pt:        #E8E8E8;
+  --pb:        #A0A0A0;
+  --pill:      linear-gradient(135deg,#D4D4D4,#707070);
+  --active-bg: rgba(255,255,255,0.06);
+  --active-br: rgba(255,255,255,0.15);
+  --glow:      none;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TEMA B — LIQUID GLASS (iOS 26 / Apple Intelligence)
+   Fundo: mesh gradient animado atrás de tudo.
+   Elementos: vidro real — blur alto + saturate + specular no topo.
+   Accent: iridescente, muda com o contexto.
+   Pensa: macOS Tahoe, iOS 26, Apple Vision Pro.
+══════════════════════════════════════════════════════════════ */
+.t-glass {
+  --bg:        #08080F;
+  --bg2:       transparent;
+  --sb:        rgba(255,255,255,0.05);
+  --sb-br:     rgba(255,255,255,0.12);
+  --card:      rgba(255,255,255,0.04);
+  --card-br:   rgba(255,255,255,0.10);
+  --fg:        #FFFFFF;
+  --fg2:       rgba(255,255,255,0.45);
+  --p:         #FFFFFF;
+  --p-dim:     rgba(255,255,255,0.08);
+  --p-br:      rgba(255,255,255,0.20);
+  --acc:       rgba(255,255,255,0.70);
+  --acc-dim:   rgba(255,255,255,0.06);
+  --pt:        #FFFFFF;
+  --pb:        rgba(255,255,255,0.6);
+  --pill:      linear-gradient(135deg,rgba(255,255,255,0.9),rgba(200,200,220,0.6));
+  --active-bg: rgba(255,255,255,0.08);
+  --active-br: rgba(255,255,255,0.25);
+  --glow:      0 0 60px rgba(180,160,255,0.12), 0 0 120px rgba(100,180,255,0.06);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TEMA C — CINEMATIC
+   Preto profundo com grain. Prata/platina como único acento.
+   Tipografia em evidência, hierarquia via peso/opacidade.
+   Pensa: Stanley Kubrick, Vercel dashboard, Linear.app.
+══════════════════════════════════════════════════════════════ */
+.t-cinema {
+  --bg:        #020202;
+  --bg2:       #080808;
+  --sb:        rgba(5,5,5,0.95);
+  --sb-br:     rgba(255,255,255,0.05);
+  --card:      rgba(255,255,255,0.025);
+  --card-br:   rgba(255,255,255,0.06);
+  --fg:        #ECECEC;
+  --fg2:       #4A4A4A;
+  --p:         #C8C8C8;   /* platina */
+  --p-dim:     rgba(200,200,200,0.07);
+  --p-br:      rgba(200,200,200,0.14);
+  --acc:       #E8440A;   /* única cor: o laranja da logo, só nos CTAs */
+  --acc-dim:   rgba(232,68,10,0.10);
+  --pt:        #D0D0D0;
+  --pb:        #808080;
+  --pill:      linear-gradient(135deg,#C8C8C8,#606060);
+  --active-bg: rgba(255,255,255,0.04);
+  --active-br: rgba(255,255,255,0.10);
+  --glow:      none;
+}
+
+/* ─── SWITCHER ──────────────────────────────────────────────── */
+.switcher{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  z-index:9999;display:flex;gap:4px;
+  background:rgba(0,0,0,0.85);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;padding:5px;
+}
+.sw{
+  padding:9px 20px;border-radius:11px;border:1px solid transparent;
+  font-size:11px;font-weight:700;cursor:pointer;
+  transition:all 0.25s;background:transparent;
+  color:rgba(255,255,255,0.35);font-family:inherit;white-space:nowrap;
+}
+.sw.on{background:rgba(255,255,255,0.09);color:#fff;border-color:rgba(255,255,255,0.14);}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+
+/* ─── DESCRIPTION TAG ───────────────────────────────────────── */
+.dtag{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%);
+  z-index:9999;
+  background:rgba(0,0,0,0.80);backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px;padding:8px 20px;
+  font-size:11px;font-weight:600;color:rgba(255,255,255,0.6);
+  text-align:center;white-space:nowrap;
+}
+.dtag strong{color:#fff;margin-right:8px;}
+
+/* ─── APP SHELL ─────────────────────────────────────────────── */
+.app{
+  display:flex;height:100vh;position:relative;overflow:hidden;
+  background:var(--bg);color:var(--fg);
+  transition:background 0.5s ease;
+}
+
+/* MESH BACKGROUND (só Liquid Glass) */
+.mesh{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  opacity:0;transition:opacity 0.5s ease;
+}
+.t-glass .mesh{opacity:1;}
+.mesh::before{
+  content:'';position:absolute;
+  top:-20%;left:-10%;width:60%;height:80%;
+  background:radial-gradient(ellipse, rgba(120,80,255,0.18) 0%, transparent 65%);
+  animation:blob1 12s ease-in-out infinite alternate;
+}
+.mesh::after{
+  content:'';position:absolute;
+  bottom:-20%;right:-10%;width:55%;height:75%;
+  background:radial-gradient(ellipse, rgba(0,160,255,0.14) 0%, transparent 65%);
+  animation:blob2 15s ease-in-out infinite alternate;
+}
+.mesh-extra{
+  position:absolute;
+  top:30%;left:40%;width:40%;height:50%;
+  background:radial-gradient(ellipse, rgba(255,80,120,0.08) 0%, transparent 65%);
+  animation:blob3 18s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+@keyframes blob1{from{transform:translate(0,0) scale(1);}to{transform:translate(5%,8%) scale(1.1);}}
+@keyframes blob2{from{transform:translate(0,0) scale(1);}to{transform:translate(-6%,-5%) scale(1.08);}}
+@keyframes blob3{from{transform:translate(0,0);}to{transform:translate(3%,-7%);}};
+
+/* GRAIN (só Cinematic) */
+.grain{
+  position:absolute;inset:0;z-index:1;pointer-events:none;
+  opacity:0;transition:opacity 0.5s ease;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+.t-cinema .grain{opacity:1;}
+
+/* ─── SIDEBAR ───────────────────────────────────────────────── */
+.sb{
+  width:230px;flex-shrink:0;display:flex;flex-direction:column;
+  background:var(--sb);
+  border:1px solid var(--sb-br);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  margin:10px 0 10px 10px;border-radius:20px;
+  overflow:hidden;position:relative;z-index:10;
+  transition:background 0.5s ease,border-color 0.5s ease;
+  box-shadow:var(--glow);
+}
+
+/* Specular highlight no topo (só glass) */
+.t-glass .sb::before{
+  content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent);
+  border-radius:0 0 2px 2px;z-index:2;
+}
+
+/* Specular borda esquerda (só glass) */
+.t-glass .sb::after{
+  content:'';position:absolute;left:0;top:10%;bottom:10%;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,0.3),transparent);
+  z-index:2;
+}
+
+.sb-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:18px 16px 14px;
+  border-bottom:1px solid var(--sb-br);
+  flex-shrink:0;position:relative;z-index:3;
+  transition:border-color 0.5s ease;
+}
+
+/* Logo icon: prata tem metal, glass tem vidro, cinema tem platina */
+.logo-icon{
+  width:34px;height:34px;border-radius:10px;
+  background:var(--pill);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:11px;font-weight:800;color:#111;
+  flex-shrink:0;transition:background 0.5s ease;
+  position:relative;overflow:hidden;
+}
+.t-glass .logo-icon{color:rgba(0,0,0,0.7);}
+.t-cinema .logo-icon{color:#111;}
+
+/* Specular no ícone para glass */
+.t-glass .logo-icon::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:50%;
+  background:linear-gradient(180deg,rgba(255,255,255,0.35),transparent);
+  border-radius:10px 10px 0 0;
+}
+
+.logo-top{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;color:var(--fg);}
+.logo-bot{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;color:var(--p);transition:color 0.5s ease;}
+
+/* Cinematic: logo-bot usa o laranja da logo */
+.t-cinema .logo-bot{color:#E8440A;}
+
+.user-card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;margin:10px 8px 0;
+  border-radius:12px;background:var(--p-dim);
+  border:1px solid var(--p-br);
+  flex-shrink:0;position:relative;z-index:3;
+  transition:background 0.5s ease,border-color 0.5s ease;
+}
+.avatar{
+  width:30px;height:30px;border-radius:50%;
+  background:var(--pill);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;color:#111;flex-shrink:0;
+  transition:background 0.5s ease;position:relative;overflow:hidden;
+}
+.t-glass .avatar::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:50%;
+  background:linear-gradient(180deg,rgba(255,255,255,0.3),transparent);
+  border-radius:50% 50% 0 0;
+}
+.uname{font-size:11px;font-weight:600;color:var(--fg);}
+.ucred{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:var(--p);transition:color 0.5s ease;}
+.ucred em{font-size:9px;color:var(--fg2);font-style:normal;font-weight:500;}
+
+.nav{flex:1;overflow-y:auto;padding:10px 8px;position:relative;z-index:3;}
+.nav::-webkit-scrollbar{display:none;}
+
+.nhome{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;border-radius:9px;
+  font-size:12px;font-weight:600;color:var(--fg);
+  margin-bottom:4px;cursor:pointer;text-decoration:none;
+  transition:background 0.15s;
+}
+.nhome:hover{background:var(--p-dim);}
+.nsec{margin-bottom:16px;}
+.nlbl{
+  font-size:9px;font-weight:700;letter-spacing:0.09em;
+  text-transform:uppercase;color:var(--fg2);
+  padding:0 10px 5px;opacity:0.65;
+}
+.ni{
+  display:flex;align-items:center;gap:9px;
+  padding:7px 10px;border-radius:9px;
+  font-size:12px;font-weight:500;color:var(--fg2);
+  cursor:pointer;transition:all 0.15s;
+  position:relative;text-decoration:none;margin-bottom:1px;
+}
+.ni:hover{color:var(--fg);background:var(--p-dim);}
+.ni.on{color:var(--p);font-weight:600;background:var(--active-bg);border:1px solid var(--active-br);}
+.t-cinema .ni.on{border-color:transparent;background:rgba(232,68,10,0.08);}
+.t-cinema .ni.on{color:var(--fg);}
+
+/* Active pill bar */
+.ni.on::before{
+  content:'';position:absolute;left:-1px;top:22%;bottom:22%;
+  width:2px;border-radius:0 2px 2px 0;background:var(--p);
+  transition:background 0.5s ease;
+}
+.t-cinema .ni.on::before{background:#E8440A;}
+
+.ndot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--p);margin-left:auto;flex-shrink:0;
+  animation:ndp 2s infinite;transition:background 0.5s ease;
+}
+.t-cinema .ndot{background:#E8440A;}
+@keyframes ndp{0%,100%{opacity:1;}50%{opacity:0.35;}}
+
+.nbadge{
+  margin-left:auto;
+  background:var(--acc-dim);color:var(--acc);
+  font-size:9px;font-weight:700;
+  padding:2px 7px;border-radius:20px;flex-shrink:0;
+  transition:all 0.5s ease;
+}
+.t-cinema .nbadge{background:rgba(232,68,10,0.12);color:#E8440A;}
+
+.sbf{
+  flex-shrink:0;padding:8px;
+  border-top:1px solid var(--sb-br);
+  position:relative;z-index:3;
+  transition:border-color 0.5s ease;
+}
+.lbtn{
+  display:flex;align-items:center;gap:9px;
+  width:100%;padding:8px 10px;border-radius:9px;
+  border:none;background:transparent;
+  font-size:12px;font-weight:600;color:#888;
+  cursor:pointer;transition:all 0.15s;font-family:inherit;
+}
+.lbtn:hover{background:rgba(255,255,255,0.04);color:#F87171;}
+
+/* ─── MAIN ──────────────────────────────────────────────────── */
+.main{
+  flex:1;display:flex;flex-direction:column;
+  overflow:hidden;padding:10px 10px 64px 8px;
+  min-width:0;position:relative;z-index:5;
+}
+
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 18px;
+  background:var(--card);border:1px solid var(--card-br);
+  border-radius:14px;margin-bottom:12px;flex-shrink:0;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transition:border-color 0.5s ease;position:relative;overflow:hidden;
+}
+
+/* Specular topbar glass */
+.t-glass .topbar::before{
+  content:'';position:absolute;top:0;left:15%;right:15%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);
+}
+
+.ptitle{font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:800;color:var(--fg);}
+
+/* Cinematic: título mais reservado */
+.t-cinema .ptitle{font-weight:600;letter-spacing:-0.02em;color:#E0E0E0;}
+
+.tbr{display:flex;align-items:center;gap:9px;}
+.tc2{
+  display:flex;align-items:center;gap:6px;
+  background:var(--p-dim);border:1px solid var(--p-br);
+  border-radius:8px;padding:5px 11px;
+  font-size:11px;font-weight:700;color:var(--p);
+  transition:all 0.5s ease;
+}
+.t-cinema .tc2{color:#E8440A;border-color:rgba(232,68,10,0.2);background:rgba(232,68,10,0.08);}
+.tic{
+  width:30px;height:30px;border-radius:8px;
+  background:var(--p-dim);border:1px solid var(--card-br);
+  display:flex;align-items:center;justify-content:center;
+}
+
+.cnt{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+.cnt::-webkit-scrollbar{display:none;}
+
+/* Stats */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.sc{
+  background:var(--card);border:1px solid var(--card-br);
+  border-radius:14px;padding:14px 15px;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:border-color 0.3s,transform 0.2s,box-shadow 0.2s;
+  cursor:default;position:relative;overflow:hidden;
+}
+.t-glass .sc::before{
+  content:'';position:absolute;top:0;left:20%;right:20%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);
+}
+.sc:hover{border-color:var(--p-br);transform:translateY(-2px);}
+.t-cinema .sc:hover{border-color:rgba(232,68,10,0.2);}
+.sl{font-size:9px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--fg2);margin-bottom:6px;}
+.sv{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:800;color:var(--fg);}
+.t-cinema .sv{font-weight:700;color:#E8E8E8;}
+.ssg{font-size:10px;font-weight:600;color:#4ADE80;margin-top:2px;}
+.ss2{font-size:10px;color:var(--fg2);margin-top:2px;}
+
+/* Main grid */
+.mg{display:grid;grid-template-columns:1.6fr 1fr;gap:10px;}
+.pn{
+  background:var(--card);border:1px solid var(--card-br);
+  border-radius:14px;padding:15px;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:border-color 0.5s ease;position:relative;overflow:hidden;
+}
+.t-glass .pn::before{
+  content:'';position:absolute;top:0;left:15%;right:15%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);
+}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.ct{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;color:var(--fg);}
+.t-cinema .ct{font-weight:600;color:#D0D0D0;}
+.cpill{
+  font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;
+  background:var(--p-dim);color:var(--p);border:1px solid var(--p-br);
+  transition:all 0.5s ease;
+}
+.t-cinema .cpill{background:rgba(232,68,10,0.10);color:#E8440A;border-color:rgba(232,68,10,0.20);}
+
+/* STL list */
+.slist{display:flex;flex-direction:column;gap:6px;}
+.si{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border-radius:10px;
+  background:rgba(255,255,255,0.015);border:1px solid var(--card-br);
+  cursor:pointer;transition:all 0.15s;
+}
+.si:hover{background:rgba(255,255,255,0.04);border-color:var(--p-br);}
+.t-cinema .si:hover{border-color:rgba(232,68,10,0.15);}
+.sth{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+  background:var(--p-dim);transition:background 0.5s ease;
+}
+.sn{font-size:11px;font-weight:600;color:var(--fg);}
+.sm{font-size:9px;color:var(--fg2);margin-top:1px;}
+.scst{
+  margin-left:auto;flex-shrink:0;
+  font-size:10px;font-weight:700;color:var(--p);
+  background:var(--p-dim);padding:3px 7px;border-radius:6px;
+  transition:all 0.5s ease;
+}
+.t-cinema .scst{color:#E8440A;background:rgba(232,68,10,0.10);}
+
+/* Arena */
+.ar{display:flex;flex-direction:column;gap:10px;}
+.xpr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.lvl{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--acc-dim);border:1px solid var(--p-br);
+  border-radius:7px;padding:3px 9px;
+  font-size:10px;font-weight:700;color:var(--p);
+  transition:all 0.5s ease;
+}
+.t-cinema .lvl{color:var(--fg);border-color:rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);}
+.xps{font-size:9px;color:var(--fg2);}
+.xpb{background:rgba(255,255,255,0.06);border-radius:99px;height:4px;overflow:hidden;}
+.xpf{
+  height:100%;width:68%;border-radius:99px;
+  background:var(--pill);transition:background 0.5s ease;
+}
+.t-cinema .xpf{background:linear-gradient(90deg,#E8440A,#C0C0C0);}
+.gl{display:flex;flex-direction:column;gap:5px;}
+.gb{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:9px;
+  border:1px solid var(--card-br);background:rgba(255,255,255,0.015);
+  cursor:pointer;transition:all 0.15s;
+  font-size:11px;font-weight:600;color:var(--fg2);
+}
+.gb:hover{background:rgba(255,255,255,0.04);color:var(--fg);}
+.gi{
+  width:26px;height:26px;border-radius:6px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--p-dim);transition:background 0.5s ease;
+}
+.gpt{
+  margin-left:auto;font-size:9px;font-weight:700;color:var(--p);
+  background:var(--p-dim);padding:2px 6px;border-radius:4px;
+  transition:all 0.5s ease;
+}
+.t-cinema .gpt{color:#E8440A;background:rgba(232,68,10,0.10);}
+
+/* Bottom */
+.br{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cr{display:flex;flex-direction:column;gap:6px;margin-top:7px;}
+.crow{display:flex;justify-content:space-between;}
+.cl{font-size:10px;color:var(--fg2);}
+.cv{font-size:10px;font-weight:600;color:var(--fg);}
+.cres{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 11px;border-radius:10px;margin-top:4px;
+  background:var(--p-dim);border:1px solid var(--p-br);
+  transition:all 0.5s ease;
+}
+.t-cinema .cres{background:rgba(232,68,10,0.08);border-color:rgba(232,68,10,0.18);}
+.crl{font-size:10px;font-weight:700;color:var(--p);transition:color 0.5s ease;}
+.t-cinema .crl{color:#E8440A;}
+.crv{font-family:'Plus Jakarta Sans',sans-serif;font-size:19px;font-weight:800;color:var(--p);transition:color 0.5s ease;}
+.t-cinema .crv{color:#E8440A;}
+
+.qr{display:flex;flex-direction:column;gap:7px;margin-top:7px;}
+.qrow{display:flex;justify-content:space-between;font-size:10px;color:var(--fg2);}
+.qb{font-weight:700;color:var(--fg);}
+.qt{background:rgba(255,255,255,0.06);border-radius:99px;height:4px;overflow:hidden;}
+.qfp{height:100%;background:var(--p);border-radius:99px;transition:background 0.5s ease;}
+.t-cinema .qfp{background:#E8440A;}
+.qfw{height:100%;background:#888;border-radius:99px;}
+.pp{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-top:9px;padding:5px 10px;border-radius:8px;
+  background:var(--p-dim);border:1px solid var(--p-br);
+  font-size:10px;font-weight:700;color:var(--p);
+  transition:all 0.5s ease;
+}
+.t-cinema .pp{background:rgba(232,68,10,0.08);border-color:rgba(232,68,10,0.16);color:#E8440A;}
+</style>
+</head>
+<body>
+
+<div class="dtag">
+  <strong id="tname">A · Preto + Prata</strong>
+  <span id="tdesc">Sem cor. OLED puro. Hierarquia em prata.</span>
+</div>
+
+<div class="switcher">
+  <button class="sw on" onclick="set('prata',this)">
+    <span class="dot" style="background:linear-gradient(135deg,#D4D4D4,#707070)"></span>A · Preto + Prata
+  </button>
+  <button class="sw" onclick="set('glass',this)">
+    <span class="dot" style="background:linear-gradient(135deg,rgba(255,255,255,0.9),rgba(180,160,255,0.8))"></span>B · Liquid Glass
+  </button>
+  <button class="sw" onclick="set('cinema',this)">
+    <span class="dot" style="background:linear-gradient(135deg,#C8C8C8,#E8440A)"></span>C · Cinematic
+  </button>
+</div>
+
+<div class="app t-prata" id="app">
+  <div class="mesh"><div class="mesh-extra"></div></div>
+  <div class="grain"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <div class="sb-logo">
+      <div class="logo-icon">LB</div>
+      <div style="display:flex;flex-direction:column;line-height:1.1;">
+        <span class="logo-top">Creative</span>
+        <span class="logo-bot">Studio</span>
+      </div>
+    </div>
+
+    <div class="user-card">
+      <div class="avatar">GG</div>
+      <div>
+        <div class="uname">GGobetti</div>
+        <div class="ucred">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          85 créditos <em>restantes</em>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nhome">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+
+      <div class="nsec">
+        <div class="nlbl">Descobrir</div>
+        <a class="ni on">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Busca de STLs
+          <div class="ndot"></div>
+        </a>
+        <a class="ni">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 19H14v1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 5H10V3.5C10 2.67 9.33 2 8.5 2S7 2.67 7 3.5 7.67 5 8.5 5z"/></svg>
+          Arena de Curação
+          <span class="nbadge">+XP</span>
+        </a>
+        <a class="ni">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          Hub Maker
+        </a>
+      </div>
+
+      <div class="nsec">
+        <div class="nlbl">Meu Negócio</div>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Calculadora<div class="ndot"></div></a>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Portfólio</a>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Clientes</a>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Cotações</a>
+      </div>
+
+      <div class="nsec">
+        <div class="nlbl">Conta</div>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Assinatura & Créditos</a>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>Perfil & Configurações</a>
+        <a class="ni"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Suporte</a>
+      </div>
+    </nav>
+
+    <div class="sbf">
+      <button class="lbtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="ptitle">Busca de STLs</div>
+      <div class="tbr">
+        <div class="tc2">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          85 créditos
+        </div>
+        <div class="tic">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--fg2)"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="cnt">
+      <div class="sg">
+        <div class="sc"><div class="sl">STLs no Acervo</div><div class="sv">12.4k</div><div class="ssg">↑ +340 esta semana</div></div>
+        <div class="sc"><div class="sl">Downloads do Mês</div><div class="sv">23</div><div class="ss2">de 100 no plano Pro</div></div>
+        <div class="sc"><div class="sl">Pontos na Arena</div><div class="sv">1.850</div><div class="ssg">Nível 7 · Curador</div></div>
+        <div class="sc"><div class="sl">Cotações Abertas</div><div class="sv">3</div><div class="ss2">2 aguardando resposta</div></div>
+      </div>
+
+      <div class="mg">
+        <div class="pn">
+          <div class="ch"><div class="ct">STLs em Destaque</div><div class="cpill">12.400 disponíveis</div></div>
+          <div class="slist">
+            <div class="si"><div class="sth">🏗️</div><div><div class="sn">Suporte para Mesa Articulado v2</div><div class="sm">Ferramentas · 42 downloads · ⭐ 4.8</div></div><div class="scst">1 crédito</div></div>
+            <div class="si"><div class="sth">🦾</div><div><div class="sn">Garra Robótica Completa MK3</div><div class="sm">Robótica · 128 downloads · ⭐ 4.9</div></div><div class="scst">2 créditos</div></div>
+            <div class="si"><div class="sth">🌿</div><div><div class="sn">Vaso Generativo Espiral</div><div class="sm">Decoração · 67 downloads · ⭐ 4.6</div></div><div class="scst">1 crédito</div></div>
+            <div class="si"><div class="sth">⚙️</div><div><div class="sn">Kit Engrenagens Paramétrico</div><div class="sm">Mecânica · 89 downloads · ⭐ 4.7</div></div><div class="scst">1 crédito</div></div>
+          </div>
+        </div>
+        <div class="pn ar">
+          <div class="ch"><div class="ct">Arena de Curação</div><div class="cpill">+240 pts hoje</div></div>
+          <div>
+            <div class="xpr"><div class="lvl">⚡ Nível 7 · Curador</div><span class="xps">1850 / 2500 XP</span></div>
+            <div class="xpb"><div class="xpf"></div></div>
+          </div>
+          <div class="gl">
+            <div class="gb"><div class="gi"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--p)"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>PhotoMatch<span class="gpt">+15 pts</span></div>
+            <div class="gb"><div class="gi"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--p)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>CategorySort<span class="gpt">+25 pts</span></div>
+            <div class="gb"><div class="gi"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--p)"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>TagDetective<span class="gpt">+20 pts</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="br">
+        <div class="pn">
+          <div class="ch"><div class="ct">Calculadora Maker</div></div>
+          <div class="cr">
+            <div class="crow"><span class="cl">Filamento</span><span class="cv">124g</span></div>
+            <div class="crow"><span class="cl">Tempo de impressão</span><span class="cv">4h 30min</span></div>
+            <div class="crow"><span class="cl">Margem desejada</span><span class="cv">40%</span></div>
+            <div class="cres"><span class="crl">Preço sugerido</span><span class="crv">R$ 67,50</span></div>
+          </div>
+        </div>
+        <div class="pn">
+          <div class="ch"><div class="ct">Plano Pro</div></div>
+          <div class="qr">
+            <div class="qrow"><span>Downloads usados</span><span class="qb">23 / 100</span></div>
+            <div class="qt"><div class="qfp" style="width:23%"></div></div>
+            <div class="qrow"><span>Renova em</span><span class="qb">12 dias</span></div>
+            <div class="qt"><div class="qfw" style="width:60%"></div></div>
+          </div>
+          <div class="pp">⭐ Plano Pro · R$ 29/mês</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const info = {
+  prata:  { name:'A · Preto + Prata', desc:'Sem cor. OLED puro. Hierarquia em prata — Apple Watch Ultra, Leica.', cls:'t-prata' },
+  glass:  { name:'B · Liquid Glass', desc:'iOS 26 / Apple Intelligence. Mesh gradient animado atrás. Vidro real com specular.', cls:'t-glass' },
+  cinema: { name:'C · Cinematic', desc:'Preto profundo, platina, grain de filme. Laranja da logo só nos CTAs — Linear.app vibe.', cls:'t-cinema' },
+};
+function set(name, btn) {
+  const t = info[name];
+  document.getElementById('app').className = 'app ' + t.cls;
+  document.getElementById('tname').textContent = t.name;
+  document.getElementById('tdesc').textContent = t.desc;
+  document.querySelectorAll('.sw').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+}
+</script>
+</body>
+</html>

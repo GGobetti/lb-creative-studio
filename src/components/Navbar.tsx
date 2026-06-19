@@ -8,16 +8,21 @@ import { useRouter } from 'next/navigation'
 import { Zap, LogOut, User, ChevronDown, LayoutDashboard, Folder, ShieldAlert } from 'lucide-react'
 import { useConfiguratorStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useTranslation } from '@/lib/translations'
 
 export function Navbar() {
-  const { profile, logout } = useConfiguratorStore()
+  const { profile, logout, xpSummary, refreshXpSummary } = useConfiguratorStore()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const { t } = useTranslation()
+
+  useEffect(() => {
+    if (profile) refreshXpSummary()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id])
 
   const handleLogout = async () => {
     const supabase = getSupabaseBrowser()
@@ -32,9 +37,11 @@ export function Navbar() {
 
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2.5 shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-primary
-                        flex items-center justify-center shadow-lg shadow-primary/30">
-          <span className="text-primary-foreground font-black text-sm">LB</span>
+        <div className="w-8 h-8 rounded-lg
+                        bg-gradient-to-br from-violet-500/90 to-blue-500/80
+                        dark:border dark:border-white/20
+                        flex items-center justify-center shadow-lg">
+          <span className="text-white font-black text-sm">LB</span>
         </div>
         <span className="font-bold text-foreground text-sm tracking-tight hidden sm:inline">
           Creative <span className="text-primary">Studio</span>
@@ -65,6 +72,24 @@ export function Navbar() {
             {t('common.crd', 'crd')}
           </span>
         </div>
+      )}
+
+      {/* XP badge */}
+      {profile && xpSummary && (
+        <Link
+          href="/dashboard/profile?tab=xp"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                     bg-amber-500/10 border border-amber-500/20
+                     hover:bg-amber-500/20 transition-colors"
+        >
+          <span className="text-sm">{xpSummary.current_level.badge_icon}</span>
+          <span className="text-sm font-semibold text-amber-500">
+            {xpSummary.xp_total.toLocaleString('pt-BR')} XP
+          </span>
+          <span className="text-xs text-amber-500/60 hidden sm:inline">
+            · {xpSummary.current_level.name}
+          </span>
+        </Link>
       )}
 
       {/* User menu */}

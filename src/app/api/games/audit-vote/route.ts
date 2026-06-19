@@ -63,6 +63,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Read xp_per_action from config
+    const { data: xpConfig } = await supabase
+      .from('game_rewards_config')
+      .select('xp_per_action')
+      .eq('game_type', game_type)
+      .single() as any
+    const xpPerAction = xpConfig?.xp_per_action ?? 15
+
+    // Award XP
+    const { data: xpData, error: xpError } = await supabase
+      .rpc('award_xp', {
+        p_user_id: user.id,
+        p_game_type: game_type,
+        p_xp_amount: xpPerAction,
+      })
+      .single() as any
+    if (xpError) console.error('[AUDIT-VOTE] XP error (non-fatal):', xpError)
+
     // 2. Insert vote (will auto-trigger recompute_audit_result)
     console.log('[AUDIT-VOTE] Inserting vote:', {
       auditorId: user.id,
@@ -128,6 +146,9 @@ export async function POST(request: NextRequest) {
       can_continue: canContinue,
       actions_remaining: actionResult?.actions_remaining || 0,
       credits_remaining: actionResult?.credits_remaining || 0,
+      xp_earned: xpData?.xp_earned ?? 0,
+      level_up: xpData?.level_up ?? false,
+      new_level: xpData?.new_level ?? null,
     })
   } catch (error) {
     console.error('Audit vote error:', error)

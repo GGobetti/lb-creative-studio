@@ -12,25 +12,51 @@ export const dynamic = 'force-dynamic'
 
 export default async function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
+    <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20 relative overflow-hidden">
+
+      {/* Liquid Glass mesh — absolute so backdrop-filter on glass elements blurs it */}
+      <div aria-hidden className="absolute inset-0 z-0 overflow-hidden pointer-events-none dark:block hidden">
+        <div
+          className="absolute -top-[20%] -left-[10%] w-[60%] h-[80%] animate-blob-1 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(120,80,255,0.18) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute -bottom-[20%] -right-[10%] w-[55%] h-[75%] animate-blob-2 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(0,160,255,0.14) 0%, transparent 65%)' }}
+        />
+        <div
+          className="absolute top-[30%] left-[40%] w-[40%] h-[50%] animate-blob-3 rounded-full"
+          style={{ background: 'radial-gradient(ellipse, rgba(255,80,120,0.08) 0%, transparent 65%)' }}
+        />
+      </div>
+
       <Navbar />
 
-      <main className="flex-1">
+      <main className="flex-1 relative z-10">
         <Hero />
-        
+
         <Features />
-        
-        {/* Simple CTA */}
-        <section className="py-24 bg-primary relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent opacity-50" />
+
+        {/* CTA — solid brand color in light, glass in dark */}
+        <section className="py-24 relative overflow-hidden
+                            bg-primary dark:bg-transparent
+                            dark:border-t dark:border-white/10">
+          {/* Light mode radial overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 to-transparent opacity-50 dark:hidden" />
+          {/* Dark mode glass overlay */}
+          <div className="absolute inset-0 dark:block hidden"
+            style={{ background: 'radial-gradient(ellipse at 50% 50%, rgba(120,80,255,0.15) 0%, transparent 70%)' }}
+          />
           <div className="container mx-auto px-6 relative z-10 text-center">
-            <h2 className="text-3xl md:text-5xl font-black text-white mb-8">
+            <h2 className="text-3xl md:text-5xl font-black text-white dark:text-foreground mb-8">
               Pronto para imprimir seu primeiro projeto?
             </h2>
             <a
               href="/login?mode=signup"
-              className="inline-block px-10 py-5 bg-white text-primary rounded-2xl font-black text-xl 
-                         shadow-2xl hover:scale-105 transition-transform"
+              className="inline-block px-10 py-5 rounded-2xl font-black text-xl shadow-2xl
+                         hover:scale-105 transition-transform
+                         bg-white text-primary
+                         dark:bg-white/10 dark:text-foreground dark:border dark:border-white/20 dark:backdrop-blur-xl"
             >
               Começar Agora Gratuitamente
             </a>
@@ -38,7 +64,7 @@ export default async function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border py-12 px-6 bg-card">
+      <footer className="border-t border-border py-12 px-6 bg-card relative z-10">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-2">
             <div className="flex items-center gap-2.5 mb-6">

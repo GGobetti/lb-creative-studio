@@ -25,7 +25,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings } = useConfiguratorStore(
+  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings, refreshXpSummary } = useConfiguratorStore(
     useShallow((s) => ({
       user: s.user,
       setUser: s.setUser,
@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: s.logout,
       pricingSettings: s.pricingSettings,
       setPricingSettings: s.setPricingSettings,
+      refreshXpSummary: s.refreshXpSummary,
     }))
   )
   const skipSyncRef = useRef<boolean>(true)
@@ -69,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profile = await fetchProfile(user.id)
         if (isMounted && profile) {
           setProfile(profile)
+          refreshXpSummary()
 
           // Buscar pricing settings do banco
           const supabase = getSupabaseBrowser()
@@ -135,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false
       supabase.removeChannel(profileChannel)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, setProfile, setPricingSettings])
 
   // 3. Sincronizar pricingSettings alterados com o banco (Debounced)

@@ -46,12 +46,7 @@ const SUBSCRIPTION_PLANS = [
     bgColor: "bg-card",
     badgeVariant: "muted" as const,
     iconBg: "bg-muted",
-    features: [
-      "Acesso ao catálogo básico",
-      "Calculadora de precificação",
-      "Até 5 clientes no CRM",
-      "Custo extra por exportação",
-    ],
+    featureKeys: ["billing.freeFeature1", "billing.freeFeature2", "billing.freeFeature3", "billing.freeFeature4"],
   },
   {
     id: "pro",
@@ -64,12 +59,7 @@ const SUBSCRIPTION_PLANS = [
     badgeVariant: "default" as const,
     iconBg: "bg-primary/10",
     highlight: true,
-    features: [
-      "Tudo do Free",
-      "Sem limite de clientes no CRM",
-      "100 Créditos Mensais inclusos",
-      "Suporte prioritário",
-    ],
+    featureKeys: ["billing.proFeature1", "billing.proFeature2", "billing.proFeature3", "billing.proFeature4"],
   },
   {
     id: "max",
@@ -81,18 +71,13 @@ const SUBSCRIPTION_PLANS = [
     bgColor: "bg-warning/3",
     badgeVariant: "warning" as const,
     iconBg: "bg-warning/10",
-    features: [
-      "Tudo do Pro",
-      "Exportações ilimitadas grátis",
-      "Acesso à API (em breve)",
-      "Marketplace (em breve)",
-    ],
+    featureKeys: ["billing.maxFeature1", "billing.maxFeature2", "billing.maxFeature3", "billing.maxFeature4"],
   },
 ]
 
 export default function BillingPage() {
   const { profile } = useConfiguratorStore()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
@@ -105,7 +90,7 @@ export default function BillingPage() {
         body: JSON.stringify({ itemId, type }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || "Erro ao iniciar checkout")
+      if (!response.ok) throw new Error(data.error || t("billing.errorCheckout"))
       if (data.url) window.location.href = data.url
     } catch (err: any) {
       toast(err.message, "error")
@@ -115,16 +100,19 @@ export default function BillingPage() {
   }
 
   const formatBRL = (value: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
+    new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US', {
+      style: "currency",
+      currency: "BRL",
+    }).format(value)
 
   const currentPlan = profile?.plan || "free"
 
   return (
     <div className="space-y-8 pb-12">
       <PageHeader
-        title="Faturamento & Assinatura"
-        subtitle="Gerencie seu plano, créditos e métodos de pagamento."
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Faturamento" }]}
+        title={t("billing.title")}
+        subtitle={t("billing.subtitle")}
+        breadcrumbs={[{ label: t("nav.dashboard"), href: "/dashboard" }, { label: t("billing.title") }]}
       />
 
       {/* Current status strip */}
@@ -134,10 +122,10 @@ export default function BillingPage() {
             <Zap className="w-6 h-6 text-primary fill-primary" />
           </div>
           <div className="min-w-0">
-            <p className="text-label text-muted-foreground mb-0.5">Saldo de créditos</p>
+            <p className="text-label text-muted-foreground mb-0.5">{t("billing.creditBalance")}</p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-heading text-3xl text-foreground">{profile?.credits ?? 0}</span>
-              <span className="text-sm text-muted-foreground font-medium">créditos disponíveis</span>
+              <span className="text-sm text-muted-foreground font-medium">{t("billing.creditsAvailable")}</span>
             </div>
           </div>
           <button
@@ -146,7 +134,7 @@ export default function BillingPage() {
             className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-primary shrink-0 disabled:opacity-50"
           >
             {loadingId === "pack_200" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            Recarregar
+            {t("billing.reload")}
           </button>
         </div>
 
@@ -163,11 +151,11 @@ export default function BillingPage() {
             )}
           </div>
           <div>
-            <p className="text-label text-muted-foreground mb-0.5">Plano atual</p>
+            <p className="text-label text-muted-foreground mb-0.5">{t("billing.currentPlan")}</p>
             <div className="flex items-center gap-2">
               <span className="text-heading text-xl text-foreground capitalize">{currentPlan}</span>
               {currentPlan !== "free" && (
-                <StatusBadge variant="success" dot size="sm">Ativo</StatusBadge>
+                <StatusBadge variant="success" dot size="sm">{t("billing.active")}</StatusBadge>
               )}
             </div>
           </div>
@@ -176,7 +164,7 @@ export default function BillingPage() {
 
       {/* Subscription Plans */}
       <div>
-        <h2 className="text-heading text-lg text-foreground mb-4">Planos de Assinatura</h2>
+        <h2 className="text-heading text-lg text-foreground mb-4">{t("billing.subscriptionPlans")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {SUBSCRIPTION_PLANS.map((plan, idx) => {
             const isCurrentPlan = currentPlan === plan.id
@@ -197,13 +185,13 @@ export default function BillingPage() {
                   <div className={`absolute -top-3 left-5 px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider shadow-sm ${
                     plan.id === "max" ? "bg-warning" : plan.id === "pro" ? "bg-primary" : "bg-muted-foreground"
                   }`}>
-                    Seu Plano
+                    {t("billing.yourPlan")}
                   </div>
                 )}
 
                 {plan.highlight && !isCurrentPlan && (
                   <div className="absolute -top-3 left-5 px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-primary-foreground uppercase tracking-wider shadow-primary">
-                    Mais Popular
+                    {t("billing.mostPopular")}
                   </div>
                 )}
 
@@ -217,18 +205,18 @@ export default function BillingPage() {
                 <div className="mb-5">
                   <div className="flex items-baseline gap-1">
                     <span className="text-heading text-3xl text-foreground">{formatBRL(plan.price)}</span>
-                    {plan.price > 0 && <span className="text-sm text-muted-foreground">/mês</span>}
+                    {plan.price > 0 && <span className="text-sm text-muted-foreground">{t("billing.perMonth")}</span>}
                   </div>
                   {plan.price === 0 && (
-                    <span className="text-sm text-muted-foreground">Gratuito para sempre</span>
+                    <span className="text-sm text-muted-foreground">{t("billing.freeForever")}</span>
                   )}
                 </div>
 
                 <ul className="space-y-2.5 mb-6 flex-1">
-                  {plan.features.map((feature, i) => (
+                  {plan.featureKeys.map((key, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                       <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.color}`} />
-                      <span>{feature}</span>
+                      <span>{t(key)}</span>
                     </li>
                   ))}
                 </ul>
@@ -249,10 +237,10 @@ export default function BillingPage() {
                   {loadingId === plan.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : isCurrentPlan ? (
-                    "Plano Atual"
+                    t("billing.currentPlanBtn")
                   ) : (
                     <>
-                      Assinar {plan.name}
+                      {t("billing.subscribe")} {plan.name}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -266,8 +254,8 @@ export default function BillingPage() {
       {/* Credit Packages */}
       <div>
         <div className="flex items-baseline justify-between mb-4">
-          <h2 className="text-heading text-lg text-foreground">Comprar Créditos Avulsos</h2>
-          <p className="text-xs text-muted-foreground">Sem validade — use quando quiser</p>
+          <h2 className="text-heading text-lg text-foreground">{t("billing.buyCredits")}</h2>
+          <p className="text-xs text-muted-foreground">{t("billing.noExpiry")}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {CREDIT_PACKAGES.map((pack, idx) => (
@@ -284,7 +272,7 @@ export default function BillingPage() {
             >
               {pack.popular && (
                 <div className="absolute -top-3 left-5 px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-primary-foreground uppercase tracking-wider shadow-primary">
-                  Melhor custo-benefício
+                  {t("billing.bestValue")}
                 </div>
               )}
 
@@ -295,7 +283,7 @@ export default function BillingPage() {
                   </div>
                   <div>
                     <p className="text-heading text-2xl text-foreground leading-none">{pack.credits}</p>
-                    <p className="text-xs text-muted-foreground">créditos</p>
+                    <p className="text-xs text-muted-foreground">{t("billing.credits")}</p>
                   </div>
                 </div>
                 {pack.saving && (
@@ -322,7 +310,7 @@ export default function BillingPage() {
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    Comprar {pack.credits} crd
+                    {t("billing.buy")} {pack.credits} crd
                   </>
                 )}
               </button>

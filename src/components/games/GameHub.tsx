@@ -116,7 +116,7 @@ export function GameHub() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-display text-2xl gradient-text">Arena de Curação</h1>
+          <h1 className="text-display text-2xl gradient-text">Gaming Lab XP</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Ajude a melhorar o catálogo e ganhe créditos
           </p>

@@ -536,8 +536,8 @@ export default function StlSearchPage() {
             <PackageSearch className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-base font-black tracking-tight text-foreground leading-tight">Global STL Search</h1>
-            <p className="text-xs text-muted-foreground leading-tight">Modelos 3D da rede de canais do Telegram</p>
+            <h1 className="text-base font-black tracking-tight text-foreground leading-tight">Garimpo 3D</h1>
+            <p className="text-xs text-muted-foreground leading-tight">Sua mina de STLs prontos para impressão</p>
           </div>
         </div>
         <div className="flex-1">

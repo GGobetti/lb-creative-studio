@@ -9,7 +9,6 @@ import {
   LogOut,
   Folder,
   Search,
-  Settings,
   Users,
   FileText,
   LifeBuoy,
@@ -94,34 +93,28 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     items: { name: string; href: string; icon: any; highlight?: boolean }[]
   }[] = [
     {
-      title: t("sidebar.tools", "Ferramentas"),
+      title: t("sidebar.discover", "Descobrir"),
       items: [
-        { name: t("sidebar.stlSearch", "Busca STL"), href: "/dashboard/stl-search", icon: Search, highlight: true },
-        { name: t("sidebar.calculator", "Calculadora"), href: "/dashboard/calculator", icon: Calculator, highlight: true },
+        { name: t("sidebar.stlSearch", "Garimpo 3D"), href: "/dashboard/stl-search", icon: Search, highlight: true },
+        { name: t("sidebar.curation", "Gaming Lab XP"), href: "/dashboard/games", icon: Swords, highlight: true },
+        { name: t("sidebar.makerHub", "Hub Maker"), href: "/dashboard/hub", icon: BookOpen },
       ],
     },
     {
-      title: t("sidebar.management", "Gestão"),
+      title: t("sidebar.myBusiness", "Meu Negócio"),
       items: [
+        { name: t("sidebar.calculator", "Calculadora"), href: "/dashboard/calculator", icon: Calculator, highlight: true },
         { name: t("sidebar.portfolio", "Portfólio"), href: "/dashboard/portfolio", icon: Folder },
         { name: t("sidebar.customers", "Clientes"), href: "/dashboard/customers", icon: Users },
         { name: t("sidebar.quotations", "Cotações"), href: "/dashboard/quotations", icon: FileText },
       ],
     },
     {
-      title: t("sidebar.platform", "Plataforma"),
+      title: t("sidebar.account", "Conta"),
       items: [
-        { name: t("sidebar.billing", "Assinatura & Créditos"), href: "/dashboard/billing", icon: CreditCard, highlight: true },
-        { name: t("sidebar.setupCosts", "Setup / Custos"), href: "/dashboard/settings", icon: Settings },
-        { name: t("sidebar.makerHub", "Hub Maker"), href: "/dashboard/hub", icon: BookOpen },
-        { name: t("sidebar.profile", "Meu Perfil"), href: "/dashboard/profile", icon: User },
+        { name: t("sidebar.billing", "Assinatura & Créditos"), href: "/dashboard/billing", icon: CreditCard },
+        { name: t("sidebar.profileSettings", "Perfil & Configurações"), href: "/dashboard/profile", icon: User },
         { name: t("sidebar.tickets", "Suporte / Chamados"), href: "/dashboard/tickets", icon: LifeBuoy },
-      ],
-    },
-    {
-      title: "Comunidade",
-      items: [
-        { name: "Arena de Curação", href: "/dashboard/games", icon: Swords, highlight: true },
       ],
     },
   ]
@@ -170,14 +163,20 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     <>
       <aside
         className={`
-          fixed inset-y-0 left-0 z-40 flex w-64 flex-col
+          fixed inset-y-0 left-0 z-40 flex w-64 flex-col relative overflow-hidden
           transition-transform duration-300 ease-in-out
           lg:my-4 lg:ml-4 lg:h-[calc(100vh-2rem)] lg:rounded-2xl lg:shadow-overlay lg:static lg:translate-x-0
-          bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)]
+          bg-[var(--sidebar-bg)] glass-sidebar border-r border-[var(--sidebar-border)]
           lg:border lg:border-[var(--sidebar-border)]
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
+        {/* Liquid Glass — specular highlight on top edge */}
+        <div
+          aria-hidden
+          className="absolute top-0 left-[10%] right-[10%] h-px pointer-events-none z-10 hidden dark:block"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent)' }}
+        />
         {/* Logo */}
         <div className="flex h-16 items-center justify-between border-b border-[var(--sidebar-border)] px-5 lg:rounded-t-2xl shrink-0">
           <Link href="/dashboard" className="flex items-center gap-2.5" onClick={onClose}>
