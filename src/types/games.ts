@@ -24,7 +24,7 @@ export interface SortableStl {
   id: string
   imageUrl: string
   title: string
-  correctCategory: string
+  description: string
 }
 
 export interface CategorySortRound {
@@ -68,12 +68,20 @@ export const GAME_CONFIGS = {
 } as const
 
 export const STL_CATEGORIES = [
-  'Figurines',
-  'Funcional',
-  'Joalheria',
-  'Esportes',
   'Decoração',
+  'Esportes',
+  'Utilidades',
+  'Jogos & Board Games',
+  'Desenhos & Anime',
+  'Esculturas & Arte',
+  'Miniaturas & RPG',
+  'Brinquedos',
+  'Veículos',
+  'Personagens & Figuras',
+  'Casa & Cozinha',
+  'Natureza & Animais',
   'Ferramentas',
   'Educação',
+  'Joalheria & Acessórios',
   'Outros',
 ]

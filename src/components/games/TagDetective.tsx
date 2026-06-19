@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Image as ImageIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { loadTagDetectiveQuestions } from '@/lib/gameDataLoader'
+import { getSupabaseBrowser } from '@/lib/supabase'
 import type { TagDetectiveQuestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
 import { SessionProgress } from './shared/SessionProgress'
@@ -12,10 +13,11 @@ import { CreditsPopup } from './shared/CreditsPopup'
 import { SessionResult } from './shared/SessionResult'
 import { cn } from '@/lib/utils'
 
-const POINTS_PER_ACTION = 10
+const POINTS_PER_ACTION = 5
 
 export function TagDetective() {
   const router = useRouter()
+  const accessTokenRef = useRef<string | null>(null)
 
   const [questions, setQuestions] = useState<TagDetectiveQuestion[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,6 +33,9 @@ export function TagDetective() {
     loadTagDetectiveQuestions(8).then((data) => {
       setQuestions(data.sort(() => Math.random() - 0.5))
       setLoading(false)
+    })
+    getSupabaseBrowser().auth.getSession().then((res: { data: { session: { access_token: string } | null } }) => {
+      accessTokenRef.current = res.data.session?.access_token ?? null
     })
   }, [])
 
@@ -58,8 +63,27 @@ export function TagDetective() {
   const handleConfirm = useCallback(() => {
     if (confirmed || markedIndices.size === 0) return
     setConfirmed(true)
+
+    const currentQuestion = questions[currentIdx]
+    const allTags = currentQuestion.tags
+    const markedTags = [...markedIndices].map((i) => allTags[i].text)
+
+    // Post votes asynchronously
+    fetch('/api/games/tag-detective-vote', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessTokenRef.current}`,
+      },
+      body: JSON.stringify({
+        stl_id: currentQuestion.id,
+        irrelevant_tags: markedTags,
+        all_tags: allTags.map((t) => t.text),
+      }),
+    }).catch(console.error)
+
     advance(POINTS_PER_ACTION)
-  }, [confirmed, markedIndices, advance])
+  }, [confirmed, markedIndices, advance, questions, currentIdx])
 
   const handleSkip = useCallback(() => {
     if (confirmed) return

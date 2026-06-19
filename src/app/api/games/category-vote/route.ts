@@ -1,0 +1,58 @@
+import { getSupabaseUserClient } from '@/lib/supabase'
+import { NextRequest, NextResponse } from 'next/server'
+import { STL_CATEGORIES } from '@/types/games'
+
+export async function POST(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = getSupabaseUserClient(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { stl_id, categories, suggested_categories } = await request.json()
+
+    if (!stl_id || !Array.isArray(categories)) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Validate standard categories
+    const validCategories = categories.filter((c: string) => STL_CATEGORIES.includes(c))
+
+    // Record game action and earn credits
+    const { data: actionResult, error: actionError } = await supabase
+      .rpc('record_game_action', {
+        p_user_id: user.id,
+        p_game_type: 'category-sort',
+      })
+      .single() as any
+
+    if (actionError) {
+      return NextResponse.json({ error: 'Erro ao registrar ação', debug: actionError }, { status: 400 })
+    }
+
+    const creditsEarned = actionResult?.credits_earned || 0
+    if (!actionResult?.can_continue) {
+      return NextResponse.json({ error: 'Limite diário atingido' }, { status: 429 })
+    }
+
+    // Insert vote
+    const { error: insertError } = await supabase.from('category_votes').insert({
+      user_id: user.id,
+      stl_id,
+      categories: validCategories,
+      suggested_categories: suggested_categories || [],
+    })
+
+    if (insertError) {
+      console.error('[CATEGORY-VOTE] Insert error:', insertError)
+    }
+
+    return NextResponse.json({ success: true, credits_earned: creditsEarned })
+  } catch (error) {
+    console.error('[CATEGORY-VOTE] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
