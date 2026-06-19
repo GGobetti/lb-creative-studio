@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10 print:h-auto print:overflow-visible">
 
         {/* Top Header */}
-        <header className="h-14 flex items-center justify-between px-5 border-b border-border/60 bg-card/60 backdrop-blur-xl saturate-150 print:hidden z-20 relative shrink-0 overflow-hidden
+        <header className="h-14 flex items-center justify-between px-5 border-b border-border/60 bg-card/60 backdrop-blur-xl saturate-150 print:hidden z-20 relative shrink-0
                            lg:mt-4 lg:mr-4 lg:rounded-2xl lg:border lg:border-border/60 lg:shadow-card lg:ml-0 transition-all duration-300">
 
           {/* Mobile hamburger */}
