@@ -312,8 +312,19 @@ Semana atual (sem atividade ainda) não quebra o streak — só a semana passada
 
 ---
 
-## Open Questions (para decidir na implementação)
+## Decisions Closed
 
-- Qual biblioteca de gráficos usar? Recharts é leve e compatível com Tailwind. Confirmar se já está no projeto ou adicionar.
-- A taxa de conversão XP → créditos deve ter um mínimo resgatável (ex: mínimo 100 XP por resgate)?
-- Resgatar XP deve ter cooldown além do limite diário?
+- **Biblioteca de gráficos:** Apache ECharts via `echarts-for-react`. Suporta gradientes, barras empilhadas animadas e dark mode nativo — visual adequado para dashboard de gamificação. Adicionar dependência `echarts` + `echarts-for-react`.
+- **Taxa de conversão XP → créditos:** configurável pelo admin via `xp_config.xp_to_credits_rate`. Sem mínimo de resgate hardcoded — mínimo pode ser definido no painel (campo `min_redeem_xp`, default 100).
+- **Limite diário de resgate:** configurável via `xp_config.max_redeem_per_day`. Sem cooldown adicional além do limite diário.
+
+### Adição ao `xp_config`
+
+```sql
+ALTER TABLE xp_config ADD COLUMN min_redeem_xp int NOT NULL DEFAULT 100;
+```
+
+Admin panel expõe os três campos de `xp_config`:
+- Taxa de conversão (`xp_to_credits_rate`)
+- Mínimo por resgate (`min_redeem_xp`)
+- Limite diário (`max_redeem_per_day`)
