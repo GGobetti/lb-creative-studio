@@ -161,11 +161,11 @@ export default function DashboardPage() {
           initial="hidden"
           animate="visible"
           whileHover={{ y: -3 }}
-          className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-primary to-violet-600 rounded-3xl p-7 text-white shadow-overlay flex flex-col justify-between min-h-[240px] group border border-white/10"
+          className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-indigo-700 to-violet-700 rounded-3xl p-7 text-white shadow-overlay flex flex-col justify-between min-h-[240px] group border border-white/10"
         >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)] pointer-events-none" />
-          <div className="absolute top-0 right-0 w-56 h-56 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-          <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-400/20 rounded-full blur-2xl mr-6 -mb-10 pointer-events-none" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-56 h-56 bg-violet-400/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-40 h-40 bg-indigo-300/10 rounded-full blur-2xl mr-6 -mb-10 pointer-events-none" />
 
           <div className="relative z-10 space-y-3">
             <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -173,7 +173,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <h2 className="text-display text-xl leading-tight">Garimpo 3D</h2>
-              <p className="text-sm text-white/75 mt-1 leading-relaxed max-w-sm">
+              <p className="text-sm text-white/80 font-medium mt-1 leading-relaxed max-w-sm">
                 Sua mina de STLs prontos para impressão. Descubra, baixe e imprima milhares de modelos.
               </p>
             </div>
@@ -200,11 +200,11 @@ export default function DashboardPage() {
           initial="hidden"
           animate="visible"
           whileHover={{ y: -3 }}
-          className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 rounded-3xl p-7 text-white shadow-overlay flex flex-col justify-between min-h-[240px] group border border-white/10"
+          className="relative overflow-hidden bg-gradient-to-br from-violet-900 via-purple-700 to-fuchsia-700 rounded-3xl p-7 text-white shadow-overlay flex flex-col justify-between min-h-[240px] group border border-white/10"
         >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)] pointer-events-none" />
-          <div className="absolute top-0 right-0 w-56 h-56 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-          <div className="absolute bottom-0 right-0 w-40 h-40 bg-fuchsia-400/20 rounded-full blur-2xl mr-6 -mb-10 pointer-events-none" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)] pointer-events-none" />
+          <div className="absolute top-0 right-0 w-56 h-56 bg-fuchsia-400/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-300/10 rounded-full blur-2xl mr-6 -mb-10 pointer-events-none" />
 
           <div className="relative z-10 space-y-3">
             <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -212,7 +212,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <h2 className="text-display text-xl leading-tight">Calculadora de Precificação</h2>
-              <p className="text-sm text-white/75 mt-1 leading-relaxed max-w-sm">
+              <p className="text-sm text-white/80 font-medium mt-1 leading-relaxed max-w-sm">
                 Calcule o preço real incluindo filamento, energia, margem e taxas de marketplace.
               </p>
             </div>
