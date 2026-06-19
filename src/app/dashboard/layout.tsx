@@ -27,12 +27,13 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags } = useConfiguratorStore(
+  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags, xpSummary } = useConfiguratorStore(
     useShallow((s) => ({
       profile: s.profile,
       creditModalOpen: s.creditModalOpen,
       setCreditModalOpen: s.setCreditModalOpen,
       setFeatureFlags: s.setFeatureFlags,
+      xpSummary: s.xpSummary,
     }))
   )
   const handleLogout = useLogout()
@@ -133,6 +134,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span>{profile.credits}</span>
                 <span className="text-primary/60 font-normal">crd</span>
               </button>
+            )}
+
+            {/* XP pill */}
+            {profile && xpSummary && (
+              <Link
+                href="/dashboard/profile?tab=xp"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                           bg-amber-500/10 border border-amber-500/20 text-xs font-bold
+                           hover:bg-amber-500/20 hover:scale-105 active:scale-95
+                           transition-all shadow-sm"
+              >
+                <span>{xpSummary.current_level.badge_icon}</span>
+                <span className="text-amber-500">{xpSummary.xp_total.toLocaleString('pt-BR')} XP</span>
+                <span className="text-amber-500/60 font-normal hidden sm:inline">· {xpSummary.current_level.name}</span>
+              </Link>
             )}
 
             <LanguageSwitcher />
