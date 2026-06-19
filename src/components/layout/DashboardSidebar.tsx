@@ -24,7 +24,8 @@ import {
 } from "lucide-react"
 import { useConfiguratorStore } from "@/store/store"
 import { getSupabaseBrowser } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useShallow } from "zustand/react/shallow"
+import { useLogout } from "@/hooks/useLogout"
 import { useTranslation } from "@/lib/translations"
 import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
@@ -38,8 +39,10 @@ type ScraperHealth = "healthy" | "warning" | "offline" | "unknown"
 
 export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
-  const { logout, isFeatureEnabled, profile } = useConfiguratorStore()
+  const { isFeatureEnabled, profile } = useConfiguratorStore(
+    useShallow((s) => ({ isFeatureEnabled: s.isFeatureEnabled, profile: s.profile }))
+  )
+  const handleLogout = useLogout()
   const { t } = useTranslation()
   const isSysadmin = profile?.role === "sysadmin"
 
@@ -48,40 +51,34 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
   useEffect(() => {
     if (!isSysadmin) return
 
-    const checkScraper = async () => {
-      try {
-        const supabase = getSupabaseBrowser()
-        const { data } = await supabase
-          .from("telegram_scraper_settings")
-          .select("last_heartbeat")
-          .eq("id", "default")
-          .single()
-
-        if (!data?.last_heartbeat) {
-          setScraperHealth("unknown")
-          return
-        }
-
-        const diffSeconds = (Date.now() - new Date(data.last_heartbeat).getTime()) / 1000
-        if (diffSeconds < 120)      setScraperHealth("healthy")
-        else if (diffSeconds < 300) setScraperHealth("warning")
-        else                         setScraperHealth("offline")
-      } catch {
-        setScraperHealth("unknown")
-      }
+    const updateHealth = (heartbeat: string | null | undefined) => {
+      if (!heartbeat) { setScraperHealth("unknown"); return }
+      const diff = (Date.now() - new Date(heartbeat).getTime()) / 1000
+      if (diff < 120)      setScraperHealth("healthy")
+      else if (diff < 300) setScraperHealth("warning")
+      else                  setScraperHealth("offline")
     }
 
-    checkScraper()
-    const interval = setInterval(checkScraper, 60_000)
-    return () => clearInterval(interval)
-  }, [isSysadmin])
-
-  const handleLogout = async () => {
     const supabase = getSupabaseBrowser()
-    await supabase.auth.signOut()
-    logout()
-    router.push("/login")
-  }
+
+    supabase
+      .from("telegram_scraper_settings")
+      .select("last_heartbeat")
+      .eq("id", "default")
+      .single()
+      .then(({ data }: { data: { last_heartbeat?: string } | null }) => updateHealth(data?.last_heartbeat))
+
+    const channel = supabase
+      .channel("sidebar-scraper-health")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "telegram_scraper_settings", filter: "id=eq.default" },
+        (payload: { new: { last_heartbeat?: string } }) => { updateHealth(payload.new?.last_heartbeat) }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [isSysadmin])
 
   const flagMappings: Record<string, string> = {
     "/dashboard/stl-search": "telegram_stl_search",

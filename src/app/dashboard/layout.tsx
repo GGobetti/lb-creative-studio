@@ -18,6 +18,8 @@ import {
 } from "lucide-react"
 import { useConfiguratorStore } from "@/store/store"
 import { getSupabaseBrowser } from "@/lib/supabase"
+import { useShallow } from "zustand/react/shallow"
+import { useLogout } from "@/hooks/useLogout"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -25,7 +27,15 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const { profile, logout, creditModalOpen, setCreditModalOpen, setFeatureFlags } = useConfiguratorStore()
+  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags } = useConfiguratorStore(
+    useShallow((s) => ({
+      profile: s.profile,
+      creditModalOpen: s.creditModalOpen,
+      setCreditModalOpen: s.setCreditModalOpen,
+      setFeatureFlags: s.setFeatureFlags,
+    }))
+  )
+  const handleLogout = useLogout()
   const router = useRouter()
   const { t } = useTranslation()
 
@@ -44,13 +54,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     fetchFlags()
   }, [])
-
-  const handleLogout = async () => {
-    const supabase = getSupabaseBrowser()
-    await supabase.auth.signOut()
-    logout()
-    router.push("/login")
-  }
 
   const displayName = profile?.full_name || profile?.email?.split("@")[0] || "Maker"
   const planLabel = profile?.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) : "Free"

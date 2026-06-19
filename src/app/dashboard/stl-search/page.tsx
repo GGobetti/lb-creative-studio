@@ -10,6 +10,9 @@ import { PackageSearch, Heart, Trophy, TrendingUp, Loader2, Download, GitMerge, 
 import { useConfiguratorStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
+import { useToast } from "@/components/ui/Toast";
+
+const PAGE_SIZE = 50;
 
 function formatBytes(bytes: number, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -21,10 +24,14 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 export default function StlSearchPage() {
-  const { profile, refreshCredits } = useConfiguratorStore();
+  const profile = useConfiguratorStore((s) => s.profile);
+  const refreshCredits = useConfiguratorStore((s) => s.refreshCredits);
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [items, setItems] = useState<StlItem[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [printerFilter, setPrinterFilter] = useState<"all" | "resin" | "fdm">("all");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
@@ -107,53 +114,70 @@ export default function StlSearchPage() {
     fetchFavorites();
   }, [profile]);
 
-  // Fetch real STL files from Supabase telegram_indexed_stls
+  // Reset para a primeira página sempre que filtros mudarem
+  useEffect(() => {
+    setPage(0);
+    setItems([]);
+  }, [debouncedQuery, printerFilter]);
+
+  // Fetch real STL files from Supabase telegram_indexed_stls (paginated)
   useEffect(() => {
     const fetchItems = async () => {
       setIsLoading(true);
       try {
         const supabase = getSupabaseBrowser();
+        const trimmed = debouncedQuery.trim();
+        const isTagSearch = trimmed.startsWith("#");
+        const rawTerm = trimmed.toLowerCase().replace(/^#/, "");
+
         let query = supabase
           .from("telegram_indexed_stls")
-          .select("*");
+          .select("*")
+          .is("parent_id", null); // filtro no DB, não no cliente
 
-        if (debouncedQuery.trim()) {
-          const term = `%${debouncedQuery.trim()}%`;
-          const rawTerm = debouncedQuery.trim().toLowerCase().replace(/^#/, "");
-          query = query.or(`title.ilike.${term},description.ilike.${term},tags.cs.{${rawTerm}}`);
+        if (trimmed) {
+          if (isTagSearch) {
+            // Busca por tag exata
+            query = query.contains("tags", [rawTerm]);
+          } else {
+            // Full-text search via coluna tsv (índice GIN — rápido)
+            query = query.textSearch("tsv", trimmed, { type: "plain", config: "portuguese" });
+          }
         }
-        
+
         if (printerFilter !== "all") {
           query = query.eq("printer_type", printerFilter);
         }
 
-        query = query.order("created_at", { ascending: false });
+        query = query
+          .order("created_at", { ascending: false })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
         const { data, error } = await query;
         if (error) throw error;
 
         if (data) {
-          const mapped = data
-            .filter((item: any) => !item.parent_id) // ocultar partes filhas da listagem
-            .map((item: any) => ({
-              id: item.id,
-              title: item.title,
-              imageUrl: item.thumbnail_url?.includes("unsplash") ? "" : item.thumbnail_url || "",
-              telegramGroupId: item.telegram_group_id,
-              telegramGroupName: item.telegram_group_name,
-              telegramMessageId: Number(item.telegram_message_id),
-              fileSize: formatBytes(item.file_size_bytes),
-              fileSizeBytes: item.file_size_bytes,
-              addedAt: item.created_at,
-              photos: item.photos || [],
-              downloadCount: item.download_count || 0,
-              tags: item.tags || [],
-              fileName: item.file_name,
-              parent_id: item.parent_id ?? null,
-              parts_count: item.parts_count ?? 0,
-              printer_type: item.printer_type || "fdm"
-            }));
-          setItems(mapped);
+          const mapped = data.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            imageUrl: item.thumbnail_url?.includes("unsplash") ? "" : item.thumbnail_url || "",
+            telegramGroupId: item.telegram_group_id,
+            telegramGroupName: item.telegram_group_name,
+            telegramMessageId: Number(item.telegram_message_id),
+            fileSize: formatBytes(item.file_size_bytes),
+            fileSizeBytes: item.file_size_bytes,
+            addedAt: item.created_at,
+            photos: item.photos || [],
+            downloadCount: item.download_count || 0,
+            tags: item.tags || [],
+            fileName: item.file_name,
+            parent_id: item.parent_id ?? null,
+            parts_count: item.parts_count ?? 0,
+            printer_type: item.printer_type || "fdm"
+          }));
+
+          setItems((prev) => page === 0 ? mapped : [...prev, ...mapped]);
+          setHasMore(data.length === PAGE_SIZE);
         }
       } catch (err) {
         console.error("Error fetching telegram stls:", err);
@@ -163,7 +187,7 @@ export default function StlSearchPage() {
     };
 
     fetchItems();
-  }, [debouncedQuery, printerFilter]);
+  }, [debouncedQuery, printerFilter, page]);
 
   const fetchRankings = async () => {
     setIsLoadingRankings(true);
@@ -236,7 +260,7 @@ export default function StlSearchPage() {
 
   const handleToggleFavorite = async (id: string) => {
     if (!profile) {
-      alert("Por favor, faça login para favoritar modelos.");
+      toast("Por favor, faça login para favoritar modelos.", "warning");
       return;
     }
 
@@ -245,7 +269,7 @@ export default function StlSearchPage() {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-      alert("Sessão expirada. Faça login novamente.");
+      toast("Sessão expirada. Faça login novamente.", "error");
       return;
     }
 
@@ -289,7 +313,7 @@ export default function StlSearchPage() {
       }
       setTopDownloads((prev) => prev.map(revertItem));
       setTopFavorites((prev) => prev.map(revertItem));
-      alert("Não foi possível sincronizar o favorito. Tente novamente.");
+      toast("Não foi possível sincronizar o favorito. Tente novamente.", "error");
     }
   };
 
@@ -394,12 +418,12 @@ export default function StlSearchPage() {
     if (!item) return;
 
     if (!profile) {
-      alert("Por favor, faça login para baixar arquivos STL.");
+      toast("Por favor, faça login para baixar arquivos STL.", "warning");
       return;
     }
 
     if (profile.credits < cost) {
-      alert(`Créditos insuficientes. Esta operação custa ${cost} crédito${cost !== 1 ? 's' : ''}. Saldo atual: ${profile.credits}`);
+      toast(`Créditos insuficientes. Esta operação custa ${cost} crédito${cost !== 1 ? 's' : ''}. Saldo atual: ${profile.credits}`, "error");
       return;
     }
 
@@ -410,7 +434,7 @@ export default function StlSearchPage() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        alert("Sessão expirada. Faça login novamente.");
+        toast("Sessão expirada. Faça login novamente.", "error");
         setDownloadingIds((prev) => prev.filter((dId) => dId !== id));
         return;
       }
@@ -428,7 +452,7 @@ export default function StlSearchPage() {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         if (json.error === "INSUFFICIENT_CREDITS") {
-          alert("Créditos insuficientes.");
+          toast("Créditos insuficientes para este download.", "error");
           setDownloadingIds((prev) => prev.filter((dId) => dId !== id));
           return;
         }
@@ -494,10 +518,10 @@ export default function StlSearchPage() {
         }
       }
 
-      alert(`Download de "${item.title}" iniciado com sucesso!`);
+      toast(`Download de "${item.title}" iniciado!`, "success");
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Falha ao processar download.");
+      toast(err.message || "Falha ao processar download.", "error");
     } finally {
       setDownloadingIds((prev) => prev.filter((dId) => dId !== id));
     }
@@ -654,18 +678,30 @@ export default function StlSearchPage() {
             </div>
           </div>
 
-          <StlGrid 
-            items={displayedItems} 
-            onDownload={handleDownload} 
+          <StlGrid
+            items={displayedItems}
+            onDownload={handleDownload}
             onCardClick={handleOpenItem}
             favorites={favorites}
             onToggleFavorite={handleToggleFavorite}
-            isLoading={isLoading} 
+            isLoading={isLoading}
             cost={cost}
             downloadingIds={downloadingIds}
             mergeMode={mergeMode}
             mergeSelection={mergeSelection}
           />
+
+          {hasMore && !showOnlyFavorites && (
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={isLoading}
+                className="px-6 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-50 transition-all"
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Carregar mais"}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         /* Rankings Section */

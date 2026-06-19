@@ -6,6 +6,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { useConfiguratorStore } from '@/store/store'
+import { useShallow } from 'zustand/react/shallow'
 import type { Profile } from '@/lib/supabase'
 
 async function fetchProfile(userId: string): Promise<Profile | null> {
@@ -24,7 +25,16 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings } = useConfiguratorStore()
+  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings } = useConfiguratorStore(
+    useShallow((s) => ({
+      user: s.user,
+      setUser: s.setUser,
+      setProfile: s.setProfile,
+      logout: s.logout,
+      pricingSettings: s.pricingSettings,
+      setPricingSettings: s.setPricingSettings,
+    }))
+  )
   const skipSyncRef = useRef<boolean>(true)
 
   // 1. Sync supabase auth state (synchronously to avoid deadlock)
@@ -125,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false
       supabase.removeChannel(profileChannel)
     }
-  }, [user?.id, setProfile, setPricingSettings, pricingSettings])
+  }, [user?.id, setProfile, setPricingSettings])
 
   // 3. Sincronizar pricingSettings alterados com o banco (Debounced)
   useEffect(() => {

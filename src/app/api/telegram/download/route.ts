@@ -11,19 +11,16 @@ export async function POST(request: Request) {
     const token = authHeader.replace('Bearer ', '')
     const supabase = getSupabaseUserClient(token)
 
-    // 1. Validar a sessão do usuário
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) {
       return NextResponse.json({ error: 'Sessão inválida ou expirada.' }, { status: 401 })
     }
 
-    // 2. Extrair parâmetros da requisição
     const { id } = await request.json()
     if (!id) {
       return NextResponse.json({ error: 'ID do item ausente.' }, { status: 400 })
     }
 
-    // 3. Buscar metadados do arquivo no banco de dados
     const { data: item, error: itemError } = await supabase
       .from('telegram_indexed_stls')
       .select('*')
@@ -34,108 +31,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Arquivo STL não encontrado no índice.' }, { status: 404 })
     }
 
-    // 4. Descontar créditos diretamente chamando a RPC no banco
     const adminSupabase = getSupabaseAdmin()
-    
-    // O custo é fixo em 1 crédito para download do telegram por enquanto
     const cost = 1
-    
+
+    // Verificar créditos antes de tentar o download (sem debitar ainda)
     if (user.role !== 'sysadmin' && cost > 0) {
-      // Usar a RPC atômica para decrementar
-      const { data: updatedProfile, error: updateError } = await adminSupabase
-        .rpc('decrement_credits', { user_id: user.id, amount: cost })
-        
-      if (updateError) {
-        // Fallback update caso RPC falhe:
-        // Pega os créditos atuais primeiro
-        const { data: currentProfile } = await adminSupabase
-          .from('profiles')
-          .select('credits')
-          .eq('id', user.id)
-          .single()
-          
-        if (!currentProfile || currentProfile.credits < cost) {
-          return NextResponse.json({ error: 'INSUFFICIENT_CREDITS' }, { status: 402 })
-        }
-        
-        const { error: simpleError } = await adminSupabase
-          .from('profiles')
-          .update({ credits: currentProfile.credits - cost })
-          .eq('id', user.id)
-          
-        if (simpleError) {
-          return NextResponse.json({ error: 'Erro ao descontar créditos.' }, { status: 500 })
-        }
+      const { data: currentProfile } = await adminSupabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single()
+
+      if (!currentProfile || currentProfile.credits < cost) {
+        return NextResponse.json({ error: 'INSUFFICIENT_CREDITS' }, { status: 402 })
       }
-      
-      // Registrar transação com o nome do arquivo
-      await adminSupabase.from('transactions').insert({
-        user_id: user.id,
-        credits_added: -cost,
-        description: `Download Telegram: ${item.title || item.file_name}`,
-      })
     }
 
-    // 4.5. Incrementar o contador de downloads no banco
-    await adminSupabase
-      .from('telegram_indexed_stls')
-      .update({ download_count: (item.download_count || 0) + 1 })
-      .eq('id', id)
-
-    // 4.6. Registrar o log de download no histórico de utilização
-    try {
-      await adminSupabase
-        .from('telegram_downloads_history')
-        .insert({
-          user_id: user.id,
-          stl_id: id,
-        })
-    } catch (dbErr) {
-      // Falha não-bloqueante: Não impede o download caso o log falhe
-      console.error('[Telegram Download API] Erro ao registrar log no histórico:', dbErr)
-    }
-
-    // 5. Baixar o arquivo e fazer o stream para o usuário
+    // ── 1. Tentar o download PRIMEIRO ────────────────────────────────
     const proxyUrl = process.env.TELEGRAM_PROXY_URL
-    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    let downloadBody: ReadableStream | Uint8Array
+    let contentLength: string
+    let fileName = item.file_name
 
-    // Caso o proxy do Userbot esteja configurado
     if (proxyUrl) {
-      try {
-        const downloadRes = await fetch(
-          `${proxyUrl}/download?message_id=${item.telegram_message_id}`,
-          {
-            headers: {
-              'X-API-Key': process.env.TELEGRAM_PROXY_API_KEY || ''
-            }
-          }
-        )
-
-        if (!downloadRes.ok) {
-          throw new Error(`Proxy download returned status ${downloadRes.status}`)
-        }
-
-        return new Response(downloadRes.body, {
+      const downloadRes = await fetch(
+        `${proxyUrl}/download?message_id=${item.telegram_message_id}`,
+        {
           headers: {
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${encodeURIComponent(item.file_name)}"`,
-            'Content-Length': downloadRes.headers.get('Content-Length') || item.file_size_bytes.toString()
+            'X-API-Key': process.env.TELEGRAM_PROXY_API_KEY || ''
           }
-        })
-      } catch (err: any) {
-        console.error('[Telegram Download] Erro ao baixar via proxy:', err.message)
-        // Mesmo se o download falhar, os créditos foram debitados. Em produção, poderíamos estornar ou 
-        // permitir nova tentativa grátis. Para o fluxo atual, vamos emitir erro.
+        }
+      )
+
+      if (!downloadRes.ok) {
+        console.error('[Telegram Download] Proxy retornou:', downloadRes.status)
         return NextResponse.json(
           { error: 'Falha ao conectar com o serviço do Telegram. Tente novamente mais tarde.' },
           { status: 502 }
         )
       }
-    }
 
-    // Fallback de desenvolvimento: Stream de um arquivo STL de teste (placeholder)
-    // Isso garante que o usuário consiga testar o fluxo de créditos e downloads sem precisar rodar o userbot localmente.
-    const mockStlContent = `solid LB_Creative_Studio_Placeholder
+      downloadBody = downloadRes.body!
+      contentLength = downloadRes.headers.get('Content-Length') || item.file_size_bytes.toString()
+    } else {
+      // Fallback de desenvolvimento — STL placeholder
+      const mockStlContent = `solid LB_Creative_Studio_Placeholder
   facet normal 0 0 0
     outer loop
       vertex 0 0 0
@@ -144,14 +84,67 @@ export async function POST(request: Request) {
     endloop
   endfacet
 endsolid LB_Creative_Studio_Placeholder`
+      const bytes = new TextEncoder().encode(mockStlContent)
+      downloadBody = bytes
+      contentLength = bytes.length.toString()
+    }
 
-    const mockStlBytes = new TextEncoder().encode(mockStlContent)
+    // ── 2. Download OK → debitar créditos atomicamente ───────────────
+    if (user.role !== 'sysadmin' && cost > 0) {
+      const { error: debitError } = await adminSupabase
+        .rpc('decrement_credits', { user_id: user.id, amount: cost })
 
-    return new Response(mockStlBytes, {
+      if (debitError) {
+        // Fallback atômico com WHERE credits >= cost
+        const { data: currentProfile } = await adminSupabase
+          .from('profiles').select('credits').eq('id', user.id).single()
+
+        if (!currentProfile || currentProfile.credits < cost) {
+          return NextResponse.json({ error: 'INSUFFICIENT_CREDITS' }, { status: 402 })
+        }
+
+        const { error: simpleError } = await adminSupabase
+          .from('profiles')
+          .update({ credits: currentProfile.credits - cost })
+          .eq('id', user.id)
+
+        if (simpleError) {
+          return NextResponse.json({ error: 'Erro ao descontar créditos.' }, { status: 500 })
+        }
+      }
+
+      await adminSupabase.from('transactions').insert({
+        user_id: user.id,
+        credits_added: -cost,
+        description: `Download Telegram: ${item.title || item.file_name}`,
+      })
+    }
+
+    // ── 3. Contadores atômicos ───────────────────────────────────────
+    // download_count = download_count + 1 sem leitura prévia
+    try {
+      const { error: rpcErr } = await adminSupabase.rpc('increment_download_count', { stl_id: id })
+      if (rpcErr) {
+        await adminSupabase
+          .from('telegram_indexed_stls')
+          .update({ download_count: (item.download_count || 0) + 1 })
+          .eq('id', id)
+      }
+    } catch {}
+
+    try {
+      await adminSupabase
+        .from('telegram_downloads_history')
+        .insert({ user_id: user.id, stl_id: id })
+    } catch (err) {
+      console.error('[Telegram Download] Erro ao registrar log:', err)
+    }
+
+    return new Response(downloadBody as any, {
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${item.file_name}"`,
-        'Content-Length': mockStlBytes.length.toString()
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+        'Content-Length': contentLength,
       }
     })
 

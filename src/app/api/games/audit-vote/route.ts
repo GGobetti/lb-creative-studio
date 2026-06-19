@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const VALID_GAME_TYPES = ['quality-audit', 'photo-match', 'tag-detective', 'category-sort']
+    if (!VALID_GAME_TYPES.includes(game_type)) {
+      return NextResponse.json({ error: 'Invalid game type' }, { status: 400 })
+    }
+
     // 1. Record game action and get rewards
     const { data: actionResult, error: actionError } = await supabase
       .rpc('record_game_action', {

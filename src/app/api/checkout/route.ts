@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     // ==========================================
     // MOCK STRIPE CHECKOUT (Simulação temporária)
     // ==========================================
-    const isMockMode = true; // Forçando mock como pedido
+    const isMockMode = process.env.NODE_ENV === 'development' && process.env.STRIPE_MOCK === 'true'
     
     if (isMockMode) {
       // Usar Service Role para garantir que possamos editar plan/credits (ignora RLS)

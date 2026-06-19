@@ -63,6 +63,19 @@ function LoginContent() {
     if (error) { setError(error.message); setLoading(false) }
   }
 
+  const handleForgotPassword = async () => {
+    if (!email) { setError('Digite seu email para redefinir a senha.'); return }
+    setLoading(true)
+    setError(null)
+    const supabase = getSupabaseBrowser()
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/dashboard/settings?tab=security`,
+    })
+    setLoading(false)
+    if (error) setError(error.message)
+    else setSuccess('Email de redefinição enviado! Verifique sua caixa de entrada.')
+  }
+
   const handleMagicLink = async () => {
     if (!email) { setError('Digite seu email antes de continuar.'); return }
     setLoading(true)
@@ -87,7 +100,7 @@ function LoginContent() {
         <div
           className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage: 'radial-gradient(circle, rgba(99,102,241,0.4) 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, rgba(6,182,212,0.35) 1px, transparent 1px)',
             backgroundSize: '28px 28px',
           }}
         />
@@ -158,6 +171,20 @@ function LoginContent() {
                 </button>
               </div>
             </div>
+
+            {/* Esqueci a senha (apenas no login) */}
+            {mode === 'login' && (
+              <div className="flex justify-end -mt-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading}
+                  className="text-xs text-white/35 hover:text-primary transition-colors"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
 
             {/* Feedback */}
             {error && (
