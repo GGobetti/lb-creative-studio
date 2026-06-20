@@ -1,9 +1,9 @@
 'use client'
 
 // src/components/CreditModal.tsx
-// Low-balance modal with mock credit package selection.
+// Dynamic pricing modal — loads plans from Supabase
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Zap, X, Check, Loader2, Sparkles } from 'lucide-react'
 import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
@@ -11,35 +11,15 @@ import type { CatalogItem } from '@/lib/supabase'
 import { triggerConfetti } from '@/lib/confetti'
 import { motion, AnimatePresence } from 'framer-motion'
 
-const PACKAGES = [
-  {
-    id: 'starter',
-    label: 'Starter',
-    credits: 10,
-    price: 'R$ 9,90',
-    popular: false,
-    color: 'from-slate-700 to-slate-600',
-    border: 'border-white/10',
-  },
-  {
-    id: 'pro',
-    label: 'Pro',
-    credits: 30,
-    price: 'R$ 24,90',
-    popular: true,
-    color: 'from-violet-700 to-indigo-700',
-    border: 'border-violet-500/50',
-  },
-  {
-    id: 'studio',
-    label: 'Studio',
-    credits: 100,
-    price: 'R$ 69,90',
-    popular: false,
-    color: 'from-amber-700 to-orange-700',
-    border: 'border-amber-500/30',
-  },
-]
+interface PricingPlan {
+  id: number
+  name: string
+  description?: string
+  credits: number
+  price_cents: number
+  stripe_price_id: string
+  active: boolean
+}
 
 interface CreditModalProps {
   open: boolean
@@ -49,10 +29,40 @@ interface CreditModalProps {
 
 export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
   const { profile, refreshCredits } = useAppStore()
-  const [selectedPkg, setSelectedPkg] = useState('pro')
+  const [packages, setPackages] = useState<PricingPlan[]>([])
+  const [selectedPkgId, setSelectedPkgId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [plansLoading, setPlansLoading] = useState(true)
+
+  // Load pricing plans from Supabase
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const supabase = getSupabaseBrowser()
+        const { data, error: err } = await supabase
+          .from('pricing_plans')
+          .select('*')
+          .eq('active', true)
+          .order('price_cents', { ascending: true })
+
+        if (err) throw err
+        setPackages(data || [])
+        if (data && data.length > 0) {
+          setSelectedPkgId(data[0].id)
+        }
+      } catch (err) {
+        console.error('Failed to load pricing plans:', err)
+      } finally {
+        setPlansLoading(false)
+      }
+    }
+
+    if (open) {
+      fetchPlans()
+    }
+  }, [open])
 
   const plan = profile?.plan || 'free'
   const currentCost = item
@@ -63,7 +73,14 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
         : item.price_free ?? item.price_in_credits
     : 0
 
+  const selectedPackage = packages.find((p) => p.id === selectedPkgId)
+
   const handlePurchase = async () => {
+    if (!selectedPackage) {
+      setError('Selecione um pacote')
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -72,23 +89,17 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sessão expirada')
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/add-credits`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ package_id: selectedPkg }),
-        },
-      )
+      // Call Stripe checkout with the plan ID
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: selectedPackage.id }),
+      })
 
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Falha na compra')
 
-      const pkg = PACKAGES.find((p) => p.id === selectedPkg)!
-      refreshCredits((profile?.credits ?? 0) + pkg.credits)
+      refreshCredits((profile?.credits ?? 0) + selectedPackage.credits)
       setSuccess(true)
       triggerConfetti()
 
@@ -163,44 +174,52 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
 
             {/* Packages */}
             <div className="p-6 space-y-3">
-              {PACKAGES.map((pkg) => (
-                <motion.button
-                  key={pkg.id}
-                  onClick={() => setSelectedPkg(pkg.id)}
-                  whileHover={{ scale: 1.015, y: -1 }}
-                  whileTap={{ scale: 0.985 }}
-                  className={`
-                    w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-150 relative overflow-hidden cursor-pointer
-                    ${selectedPkg === pkg.id
-                      ? `bg-gradient-to-r ${pkg.color} ${pkg.border} shadow-lg shadow-indigo-500/15`
-                      : 'bg-white/5 border-white/10 hover:border-white/20'
-                    }
-                  `}
-                >
-                  <div className={`
-                    w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
-                    ${selectedPkg === pkg.id ? 'border-white bg-white' : 'border-white/30'}
-                  `}>
-                    {selectedPkg === pkg.id && <Check size={12} className="text-violet-700" />}
-                  </div>
+              {plansLoading ? (
+                <div className="flex items-center justify-center py-8 text-white/50">
+                  <Loader2 size={20} className="animate-spin" />
+                </div>
+              ) : packages.length === 0 ? (
+                <p className="text-center text-white/50 text-sm py-8">Nenhum plano disponível</p>
+              ) : (
+                packages.map((pkg) => {
+                  const priceInReais = (pkg.price_cents / 100).toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                  })
 
-                  <div className="flex-1 text-left">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white">{pkg.label}</span>
-                      {pkg.popular && (
-                        <span className="text-[10px] bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">
-                          POPULAR
+                  return (
+                    <motion.button
+                      key={pkg.id}
+                      onClick={() => setSelectedPkgId(pkg.id)}
+                      whileHover={{ scale: 1.015, y: -1 }}
+                      whileTap={{ scale: 0.985 }}
+                      className={`
+                        w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-150 relative overflow-hidden cursor-pointer
+                        ${selectedPkgId === pkg.id
+                          ? 'bg-gradient-to-r from-violet-700/40 to-indigo-700/40 border-violet-500/50 shadow-lg shadow-violet-500/15'
+                          : 'bg-white/5 border-white/10 hover:border-white/20'
+                        }
+                      `}
+                    >
+                      <div className={`
+                        w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+                        ${selectedPkgId === pkg.id ? 'border-white bg-white' : 'border-white/30'}
+                      `}>
+                        {selectedPkgId === pkg.id && <Check size={12} className="text-violet-700" />}
+                      </div>
+
+                      <div className="flex-1 text-left">
+                        <span className="font-semibold text-white">{pkg.name}</span>
+                        <span className="text-sm text-white/60 block">
+                          {pkg.credits === 999 ? '∞ créditos' : `${pkg.credits} créditos`}
                         </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-white/60">
-                      {pkg.credits} créditos
-                    </span>
-                  </div>
+                      </div>
 
-                  <span className="text-lg font-bold text-white">{pkg.price}</span>
-                </motion.button>
-              ))}
+                      <span className="text-lg font-bold text-white">{priceInReais}</span>
+                    </motion.button>
+                  )
+                })
+              )}
             </div>
 
             {/* Footer */}
@@ -237,7 +256,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                   ) : (
                     <>
                       <Zap size={16} />
-                      Comprar {PACKAGES.find((p) => p.id === selectedPkg)?.credits} Créditos
+                      Comprar {selectedPackage?.credits === 999 ? '∞' : selectedPackage?.credits} Créditos
                     </>
                   )}
                 </motion.button>
