@@ -144,6 +144,23 @@ export default function BillingPage() {
     }
   }
 
+  const handleCancelSubscription = async () => {
+    setLoadingId("cancel")
+    try {
+      const response = await fetch("/api/cancel-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Erro ao cancelar")
+      toast(data.message || "Assinatura cancelada", "success")
+    } catch (err: any) {
+      toast(err.message, "error")
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
   const formatBRL = (value: number) =>
     new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US', {
       style: "currency",
@@ -277,10 +294,12 @@ export default function BillingPage() {
                 </ul>
 
                 <button
-                  onClick={() => {}}
-                  disabled={true}
+                  onClick={() => isCurrentPlan && plan.id !== "free" ? handleCancelSubscription() : null}
+                  disabled={!isCurrentPlan && isDisabledDowngrade}
                   className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
-                    isCurrentPlan
+                    isCurrentPlan && plan.id !== "free"
+                      ? "bg-destructive text-white hover:bg-destructive/90 shadow-sm"
+                      : isCurrentPlan
                       ? "bg-muted text-muted-foreground cursor-not-allowed"
                       : isDisabledDowngrade
                       ? "bg-muted text-muted-foreground cursor-not-allowed"
@@ -292,8 +311,10 @@ export default function BillingPage() {
                   }`}
                   title={isDisabledDowngrade ? `Você precisa cancelar o plano atual (${currentPlan}) antes de migrar para um plano menor` : undefined}
                 >
-                  {loadingId === plan.id ? (
+                  {loadingId === "cancel" ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : isCurrentPlan && plan.id !== "free" ? (
+                    "Cancelar Assinatura"
                   ) : isCurrentPlan ? (
                     t("billing.currentPlanBtn")
                   ) : isDisabledDowngrade ? (
