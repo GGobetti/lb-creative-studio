@@ -427,98 +427,159 @@ export default function BillingPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.93 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-4"
+            className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
           >
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Tem certeza?</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Você está prestes a cancelar sua assinatura. Ela permanecerá ativa até o final do período já pago.
+            {/* Header */}
+            <div className="bg-gradient-to-r from-primary/10 to-warning/10 border-b border-border p-6">
+              <h3 className="text-xl font-bold text-foreground mb-2">Espera aí! 👀</h3>
+              <p className="text-sm text-muted-foreground">
+                Antes de cancelar, veja como você pode economizar fazendo um downgrade
               </p>
             </div>
 
-            {/* Downgrade suggestion */}
-            {currentPlan === "max" && (
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium text-foreground">
-                  💡 Que tal fazer um downgrade?
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Migrar para o plano <strong>Pro</strong> é muito mais barato e você não perde os benefícios da assinatura!
-                </p>
-                <button
-                  onClick={() => {
-                    setShowCancelDialog(false)
-                    // Scroll to Pro plan
-                    document.querySelector('[data-plan="pro"]')?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="w-full mt-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  Ver Plano Pro →
-                </button>
-              </div>
-            )}
+            <div className="p-6 space-y-6">
+              {/* Comparison Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Current Plan */}
+                <div className="bg-primary/5 border border-primary/30 rounded-xl p-4 relative">
+                  <div className="absolute -top-3 left-4 px-2 py-1 bg-primary text-primary-foreground text-xs font-bold rounded">
+                    Seu Plano
+                  </div>
+                  <div className="mt-2">
+                    <h4 className="text-lg font-bold text-foreground capitalize">{currentPlan}</h4>
+                    {currentPlan === "max" && (
+                      <>
+                        <p className="text-2xl font-bold text-warning mt-2">R$ 79,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                        <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                          <li>✓ 300+ créditos/mês</li>
+                          <li>✓ Prioridade máxima</li>
+                          <li>✓ Suporte 24/7</li>
+                        </ul>
+                      </>
+                    )}
+                    {currentPlan === "pro" && (
+                      <>
+                        <p className="text-2xl font-bold text-primary mt-2">R$ 29,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                        <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                          <li>✓ 100+ créditos/mês</li>
+                          <li>✓ Suporte padrão</li>
+                          <li>✓ Atualizações grátis</li>
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            {currentPlan === "pro" && (
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium text-foreground">
-                  💡 Quer mais benefícios?
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Fazer um <strong>upgrade para Max</strong> custa apenas um pouco mais e você ganha muito mais créditos!
-                </p>
-                <button
-                  onClick={() => {
-                    setShowCancelDialog(false)
-                    document.querySelector('[data-plan="max"]')?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="w-full mt-2 px-3 py-2 bg-warning text-white text-xs font-semibold rounded-lg hover:bg-warning/90 transition-colors"
-                >
-                  Ver Plano Max →
-                </button>
-              </div>
-            )}
+                {/* Suggested Plan */}
+                {currentPlan === "max" && (
+                  <div className="bg-card border border-primary/40 rounded-xl p-4 relative">
+                    <div className="absolute -top-3 left-4 px-2 py-1 bg-green-600 text-white text-xs font-bold rounded">
+                      Economize 62%
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="text-lg font-bold text-foreground">Pro</h4>
+                      <p className="text-2xl font-bold text-primary mt-2">R$ 29,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                      <p className="text-xs text-green-600 font-medium mt-1">Economiza R$ 50/mês</p>
+                      <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                        <li>✓ 100+ créditos/mês</li>
+                        <li>✓ Suporte padrão</li>
+                        <li>✓ Atualizações grátis</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t border-border">
-              <button
-                onClick={() => setShowCancelDialog(false)}
-                className="flex-1 px-4 py-2 rounded-lg bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition-colors"
-              >
-                Voltar
-              </button>
-              <button
-                onClick={() => setCancelConfirmed(true)}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
-              >
-                Confirmar Cancelamento
-              </button>
+                {currentPlan === "pro" && (
+                  <div className="bg-card border border-warning/40 rounded-xl p-4 relative">
+                    <div className="absolute -top-3 left-4 px-2 py-1 bg-warning text-white text-xs font-bold rounded">
+                      Melhore 3x
+                    </div>
+                    <div className="mt-2">
+                      <h4 className="text-lg font-bold text-foreground">Max</h4>
+                      <p className="text-2xl font-bold text-warning mt-2">R$ 79,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
+                      <p className="text-xs text-warning font-medium mt-1">Apenas R$ 50 a mais</p>
+                      <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                        <li>✓ 300+ créditos/mês</li>
+                        <li>✓ Prioridade máxima</li>
+                        <li>✓ Suporte 24/7</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3 border-t border-border pt-6">
+                {currentPlan === "max" && (
+                  <button
+                    onClick={() => {
+                      handleCancelClick() // Keep dialog open
+                      // TODO: Call subscription-change endpoint to downgrade
+                    }}
+                    className="w-full px-4 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+                  >
+                    Fazer Downgrade para Pro (Economize R$ 50/mês)
+                  </button>
+                )}
+
+                {currentPlan === "pro" && (
+                  <button
+                    onClick={() => {
+                      handleCancelClick()
+                      // TODO: Call subscription-change endpoint to upgrade
+                    }}
+                    className="w-full px-4 py-3 rounded-lg bg-warning text-white text-sm font-semibold hover:bg-warning/90 transition-colors"
+                  >
+                    Fazer Upgrade para Max (Ganhe 3x Créditos!)
+                  </button>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setShowCancelDialog(false)}
+                    className="px-4 py-2 rounded-lg bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition-colors"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    onClick={() => setCancelConfirmed(true)}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                  >
+                    Mesmo assim Cancelar
+                  </button>
+                </div>
+              </div>
+
+              {/* Final confirmation */}
+              {cancelConfirmed && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg space-y-3"
+                >
+                  <p className="text-sm text-red-900 dark:text-red-200 font-medium">
+                    ⚠️ Tem certeza absoluta?
+                  </p>
+                  <p className="text-xs text-red-800 dark:text-red-300">
+                    Você perderá todos os benefícios e créditos não utilizados serão perdidos. Não há volta.
+                  </p>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={loadingId === "cancel"}
+                    className="w-full px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {loadingId === "cancel" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                        Cancelando...
+                      </>
+                    ) : (
+                      "Sim, cancelar minha assinatura"
+                    )}
+                  </button>
+                </motion.div>
+              )}
             </div>
-
-            {/* Final confirmation */}
-            {cancelConfirmed && (
-              <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg space-y-3">
-                <p className="text-sm text-red-900 dark:text-red-200 font-medium">
-                  Tem certeza absoluta?
-                </p>
-                <p className="text-xs text-red-800 dark:text-red-300">
-                  Esta ação não pode ser desfeita. Você perderá todos os benefícios da assinatura.
-                </p>
-                <button
-                  onClick={handleCancelSubscription}
-                  disabled={loadingId === "cancel"}
-                  className="w-full px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
-                >
-                  {loadingId === "cancel" ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                      Cancelando...
-                    </>
-                  ) : (
-                    "Sim, cancelar minha assinatura"
-                  )}
-                </button>
-              </div>
-            )}
           </motion.div>
         </div>
       )}
