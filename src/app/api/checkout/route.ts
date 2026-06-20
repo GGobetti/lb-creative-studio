@@ -62,15 +62,13 @@ export async function POST(req: Request) {
     }
 
     let lineItems = []
-    let mode: 'payment' | 'subscription' = 'payment'
+    let mode: 'payment' | 'subscription' = plan.is_recurring ? 'subscription' : 'payment'
     let metadata: any = {
       userId: user.id,
       planId: plan.id,
       credits: plan.credits,
     }
 
-    // All plans from dynamic pricing are one-time purchases
-    mode = 'payment'
     lineItems.push({ price: plan.stripe_price_id, quantity: 1 })
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get('origin') || 'http://localhost:3000'
