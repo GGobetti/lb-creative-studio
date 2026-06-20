@@ -42,58 +42,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Get or create Stripe customer
-    const { data: profile } = await supabase
+    // Always create a new customer for test (Stripe CLI deletes them automatically)
+    console.log('Creating new test customer')
+    const customer = await stripe.customers.create({
+      email: user.email,
+      metadata: { userId: user.id, testCustomer: 'true' },
+    })
+    const customerId = customer.id
+    console.log('Test customer created:', customerId)
+
+    // Update profile with new customer ID
+    console.log('Updating profile with new customer ID:', customerId)
+    await supabase
       .from('profiles')
-      .select('stripe_customer_id')
+      .update({ stripe_customer_id: customerId })
       .eq('id', user.id)
-      .single()
-
-    console.log('Profile stripe_customer_id:', profile?.stripe_customer_id)
-
-    let customerId = profile?.stripe_customer_id
-    let needsUpdate = false
-
-    if (customerId) {
-      try {
-        // Verify customer exists
-        console.log('Verifying customer:', customerId)
-        await stripe.customers.retrieve(customerId)
-        console.log('Customer exists:', customerId)
-      } catch (err: any) {
-        // Customer doesn't exist, create new one
-        console.log(`Customer ${customerId} not found, creating new one:`, err.message)
-        const customer = await stripe.customers.create({
-          email: user.email,
-          metadata: { userId: user.id },
-        })
-        console.log('New customer created:', customer.id)
-        customerId = customer.id
-        needsUpdate = true
-      }
-    } else {
-      // No customer ID, create new one
-      console.log('No customer ID, creating new one')
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { userId: user.id },
-      })
-      console.log('New customer created:', customer.id)
-      customerId = customer.id
-      needsUpdate = true
-    }
-
-    console.log('Final customerId:', customerId, 'needsUpdate:', needsUpdate)
-
-    // Update profile if needed
-    if (needsUpdate) {
-      console.log('Updating profile with new customer ID:', customerId)
-      await supabase
-        .from('profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', user.id)
-      console.log('Profile updated')
-    }
+    console.log('Profile updated')
 
     // Get Pro plan price ID (planId=4)
     const { data: plan } = await supabase
