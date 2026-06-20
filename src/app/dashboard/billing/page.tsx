@@ -607,7 +607,7 @@ export default function BillingPage() {
                   <button
                     onClick={() => handleUpgradeDowngrade(4)}
                     disabled={loadingId?.startsWith("change-")}
-                    className="w-full px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                   >
                     {loadingId === "change-4" ? (
                       <>
@@ -646,7 +646,7 @@ export default function BillingPage() {
                   </button>
                   <button
                     onClick={() => setCancelConfirmed(true)}
-                    className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+                    className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
                   >
                     Cancelar
                   </button>
