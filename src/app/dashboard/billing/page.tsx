@@ -349,7 +349,7 @@ export default function BillingPage() {
                   Criando...
                 </>
               ) : (
-                "🧪 Criar Assinatura Teste"
+                <>🧪 {t("billing.createTestSubscription", "Criar Assinatura Teste")}</>
               )}
             </button>
           )}
@@ -455,7 +455,7 @@ export default function BillingPage() {
                   {loadingId === "cancel" ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : isCurrentPlan && plan.id !== "free" ? (
-                    "Cancelar Assinatura"
+                    t("billing.cancelSubscription", "Cancelar Assinatura")
                   ) : isCurrentPlan ? (
                     t("billing.currentPlanBtn")
                   ) : isDisabledDowngrade ? (
@@ -708,7 +708,7 @@ export default function BillingPage() {
                   onClick={() => setCancelConfirmed(true)}
                   className="w-full px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
                 >
-                  Cancelar Assinatura
+                  {t("billing.cancelSubscription", "Cancelar Assinatura")}
                 </button>
               </div>
 

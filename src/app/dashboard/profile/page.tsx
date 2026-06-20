@@ -177,7 +177,7 @@ export default function ProfilePage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tab === 'profile' ? 'Perfil' : '⭐ XP & Badges'}
+            {tab === 'profile' ? t('profile.tab', 'Perfil') : `⭐ ${t('profile.xpTab', 'XP & Badges')}`}
           </button>
         ))}
       </div>

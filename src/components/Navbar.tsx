@@ -121,7 +121,7 @@ export function Navbar() {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 w-52 bg-card border border-border
+              <div className="absolute right-0 top-full mt-2 w-52 bg-card/98 backdrop-blur-md border border-border
                               rounded-xl shadow-2xl overflow-hidden z-20">
                 <div className="px-4 py-3 border-b border-border">
                   <p className="text-xs text-muted-foreground">{t('profile.email', 'Email')}</p>
