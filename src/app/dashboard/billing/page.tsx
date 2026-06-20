@@ -151,6 +151,44 @@ export default function BillingPage() {
     setShowCancelDialog(true)
   }
 
+  const handleUpgradeDowngrade = async (toplanId: number) => {
+    setLoadingId(`change-${toplanId}`)
+    try {
+      // Map plan IDs
+      const currentPlanId = currentPlan === "max" ? 5 : currentPlan === "pro" ? 4 : 0
+
+      if (!currentPlanId) {
+        throw new Error("Plano atual inválido")
+      }
+
+      const response = await fetch("/api/subscription-change", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fromPlanId: currentPlanId,
+          toPlanId: toplanId,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Erro ao mudar plano")
+
+      const planName = toplanId === 5 ? "Max" : "Pro"
+      const isUpgrade = toplanId > currentPlanId
+      toast(
+        isUpgrade
+          ? `Upgraded para ${planName}! Cobrança iniciada.`
+          : `Downgrade para ${planName} agendado para o próximo período!`,
+        "success"
+      )
+      setShowCancelDialog(false)
+    } catch (err: any) {
+      toast(err.message, "error")
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
   const handleCancelSubscription = async () => {
     setLoadingId("cancel")
     try {
@@ -512,25 +550,35 @@ export default function BillingPage() {
               <div className="space-y-3 border-t border-border pt-6">
                 {currentPlan === "max" && (
                   <button
-                    onClick={() => {
-                      handleCancelClick() // Keep dialog open
-                      // TODO: Call subscription-change endpoint to downgrade
-                    }}
-                    className="w-full px-4 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+                    onClick={() => handleUpgradeDowngrade(4)}
+                    disabled={loadingId?.startsWith("change-")}
+                    className="w-full px-4 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                   >
-                    Fazer Downgrade para Pro (Economize R$ 50/mês)
+                    {loadingId === "change-4" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Fazer Downgrade para Pro (Economize R$ 50/mês)"
+                    )}
                   </button>
                 )}
 
                 {currentPlan === "pro" && (
                   <button
-                    onClick={() => {
-                      handleCancelClick()
-                      // TODO: Call subscription-change endpoint to upgrade
-                    }}
-                    className="w-full px-4 py-3 rounded-lg bg-warning text-white text-sm font-semibold hover:bg-warning/90 transition-colors"
+                    onClick={() => handleUpgradeDowngrade(5)}
+                    disabled={loadingId?.startsWith("change-")}
+                    className="w-full px-4 py-3 rounded-lg bg-warning text-white text-sm font-semibold hover:bg-warning/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                   >
-                    Fazer Upgrade para Max (Ganhe 3x Créditos!)
+                    {loadingId === "change-5" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Processando...
+                      </>
+                    ) : (
+                      "Fazer Upgrade para Max (Ganhe 3x Créditos!)"
+                    )}
                   </button>
                 )}
 
