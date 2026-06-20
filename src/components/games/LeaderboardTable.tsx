@@ -1,14 +1,7 @@
 'use client'
 
-interface LeaderboardUser {
-  rank: number
-  userId: string
-  name: string
-  xp: number
-  badge: string
-  streak: number
-  gamesPlayed: number
-}
+import { useTranslation } from '@/lib/translations'
+import type { LeaderboardUser } from '@/types/leaderboard'
 
 interface LeaderboardTableProps {
   rankings: LeaderboardUser[]
@@ -21,6 +14,8 @@ export function LeaderboardTable({
   isLoading = false,
   period,
 }: LeaderboardTableProps) {
+  const { t } = useTranslation()
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -38,8 +33,7 @@ export function LeaderboardTable({
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p className="text-sm">
-          Nenhum resultado para{' '}
-          {period === 'week' ? 'essa semana' : 'todos os tempos'}
+          {t('leaderboard.noGamesYet')}
         </p>
       </div>
     )
@@ -51,22 +45,22 @@ export function LeaderboardTable({
         <thead>
           <tr className="border-b border-border/50 bg-muted/40">
             <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap">
-              Pos
+              {t('leaderboard.rank')}
             </th>
             <th className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap">
-              Nome
+              {t('leaderboard.name')}
             </th>
             <th className="px-4 py-3 text-right font-semibold text-foreground whitespace-nowrap">
-              XP
+              {t('leaderboard.xp')}
             </th>
             <th className="px-4 py-3 text-center font-semibold text-foreground whitespace-nowrap">
-              Badge
+              {t('leaderboard.badge')}
             </th>
             <th className="px-4 py-3 text-center font-semibold text-foreground whitespace-nowrap">
-              Streak
+              {t('leaderboard.streak')}
             </th>
             <th className="px-4 py-3 text-right font-semibold text-foreground whitespace-nowrap">
-              Games
+              {t('leaderboard.games')}
             </th>
           </tr>
         </thead>
