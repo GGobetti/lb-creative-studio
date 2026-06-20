@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
           price: toPlan.stripe_price_id,
         },
       },
+      trial_end: 'now', // End trial immediately to avoid conflicts
     }
 
     if (isUpgrade) {
