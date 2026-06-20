@@ -240,15 +240,15 @@ export default function BillingPage() {
         headers: { 'Content-Type': 'application/json' },
       })
       const data = await response.json()
+      console.log('Create subscription response:', { status: response.status, data })
       if (!response.ok) throw new Error(data.error || 'Erro ao criar assinatura')
-      toast('Assinatura criada no Stripe! Webhook sincronizará em alguns segundos...', 'success')
-      // Reload subscription after a delay
-      setTimeout(async () => {
-        const response = await fetch('/api/subscription')
-        const data = await response.json()
-        setSubscription(data.subscription)
+      toast('Assinatura criada no Stripe! Recarregando página em 2 segundos...', 'success')
+      // Reload page after a delay to let webhook sync
+      setTimeout(() => {
+        window.location.reload()
       }, 2000)
     } catch (err: any) {
+      console.error('Create subscription error:', err)
       toast(err.message, 'error')
     } finally {
       setSubscriptionLoading(false)
