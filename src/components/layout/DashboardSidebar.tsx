@@ -121,9 +121,9 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
 
   if (isSysadmin) {
     sections.push({
-      title: "Admin",
+      title: t("sidebar.admin", "Admin"),
       items: [
-        { name: "Painel Admin", href: "/dashboard/admin", icon: ShieldAlert },
+        { name: t("sidebar.adminPanel", "Painel Admin"), href: "/dashboard/admin", icon: ShieldAlert },
       ],
     })
   }
@@ -146,10 +146,10 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
   }[scraperHealth]
 
   const scraperLabel = {
-    healthy: "Scraper online",
-    warning: "Scraper lento",
-    offline: "Scraper offline",
-    unknown: "Status desconhecido",
+    healthy: t("sidebar.scraperOnline", "Scraper online"),
+    warning: t("sidebar.scraperSlow", "Scraper lento"),
+    offline: t("sidebar.scraperOffline", "Scraper offline"),
+    unknown: t("sidebar.unknownStatus", "Status desconhecido"),
   }[scraperHealth]
 
   const scraperDotClass = {
