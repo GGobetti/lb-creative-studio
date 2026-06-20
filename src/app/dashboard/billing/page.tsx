@@ -94,6 +94,8 @@ export default function BillingPage() {
   const [plansLoading, setPlansLoading] = useState(true)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelConfirmed, setCancelConfirmed] = useState(false)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
 
   // Load pricing plans from Supabase on mount
   useEffect(() => {
@@ -216,6 +218,43 @@ export default function BillingPage() {
 
   const currentPlan = profile?.plan || "free"
 
+  // Load subscription on mount
+  useEffect(() => {
+    const loadSubscription = async () => {
+      try {
+        const response = await fetch('/api/subscription')
+        const data = await response.json()
+        setSubscription(data.subscription)
+      } catch (err) {
+        console.error('Failed to load subscription:', err)
+      }
+    }
+    loadSubscription()
+  }, [])
+
+  const handleCreateTestSubscription = async () => {
+    setSubscriptionLoading(true)
+    try {
+      const response = await fetch('/api/test/create-real-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Erro ao criar assinatura')
+      toast('Assinatura criada no Stripe! Webhook sincronizará em alguns segundos...', 'success')
+      // Reload subscription after a delay
+      setTimeout(async () => {
+        const response = await fetch('/api/subscription')
+        const data = await response.json()
+        setSubscription(data.subscription)
+      }, 2000)
+    } catch (err: any) {
+      toast(err.message, 'error')
+    } finally {
+      setSubscriptionLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-8 pb-12">
       <PageHeader
@@ -273,7 +312,25 @@ export default function BillingPage() {
 
       {/* Subscription Plans */}
       <div>
-        <h2 className="text-heading text-lg text-foreground mb-4">{t("billing.subscriptionPlans")}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-heading text-lg text-foreground">{t("billing.subscriptionPlans")}</h2>
+          {currentPlan === "free" && process.env.NODE_ENV === "development" && (
+            <button
+              onClick={handleCreateTestSubscription}
+              disabled={subscriptionLoading}
+              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {subscriptionLoading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin inline mr-1" />
+                  Criando...
+                </>
+              ) : (
+                "🧪 Criar Assinatura Teste"
+              )}
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {SUBSCRIPTION_PLANS.map((plan, idx) => {
             const isCurrentPlan = currentPlan === plan.id
