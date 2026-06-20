@@ -214,6 +214,16 @@ export default function BillingPage() {
           {SUBSCRIPTION_PLANS.map((plan, idx) => {
             const isCurrentPlan = currentPlan === plan.id
             const Icon = plan.icon
+
+            // Tier hierarchy: free (0) < pro (1) < max (2)
+            const tierMap = { free: 0, pro: 1, max: 2 }
+            const currentTier = tierMap[currentPlan as keyof typeof tierMap] || 0
+            const targetTier = tierMap[plan.id as keyof typeof tierMap] || 0
+
+            // Can't downgrade: if on Max/Pro, can't go to Pro/Free without canceling first
+            const isDowngrade = targetTier < currentTier && currentTier > 0
+            const isDisabledDowngrade = isDowngrade && !isCurrentPlan
+
             return (
               <motion.div
                 key={plan.id}
@@ -272,17 +282,24 @@ export default function BillingPage() {
                   className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                     isCurrentPlan
                       ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : isDisabledDowngrade
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
                       : plan.id === "max"
                       ? "bg-warning text-white hover:bg-warning/90 shadow-sm"
                       : plan.id === "pro"
                       ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary"
                       : "bg-muted text-foreground hover:bg-muted/80"
                   }`}
+                  title={isDisabledDowngrade ? `Você precisa cancelar o plano atual (${currentPlan}) antes de migrar para um plano menor` : undefined}
                 >
                   {loadingId === plan.id ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : isCurrentPlan ? (
                     t("billing.currentPlanBtn")
+                  ) : isDisabledDowngrade ? (
+                    <>
+                      Cancelar primeiro
+                    </>
                   ) : (
                     <>
                       {t("billing.subscribe")} {plan.name}
