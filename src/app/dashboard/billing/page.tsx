@@ -175,7 +175,7 @@ export default function BillingPage() {
       if (!response.ok) throw new Error(data.error || `Erro ao mudar plano (${response.status})`)
 
       const planName = toplanId === 5 ? "Max" : "Pro"
-      const isUpgrade = toplanId > currentPlanId
+      const isUpgrade = toplanId > subscription.current_plan_id
       toast(
         isUpgrade
           ? `Upgraded para ${planName}! Cobrança iniciada.`
