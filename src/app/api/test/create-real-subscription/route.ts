@@ -70,11 +70,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plano Pro não encontrado' }, { status: 400 })
     }
 
-    // Create subscription in Stripe with trial period (no payment method needed)
+    // Create subscription in Stripe (without trial to allow upgrades/downgrades)
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: plan.stripe_price_id }],
-      trial_period_days: 14,
       metadata: { userId: user.id, testSubscription: 'true' },
     })
 
