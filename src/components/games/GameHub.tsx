@@ -7,6 +7,7 @@ import { Zap, Flame, Camera, Tag, LayoutGrid, ShieldCheck, Award, Gem, Trophy } 
 import { useConfiguratorStore } from '@/store/store'
 import { BADGES } from '@/types/games'
 import { getSupabaseBrowser } from '@/lib/supabase'
+import { WeeklyLeaderboardTeaser } from './WeeklyLeaderboardTeaser'
 
 const GAMES = [
   {
@@ -232,11 +233,7 @@ export function GameHub() {
       )}
 
       {/* Leaderboard teaser */}
-      <div className="text-center py-2">
-        <p className="text-xs text-muted-foreground">
-          🏆 Leaderboard semanal em breve
-        </p>
-      </div>
+      <WeeklyLeaderboardTeaser />
     </div>
   )
 }
