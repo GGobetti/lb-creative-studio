@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Settings, ShieldCheck, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { Lock } from 'lucide-react'
 import { GamesLimitsPanel } from '@/components/admin/GamesLimitsPanel'
 
@@ -16,7 +16,7 @@ const tabs: { key: TabType; label: string; icon: any }[] = [
 ]
 
 export default function GamesAdminPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const [activeTab, setActiveTab] = useState<TabType>('limits')
 
   if (!profile || profile.role !== 'sysadmin') {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { X, Heart, Download, MessageSquare, Calendar, HardDrive, FileText, ChevronLeft, ChevronRight, Trash2, Send, Plus, Upload, Loader2, Layers, Unlink, Package, Star, ImageIcon } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
-import { useConfiguratorStore } from "@/store/store";
+import { useAppStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { useTranslation } from "@/lib/translations";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,7 +35,7 @@ export function StlDetailsModal({
   onUnmergeSuccess,
   onPrinterTypeUpdate,
 }: StlDetailsModalProps) {
-  const { profile } = useConfiguratorStore();
+  const { profile } = useAppStore();
   const isAdmin = profile?.role === "sysadmin";
   const { t } = useTranslation();
 

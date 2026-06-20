@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 
 const LANGUAGES = [
@@ -13,7 +13,7 @@ const LANGUAGES = [
 type LangCode = typeof LANGUAGES[number]['code']
 
 export function LanguageSwitcher() {
-  const { language, setLanguage, profile, setProfile } = useConfiguratorStore()
+  const { language, setLanguage, profile, setProfile } = useAppStore()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 

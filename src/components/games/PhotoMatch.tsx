@@ -6,7 +6,7 @@ import { Check, X, Image as ImageIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { loadPhotoMatchQuestions } from '@/lib/gameDataLoader'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import type { PhotoMatchQuestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
 import { TimerBar } from './shared/TimerBar'
@@ -83,7 +83,7 @@ export function PhotoMatch() {
         try {
           const data = await res.json()
           if (data.level_up) {
-            const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+            const { refreshXpSummary, refreshCredits } = useAppStore.getState()
             refreshXpSummary()
             const { data: profileData } = await getSupabaseBrowser()
               .from('profiles')

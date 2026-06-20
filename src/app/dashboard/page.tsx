@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import {
   Zap,
   DownloadCloud,
@@ -31,7 +31,7 @@ const cardVariants = {
 }
 
 export default function DashboardPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const { t } = useTranslation()
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)

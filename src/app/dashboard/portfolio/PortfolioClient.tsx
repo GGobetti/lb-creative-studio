@@ -32,11 +32,11 @@ import { PortfolioItem, getSupabaseBrowser } from '@/lib/supabase'
 import { MakerWorldImportModal } from '@/components/dashboard/MakerWorldImportModal'
 import { PricingCalculator } from '@/components/dashboard/PricingCalculator'
 import * as Dialog from '@radix-ui/react-dialog'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function PortfolioClient() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const [items, setItems] = useState<PortfolioItem[]>([])
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)

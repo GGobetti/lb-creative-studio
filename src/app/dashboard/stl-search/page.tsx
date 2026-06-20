@@ -7,7 +7,7 @@ import { StlDetailsModal } from "@/components/stl-search/StlDetailsModal";
 import { MergePartsModal } from "@/components/stl-search/MergePartsModal";
 import { StlItem } from "@/lib/mockStlData";
 import { PackageSearch, Heart, Trophy, TrendingUp, Loader2, Download, GitMerge, X as XIcon, CheckSquare } from "lucide-react";
-import { useConfiguratorStore } from "@/store/store";
+import { useAppStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
 import { useToast } from "@/components/ui/Toast";
@@ -24,8 +24,8 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 export default function StlSearchPage() {
-  const profile = useConfiguratorStore((s) => s.profile);
-  const refreshCredits = useConfiguratorStore((s) => s.refreshCredits);
+  const profile = useAppStore((s) => s.profile);
+  const refreshCredits = useAppStore((s) => s.refreshCredits);
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");

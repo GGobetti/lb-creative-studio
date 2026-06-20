@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import type { XpSummary, XpConfig } from '@/types/xp'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { Loader2, ArrowRightLeft } from 'lucide-react'
 
 interface Props { summary: XpSummary }
 
 export function XpRedeemCard({ summary }: Props) {
-  const { refreshXpSummary, refreshCredits } = useConfiguratorStore()
+  const { refreshXpSummary, refreshCredits } = useAppStore()
   const [config, setConfig] = useState<XpConfig | null>(null)
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)

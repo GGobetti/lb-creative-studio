@@ -3,11 +3,11 @@
 import { PricingCalculator } from "@/components/dashboard/PricingCalculator"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 
 export default function PricingCalculatorPage() {
   const router = useRouter()
-  const isFeatureEnabled = useConfiguratorStore((s) => s.isFeatureEnabled)
+  const isFeatureEnabled = useAppStore((s) => s.isFeatureEnabled)
 
   useEffect(() => {
     if (!isFeatureEnabled("pricing_calculator")) {

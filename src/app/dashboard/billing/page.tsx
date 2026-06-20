@@ -1,6 +1,6 @@
 "use client"
 
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { Zap, Check, CreditCard, Loader2, Rocket, Crown, Star, Sparkles, ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "@/lib/translations"
@@ -76,7 +76,7 @@ const SUBSCRIPTION_PLANS = [
 ]
 
 export default function BillingPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const { t, language } = useTranslation()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)

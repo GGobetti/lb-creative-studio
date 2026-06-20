@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser, SupportTicket, TicketMessage } from "@/lib/supabase"
 import { 
   LifeBuoy, 
@@ -22,7 +22,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useTranslation } from "@/lib/translations"
 
 export function TicketsTab() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const { t } = useTranslation()
 
   // State

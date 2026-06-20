@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Zap, Flame, Camera, Tag, LayoutGrid, ShieldCheck, Award, Gem, Trophy } from 'lucide-react'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { BADGES } from '@/types/games'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { WeeklyLeaderboardTeaser } from './WeeklyLeaderboardTeaser'
@@ -61,7 +61,7 @@ const GAMES = [
 ]
 
 export function GameHub() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const [streak, setStreak] = useState(0)
   const [points, setPoints] = useState(0)
 

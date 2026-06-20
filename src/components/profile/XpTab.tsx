@@ -1,6 +1,6 @@
 'use client'
 
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { XpHeroCard } from './XpHeroCard'
 import { XpLevelTrail } from './XpLevelTrail'
 import { XpChart } from './XpChart'
@@ -9,7 +9,7 @@ import { XpBadgesGrid } from './XpBadgesGrid'
 import { Loader2 } from 'lucide-react'
 
 export function XpTab() {
-  const { xpSummary } = useConfiguratorStore()
+  const { xpSummary } = useAppStore()
 
   if (!xpSummary) {
     return (

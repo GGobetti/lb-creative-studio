@@ -1,7 +1,7 @@
 // src/lib/translations.ts
 // Client-side lightweight translation dictionary and helper hook
 
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 
 export const translations = {
   pt: {
@@ -866,7 +866,7 @@ export const translations = {
 }
 
 export function useTranslation() {
-  const language = useConfiguratorStore((s) => s.language) || 'pt'
+  const language = useAppStore((s) => s.language) || 'pt'
 
   const t = (key: string, fallback?: string): string => {
     const keys = key.split('.')

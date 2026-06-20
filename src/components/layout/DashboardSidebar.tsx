@@ -21,7 +21,7 @@ import {
   AlertTriangle,
   Swords,
 } from "lucide-react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { useShallow } from "zustand/react/shallow"
 import { useLogout } from "@/hooks/useLogout"
@@ -38,7 +38,7 @@ type ScraperHealth = "healthy" | "warning" | "offline" | "unknown"
 
 export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
   const pathname = usePathname()
-  const { isFeatureEnabled, profile } = useConfiguratorStore(
+  const { isFeatureEnabled, profile } = useAppStore(
     useShallow((s) => ({ isFeatureEnabled: s.isFeatureEnabled, profile: s.profile }))
   )
   const handleLogout = useLogout()

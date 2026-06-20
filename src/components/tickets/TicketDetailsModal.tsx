@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser, SupportTicket, TicketMessage } from "@/lib/supabase"
 import { 
   X, 
@@ -31,7 +31,7 @@ export function TicketDetailsModal({
   ticket,
   onTicketUpdated
 }: TicketDetailsModalProps) {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const { t } = useTranslation()
   
   const [messages, setMessages] = useState<TicketMessage[]>([])

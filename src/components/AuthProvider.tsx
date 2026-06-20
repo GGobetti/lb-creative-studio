@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, type ReactNode } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { useShallow } from 'zustand/react/shallow'
 import type { Profile } from '@/lib/supabase'
 
@@ -25,7 +25,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings, refreshXpSummary } = useConfiguratorStore(
+  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings, refreshXpSummary } = useAppStore(
     useShallow((s) => ({
       user: s.user,
       setUser: s.setUser,

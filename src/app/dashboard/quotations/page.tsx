@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { getSupabaseBrowser } from "@/lib/supabase"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { FileText, Search, Plus, Trash2, Eye, Clock, FileCheck, CheckCircle2, AlertCircle, XCircle } from "lucide-react"
 import Link from "next/link"
 
@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: Quotation['status'] }) {
 }
 
 export default function QuotationsPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")

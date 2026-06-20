@@ -9,7 +9,7 @@ import {
 import { useRouter } from 'next/navigation'
 import { loadAuditQuestions } from '@/lib/gameDataLoader'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { STL_CATEGORIES } from '@/types/games'
 import type { AuditQuestion, AuditSuggestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
@@ -465,7 +465,7 @@ export function QualityAudit() {
       if (!res.ok) throw new Error(data.error)
       if (data.level_up) {
         try {
-          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          const { refreshXpSummary, refreshCredits } = useAppStore.getState()
           refreshXpSummary()
           const { data: profileData } = await getSupabaseBrowser()
             .from('profiles')
@@ -512,7 +512,7 @@ export function QualityAudit() {
       if (!voteRes.ok) throw new Error(voteData.error)
       if (voteData.level_up) {
         try {
-          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          const { refreshXpSummary, refreshCredits } = useAppStore.getState()
           refreshXpSummary()
           const { data: profileData } = await getSupabaseBrowser()
             .from('profiles')

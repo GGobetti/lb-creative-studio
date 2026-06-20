@@ -1,12 +1,12 @@
 // src/store/store.ts
 // Zustand global store with immer for clean mutations.
-// Slices: auth, catalog, parametric, imageToStl, ui, pricing
+// Slices: auth, ui, pricing, featureFlags, xp
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { User } from '@supabase/supabase-js'
-import type { Profile, CatalogItem, ConfigState } from '@/lib/supabase'
+import type { Profile } from '@/lib/supabase'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import type { XpSummary } from '@/types/xp'
 
@@ -21,112 +21,6 @@ interface AuthSlice {
   setLanguage: (lang: 'pt' | 'en' | 'es') => void
   refreshCredits: (credits: number) => void
   logout: () => void
-}
-
-// ─── Catalog Slice ───────────────────────────────────────────────
-
-interface CatalogSlice {
-  currentItem: CatalogItem | null
-  setCurrentItem: (item: CatalogItem | null) => void
-}
-
-// ─── Parametric Slice ────────────────────────────────────────────
-
-export interface ParametricValues {
-  // Text
-  line1: string
-  line2: string
-  // Base geometry
-  baseWidth: number
-  baseHeight: number
-  baseDepth: number
-  baseRadius: number
-  // Text 3D
-  textDepth: number
-  textScale: number
-  textX: number
-  textYOffset: number
-  textZ: number
-  textRotationX: number
-  textRotationY: number
-  textRotationZ: number
-  // Advanced Features
-  booleanMode: 'union' | 'subtract'
-  fontFamily: string
-  baseShape: 'rectangle' | 'circle' | 'hexagon'
-  holesEnabled: boolean
-  holeDiameter: number
-  holeMargin: number
-  keychainEnabled: boolean
-  surfaceTexture: 'none' | 'honeycomb' | 'stripes'
-  customBaseStlUrl: string | null
-  // Image-to-3D / Cookie Cutter
-  bladeHeight: number
-  bladeWall: number
-  flangeOffset: number
-  flangeHeight: number
-  // Keychain
-  bodyDepth: number
-  bodyScale: number
-  ringRadius: number
-  // Generic
-  [key: string]: string | number | boolean | null
-}
-
-const DEFAULT_PARAMETRIC: ParametricValues = {
-  line1: 'LB Creative',
-  line2: 'Studio',
-  baseWidth: 120,
-  baseHeight: 10,
-  baseDepth: 80,
-  baseRadius: 2,
-  textDepth: 3,
-  textScale: 1,
-  textX: 0,
-  textYOffset: 0,
-  textZ: 0,
-  textRotationX: 0,
-  textRotationY: 0,
-  textRotationZ: 0,
-  booleanMode: 'union',
-  fontFamily: 'roboto',
-  baseShape: 'rectangle',
-  holesEnabled: false,
-  holeDiameter: 4,
-  holeMargin: 10,
-  keychainEnabled: false,
-  surfaceTexture: 'none',
-  customBaseStlUrl: null,
-  bladeHeight: 15,
-  bladeWall: 1.2,
-  flangeOffset: 4,
-  flangeHeight: 3,
-  bodyDepth: 3,
-  bodyScale: 40,
-  ringRadius: 5,
-}
-
-interface ParametricSlice {
-  values: ParametricValues
-  color: string
-  preset: 'cookie_cutter' | 'keychain' | null
-  setValue: (key: string, value: number | string | boolean | null) => void
-  setColor: (color: string) => void
-  setPreset: (preset: 'cookie_cutter' | 'keychain' | null) => void
-  resetToDefaults: (schema?: { sliders: Array<{ key: string; default: number }> }) => void
-  toConfigState: () => ConfigState
-}
-
-// ─── Image-to-STL Slice ──────────────────────────────────────────
-
-interface ImageToStlSlice {
-  sourceImageUrl: string | null
-  svgPathData: string | null
-  traceThreshold: number
-  setSourceImage: (url: string | null) => void
-  setSvgPathData: (svg: string | null) => void
-  setTraceThreshold: (v: number) => void
-  clearImage: () => void
 }
 
 // ─── UI Slice ────────────────────────────────────────────────────
@@ -208,9 +102,9 @@ interface XpSlice {
 
 // ─── Combined Store ──────────────────────────────────────────────
 
-type Store = AuthSlice & CatalogSlice & ParametricSlice & ImageToStlSlice & UiSlice & PricingSlice & FeatureFlagsSlice & XpSlice
+type Store = AuthSlice & UiSlice & PricingSlice & FeatureFlagsSlice & XpSlice
 
-export const useConfiguratorStore = create<Store>()(
+export const useAppStore = create<Store>()(
   persist(
     immer((set, get) => ({
       // ── Feature Flags ───────────────────────────────────────────
@@ -269,69 +163,6 @@ export const useConfiguratorStore = create<Store>()(
           })
         }
       },
-
-      // ── Catalog ───────────────────────────────────────────────
-      currentItem: null,
-      setCurrentItem: (item) =>
-        set((s) => {
-          s.currentItem = item
-        }),
-
-      // ── Parametric ────────────────────────────────────────────
-      values: { ...DEFAULT_PARAMETRIC },
-      color: '#e8d5b7',
-      preset: null,
-      setValue: (key, value) =>
-        set((s) => {
-          ;(s.values as Record<string, unknown>)[key] = value
-        }),
-      setColor: (color) =>
-        set((s) => {
-          s.color = color
-        }),
-      setPreset: (preset) =>
-        set((s) => {
-          s.preset = preset
-        }),
-      resetToDefaults: (schema) =>
-        set((s) => {
-          s.values = { ...DEFAULT_PARAMETRIC }
-          if (schema) {
-            schema.sliders.forEach((sl) => {
-              ;(s.values as Record<string, unknown>)[sl.key] = sl.default
-            })
-          }
-        }),
-      toConfigState: () => {
-        const s = get()
-        return {
-          ...s.values,
-          color: s.color,
-          preset: s.preset,
-        }
-      },
-
-      // ── Image-to-STL ──────────────────────────────────────────
-      sourceImageUrl: null,
-      svgPathData: null,
-      traceThreshold: 128,
-      setSourceImage: (url) =>
-        set((s) => {
-          s.sourceImageUrl = url
-        }),
-      setSvgPathData: (svg) =>
-        set((s) => {
-          s.svgPathData = svg
-        }),
-      setTraceThreshold: (v) =>
-        set((s) => {
-          s.traceThreshold = v
-        }),
-      clearImage: () =>
-        set((s) => {
-          s.sourceImageUrl = null
-          s.svgPathData = null
-        }),
 
       // ── UI ────────────────────────────────────────────────────
       exportLoading: false,
@@ -396,11 +227,8 @@ export const useConfiguratorStore = create<Store>()(
     {
       name: 'lb-studio-store',
       storage: createJSONStorage(() => localStorage),
-      // Only persist non-sensitive UI preferences and parametric values
+      // Only persist non-sensitive UI preferences
       partialize: (state) => ({
-        values: state.values,
-        color: state.color,
-        preset: state.preset,
         sidebarTab: state.sidebarTab,
         uiMode: state.uiMode,
         pricingSettings: state.pricingSettings,

@@ -5,7 +5,7 @@
 
 import { useState } from 'react'
 import { Zap, X, Check, Loader2, Sparkles } from 'lucide-react'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import type { CatalogItem } from '@/lib/supabase'
 import { triggerConfetti } from '@/lib/confetti'
@@ -48,7 +48,7 @@ interface CreditModalProps {
 }
 
 export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
-  const { profile, refreshCredits } = useConfiguratorStore()
+  const { profile, refreshCredits } = useAppStore()
   const [selectedPkg, setSelectedPkg] = useState('pro')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)

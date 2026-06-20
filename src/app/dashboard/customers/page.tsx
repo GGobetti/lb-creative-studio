@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { getSupabaseBrowser } from "@/lib/supabase"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { Users, Search, Plus, Trash2, Edit, X, Phone, Mail, Send, Clock, UserCheck } from "lucide-react"
 
 interface Customer {
@@ -16,7 +16,7 @@ interface Customer {
 }
 
 export default function CustomersPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")

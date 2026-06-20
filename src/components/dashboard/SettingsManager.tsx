@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useConfiguratorStore, Printer, Marketplace, Material } from '@/store/store'
+import { useAppStore, Printer, Marketplace, Material } from '@/store/store'
 import { Settings, Printer as PrinterIcon, Store, Box, Trash2, Plus, Zap, Percent, Clock } from 'lucide-react'
 
 export function SettingsManager() {
-  const { pricingSettings, setPricingSettings } = useConfiguratorStore()
+  const { pricingSettings, setPricingSettings } = useAppStore()
   const [settings, setSettings] = useState(pricingSettings)
 
   useEffect(() => {

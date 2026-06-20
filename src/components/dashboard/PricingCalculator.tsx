@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { 
   Calculator, 
   Package, 
@@ -32,7 +32,7 @@ export function PricingCalculator({
   onSavePrice,
   isStandalone = true,
 }: PricingCalculatorProps) {
-  const { pricingSettings, setPricingSettings } = useConfiguratorStore()
+  const { pricingSettings, setPricingSettings } = useAppStore()
   const router = useRouter()
   const { t } = useTranslation()
 
@@ -90,7 +90,7 @@ export function PricingCalculator({
   const handleCreateQuickCustomer = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newCustomerName.trim()) return
-    const { profile } = useConfiguratorStore.getState()
+    const { profile } = useAppStore.getState()
     if (!profile) return
     
     try {
@@ -117,7 +117,7 @@ export function PricingCalculator({
   }
 
   const handleSaveQuote = async () => {
-    const { profile } = useConfiguratorStore.getState()
+    const { profile } = useAppStore.getState()
     if (!profile || !selectedCustomerId) return
     
     setIsCreatingQuote(true)

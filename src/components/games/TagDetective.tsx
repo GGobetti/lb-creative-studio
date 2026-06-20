@@ -6,7 +6,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { loadTagDetectiveQuestions } from '@/lib/gameDataLoader'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import type { TagDetectiveQuestion } from '@/types/games'
 import { GameHeader } from './shared/GameHeader'
 import { SessionProgress } from './shared/SessionProgress'
@@ -85,7 +85,7 @@ export function TagDetective() {
       try {
         const data = await res.json()
         if (data.level_up) {
-          const { refreshXpSummary, refreshCredits } = useConfiguratorStore.getState()
+          const { refreshXpSummary, refreshCredits } = useAppStore.getState()
           refreshXpSummary()
           const { data: profileData } = await getSupabaseBrowser()
             .from('profiles')

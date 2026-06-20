@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { getSupabaseBrowser } from "@/lib/supabase"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { 
   FileText, 
   Printer, 
@@ -51,7 +51,7 @@ interface Quotation {
 
 export default function QuotationDetailPage({ params }: Props) {
   const { id } = React.use(params)
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const router = useRouter()
   
   const [quotation, setQuotation] = useState<Quotation | null>(null)

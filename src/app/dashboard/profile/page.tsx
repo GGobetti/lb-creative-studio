@@ -1,6 +1,6 @@
 "use client"
 
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { User, Mail, MapPin, Camera, Save, Loader2, Globe, Zap, ArrowUpRight, ArrowDownLeft, Receipt } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -17,7 +17,7 @@ interface Transaction {
 }
 
 export default function ProfilePage() {
-  const { profile, setProfile, setLanguage, setCreditModalOpen } = useConfiguratorStore()
+  const { profile, setProfile, setLanguage, setCreditModalOpen } = useAppStore()
   const { toast } = useToast()
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)

@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 
 export function useLogout() {
   const router = useRouter()
-  const logout = useConfiguratorStore((s) => s.logout)
+  const logout = useAppStore((s) => s.logout)
 
   return async function handleLogout() {
     const supabase = getSupabaseBrowser()

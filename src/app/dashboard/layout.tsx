@@ -16,7 +16,7 @@ import {
   ShieldAlert,
   LayoutDashboard,
 } from "lucide-react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { useShallow } from "zustand/react/shallow"
 import { useLogout } from "@/hooks/useLogout"
@@ -27,7 +27,7 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags, xpSummary } = useConfiguratorStore(
+  const { profile, creditModalOpen, setCreditModalOpen, setFeatureFlags, xpSummary } = useAppStore(
     useShallow((s) => ({
       profile: s.profile,
       creditModalOpen: s.creditModalOpen,

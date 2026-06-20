@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { X, Link as LinkIcon, Download, Loader2 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { DotMatrixLoader } from '@/components/ui/DotMatrixLoader'
 
 interface MakerWorldImportModalProps {
@@ -14,7 +14,7 @@ interface MakerWorldImportModalProps {
 }
 
 export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: MakerWorldImportModalProps) {
-  const { profile, refreshCredits } = useConfiguratorStore()
+  const { profile, refreshCredits } = useAppStore()
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

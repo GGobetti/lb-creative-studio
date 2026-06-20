@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser, Profile, CatalogItem, FeatureCost } from "@/lib/supabase"
 import { 
   ShieldAlert, 
@@ -35,7 +35,7 @@ import { XpConfigPanel } from "@/components/admin/XpConfigPanel"
 // import { GameAdminShortcuts } from "@/components/admin/GameAdminShortcuts"
 
 export default function AdminPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "scraper" | "analytics" | "tickets" | "flags" | "acervo" | "xp">("features")
   const [loading, setLoading] = useState(true)
@@ -349,8 +349,8 @@ export default function AdminPage() {
       setFeatureFlagsData(prev => prev.map(f => f.key === key ? { ...f, is_enabled: newVal } : f))
       
       // Update store state immediately
-      const currentFlags = useConfiguratorStore.getState().featureFlags
-      useConfiguratorStore.getState().setFeatureFlags({
+      const currentFlags = useAppStore.getState().featureFlags
+      useAppStore.getState().setFeatureFlags({
         ...currentFlags,
         [key]: newVal
       })

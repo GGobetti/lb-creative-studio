@@ -6,7 +6,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Zap, LogOut, User, ChevronDown, LayoutDashboard, Folder, ShieldAlert } from 'lucide-react'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { useState, useEffect } from 'react'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -14,7 +14,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useTranslation } from '@/lib/translations'
 
 export function Navbar() {
-  const { profile, logout, xpSummary, refreshXpSummary } = useConfiguratorStore()
+  const { profile, logout, xpSummary, refreshXpSummary } = useAppStore()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
   const { t } = useTranslation()

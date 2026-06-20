@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import { useConfiguratorStore } from "@/store/store"
+import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser, SupportTicket } from "@/lib/supabase"
 import { 
   LifeBuoy, 
@@ -23,7 +23,7 @@ import { TicketDetailsModal } from "@/components/tickets/TicketDetailsModal"
 import { motion, AnimatePresence } from "framer-motion"
 
 export default function TicketsPage() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const { toast } = useToast()
   const { t } = useTranslation()
 

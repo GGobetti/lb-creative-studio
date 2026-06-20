@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { useConfiguratorStore } from '@/store/store'
+import { useAppStore } from '@/store/store'
 import dynamic from 'next/dynamic'
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false })
@@ -41,7 +41,7 @@ function isoWeek(date: Date): string {
 }
 
 export function XpChart() {
-  const { profile } = useConfiguratorStore()
+  const { profile } = useAppStore()
   const [txs, setTxs] = useState<XpTx[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<View>('cumulative')
