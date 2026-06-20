@@ -339,21 +339,12 @@ Sistema de gamificação completo:
 
 ### 🔜 Próximos Itens
 
-**Migrations manuais pendentes (aplicar no Supabase Dashboard antes do deploy):**
-- ~~`supabase/migrations/20260619002000_onboarding_flag.sql`~~ — ✅ aplicado (`onboarding_completed` em `profiles`)
-- ~~`supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql`~~ — ✅ aplicado (pg_cron agendado, 1 row confirmado)
-
-**Produto:**
+**Produto (curto prazo):**
 - U8: Exibir custo de crédito no card do STL antes do download
+- Stripe sandbox: conectar webhook em modo Test (`stripe listen` local ou endpoint ngrok) para validar fluxo de assinatura end-to-end
 
-**Deploy para beta (próximo passo imediato):**
-- Configurar Supabase redirect URLs para domínio Vercel
-- Configurar Google OAuth com domínio de produção
-- Configurar Stripe webhook endpoint em produção
-- Deploy no Vercel: `vercel` CLI ou conectar GitHub repo
-- Scraper separado em [`lb-creative-scrapper`](https://github.com/GGobetti/lb-creative-scrapper) — roda local com `npm run scan`
-
-**Produto (longo prazo):**
+**Longo prazo (quando for ao ar para beta testers):**
+- Deploy Vercel: configurar redirect URLs Supabase + Google OAuth + Stripe webhook em produção
 - Hub Maker com conteúdo real (atualmente placeholder)
 - Landing page: prova social (testimonials, contador de usuários, pricing visível)
 - Leaderboard semanal real com ranking de XP
@@ -372,8 +363,12 @@ Sistema de gamificação completo:
 - ✅ Download tenta proxy antes de debitar créditos
 - ✅ `invoice.paid` implementado (stripe_customer_id salvo + créditos mensais)
 
-### Deploy (ainda pendente)
-- ⚠️ `STRIPE_WEBHOOK_SECRET` — configurar endpoint no Stripe Dashboard (modo Test) apontando para o domínio Vercel
+### Stripe Sandbox (próximo passo de produto)
+- ⚠️ Conectar webhook Stripe em modo Test — `stripe listen --forward-to localhost:3000/api/webhooks/stripe` ou endpoint ngrok
+- ⚠️ Validar fluxo completo: checkout → `invoice.paid` → créditos creditados → renovação mensal
+
+### Deploy para Beta (backlog futuro — quando for ao ar)
+- ⚠️ `STRIPE_WEBHOOK_SECRET` — configurar endpoint no Stripe Dashboard apontando para o domínio Vercel
 - ⚠️ Supabase → Authentication → URL Configuration: adicionar domínio Vercel em Site URL e Redirect URLs
 - ⚠️ Google Cloud Console → OAuth Client: adicionar domínio Vercel em Authorized Origins e Redirect URIs
 - ⚠️ Variáveis de ambiente no Vercel (Settings → Environment Variables): todas as vars do `.env.local`
