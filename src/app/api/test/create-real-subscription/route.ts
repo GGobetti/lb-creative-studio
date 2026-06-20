@@ -50,14 +50,34 @@ export async function POST(req: NextRequest) {
       .single()
 
     let customerId = profile?.stripe_customer_id
-    if (!customerId) {
+    let needsUpdate = false
+
+    if (customerId) {
+      try {
+        // Verify customer exists
+        await stripe.customers.retrieve(customerId)
+      } catch (err: any) {
+        // Customer doesn't exist, create new one
+        console.log(`Customer ${customerId} not found, creating new one`)
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id },
+        })
+        customerId = customer.id
+        needsUpdate = true
+      }
+    } else {
+      // No customer ID, create new one
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: { userId: user.id },
       })
       customerId = customer.id
+      needsUpdate = true
+    }
 
-      // Update profile
+    // Update profile if needed
+    if (needsUpdate) {
       await supabase
         .from('profiles')
         .update({ stripe_customer_id: customerId })
