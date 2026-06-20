@@ -137,7 +137,7 @@ O projeto atingiu **maturidade operacional**. Todos os blockers financeiros e de
 | `20260619_audit_suggestions_v2.sql` | Sugestões cooperativas QualityAudit |
 | `20260620_xp_gamification.sql` | Tabelas XP, badges, níveis, RPCs |
 | `20260620_xp_security_fix.sql` | Fix de segurança no sistema XP |
-| `20260619002000_onboarding_flag.sql` | Coluna `onboarding_completed` em `profiles` *(apply manual pendente)* |
+| `20260619002000_onboarding_flag.sql` | Coluna `onboarding_completed` em `profiles` ✅ aplicado |
 | `20260620_cleanup_scraper_jobs_cron.sql` | pg_cron cleanup diário de `telegram_scraper_jobs` ✅ aplicado |
 
 ---
@@ -255,7 +255,7 @@ Sistema de gamificação completo:
 | A7 | Arquitetura | Logout duplicado | 🟢 BAIXO | ✅ Concluído |
 | D6 | Infra | scraper_jobs sem archival | 🟢 BAIXO | ✅ pg_cron agendado — cleanup diário 02:00 UTC, 30d retention |
 | D9 | Performance | Polling → Realtime | 🟢 BAIXO | ✅ Concluído |
-| U2 | Produto | Onboarding ausente | 🟢 BAIXO | ✅ Concluído (migration manual pendente) |
+| U2 | Produto | Onboarding ausente | 🟢 BAIXO | ✅ Concluído — tour 4 passos ativo em produção |
 | U5 | UX | Dot grid login cor incorreta (indigo → cyan) | 🟢 BAIXO | ✅ Concluído |
 | U6 | UX | Emojis vs Lucide icons | 🟢 BAIXO | ✅ Concluído |
 | U7 | UX | Leaderboard teaser morto | 🟢 BAIXO | ✅ Concluído |
@@ -340,7 +340,7 @@ Sistema de gamificação completo:
 ### 🔜 Próximos Itens
 
 **Migrations manuais pendentes (aplicar no Supabase Dashboard antes do deploy):**
-- `supabase/migrations/20260619002000_onboarding_flag.sql` — coluna `onboarding_completed` em `profiles`
+- ~~`supabase/migrations/20260619002000_onboarding_flag.sql`~~ — ✅ aplicado (`onboarding_completed` em `profiles`)
 - ~~`supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql`~~ — ✅ aplicado (pg_cron agendado, 1 row confirmado)
 
 **Produto:**
