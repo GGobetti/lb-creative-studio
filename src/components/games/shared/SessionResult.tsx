@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Star, RotateCcw, LayoutGrid } from 'lucide-react'
+import { Star, RotateCcw, LayoutGrid, Award } from 'lucide-react'
 
 interface SessionResultProps {
   actionsCount: number
@@ -17,9 +17,9 @@ export function SessionResult({ actionsCount, pointsEarned, onReplay, onExit }: 
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-        className="text-6xl"
+        className="flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 border border-primary/20"
       >
-        🏅
+        <Award size={40} className="text-primary" />
       </motion.div>
 
       <motion.div

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Zap, Flame, Camera, Tag, LayoutGrid, ShieldCheck } from 'lucide-react'
+import { Zap, Flame, Camera, Tag, LayoutGrid, ShieldCheck, Award, Gem, Trophy } from 'lucide-react'
 import { useConfiguratorStore } from '@/store/store'
 import { BADGES } from '@/types/games'
 import { getSupabaseBrowser } from '@/lib/supabase'
@@ -104,11 +104,11 @@ export function GameHub() {
     ? Math.min(100, Math.round(((points - (currentBadge?.requiredPoints ?? 0)) / (nextBadge.requiredPoints - (currentBadge?.requiredPoints ?? 0))) * 100))
     : 100
 
-  const badgeEmoji: Record<string, string> = {
-    bronze: '🥉',
-    silver: '🥈',
-    gold: '🥇',
-    diamond: '💎',
+  const BADGE_ICONS: Record<string, { Icon: React.ElementType; className: string }> = {
+    bronze:  { Icon: Award, className: 'text-amber-600' },
+    silver:  { Icon: Award, className: 'text-slate-400' },
+    gold:    { Icon: Award, className: 'text-yellow-400' },
+    diamond: { Icon: Gem,   className: 'text-cyan-400'  },
   }
 
   return (
@@ -137,7 +137,7 @@ export function GameHub() {
           <Flame size={18} className="text-warning shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">
-              🔥 Streak de {streak} {streak === 1 ? 'dia' : 'dias'}!
+              Streak de {streak} {streak === 1 ? 'dia' : 'dias'}!
             </p>
             <p className="text-xs text-muted-foreground">Multiplicador 2× ativo hoje</p>
           </div>
@@ -196,7 +196,11 @@ export function GameHub() {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{badgeEmoji[currentBadge?.tier ?? 'bronze']}</span>
+            {(() => {
+              const b = BADGE_ICONS[currentBadge?.tier ?? 'bronze']
+              const Icon = b.Icon
+              return <Icon size={32} className={b.className} />
+            })()}
             <div className="flex-1">
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-foreground font-medium">{currentBadge?.name ?? 'Sem badge'}</span>
@@ -213,7 +217,12 @@ export function GameHub() {
                 />
               </div>
             </div>
-            <span className="text-2xl opacity-40">{badgeEmoji[nextBadge.tier]}</span>
+            {(() => {
+              const b = BADGE_ICONS[nextBadge.tier]
+              if (!b) return null
+              const Icon = b.Icon
+              return <Icon size={24} className={`${b.className} opacity-40`} />
+            })()}
           </div>
 
           <p className="text-xs text-muted-foreground">
