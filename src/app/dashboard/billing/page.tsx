@@ -92,6 +92,8 @@ export default function BillingPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [creditPlans, setCreditPlans] = useState<PricingPlan[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
+  const [showCancelDialog, setShowCancelDialog] = useState(false)
+  const [cancelConfirmed, setCancelConfirmed] = useState(false)
 
   // Load pricing plans from Supabase on mount
   useEffect(() => {
@@ -144,6 +146,11 @@ export default function BillingPage() {
     }
   }
 
+  const handleCancelClick = () => {
+    setCancelConfirmed(false)
+    setShowCancelDialog(true)
+  }
+
   const handleCancelSubscription = async () => {
     setLoadingId("cancel")
     try {
@@ -154,6 +161,7 @@ export default function BillingPage() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || "Erro ao cancelar")
       toast(data.message || "Assinatura cancelada", "success")
+      setShowCancelDialog(false)
     } catch (err: any) {
       toast(err.message, "error")
     } finally {
@@ -244,6 +252,7 @@ export default function BillingPage() {
             return (
               <motion.div
                 key={plan.id}
+                data-plan={plan.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.06 }}
@@ -294,7 +303,7 @@ export default function BillingPage() {
                 </ul>
 
                 <button
-                  onClick={() => isCurrentPlan && plan.id !== "free" ? handleCancelSubscription() : null}
+                  onClick={() => isCurrentPlan && plan.id !== "free" ? handleCancelClick() : null}
                   disabled={!isCurrentPlan && isDisabledDowngrade}
                   className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                     isCurrentPlan && plan.id !== "free"
@@ -409,6 +418,110 @@ export default function BillingPage() {
           </div>
         )}
       </div>
+
+      {/* Cancel Subscription Dialog */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)} />
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-4"
+          >
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Tem certeza?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Você está prestes a cancelar sua assinatura. Ela permanecerá ativa até o final do período já pago.
+              </p>
+            </div>
+
+            {/* Downgrade suggestion */}
+            {currentPlan === "max" && (
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  💡 Que tal fazer um downgrade?
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Migrar para o plano <strong>Pro</strong> é muito mais barato e você não perde os benefícios da assinatura!
+                </p>
+                <button
+                  onClick={() => {
+                    setShowCancelDialog(false)
+                    // Scroll to Pro plan
+                    document.querySelector('[data-plan="pro"]')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="w-full mt-2 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Ver Plano Pro →
+                </button>
+              </div>
+            )}
+
+            {currentPlan === "pro" && (
+              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  💡 Quer mais benefícios?
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Fazer um <strong>upgrade para Max</strong> custa apenas um pouco mais e você ganha muito mais créditos!
+                </p>
+                <button
+                  onClick={() => {
+                    setShowCancelDialog(false)
+                    document.querySelector('[data-plan="max"]')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="w-full mt-2 px-3 py-2 bg-warning text-white text-xs font-semibold rounded-lg hover:bg-warning/90 transition-colors"
+                >
+                  Ver Plano Max →
+                </button>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <button
+                onClick={() => setShowCancelDialog(false)}
+                className="flex-1 px-4 py-2 rounded-lg bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition-colors"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={() => setCancelConfirmed(true)}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
+              >
+                Confirmar Cancelamento
+              </button>
+            </div>
+
+            {/* Final confirmation */}
+            {cancelConfirmed && (
+              <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg space-y-3">
+                <p className="text-sm text-red-900 dark:text-red-200 font-medium">
+                  Tem certeza absoluta?
+                </p>
+                <p className="text-xs text-red-800 dark:text-red-300">
+                  Esta ação não pode ser desfeita. Você perderá todos os benefícios da assinatura.
+                </p>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={loadingId === "cancel"}
+                  className="w-full px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {loadingId === "cancel" ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                      Cancelando...
+                    </>
+                  ) : (
+                    "Sim, cancelar minha assinatura"
+                  )}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
