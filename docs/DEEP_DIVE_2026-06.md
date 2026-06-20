@@ -138,7 +138,7 @@ O projeto atingiu **maturidade operacional**. Todos os blockers financeiros e de
 | `20260620_xp_gamification.sql` | Tabelas XP, badges, níveis, RPCs |
 | `20260620_xp_security_fix.sql` | Fix de segurança no sistema XP |
 | `20260619002000_onboarding_flag.sql` | Coluna `onboarding_completed` em `profiles` *(apply manual pendente)* |
-| `20260620_cleanup_scraper_jobs_cron.sql` | pg_cron cleanup diário de `telegram_scraper_jobs` *(apply manual pendente)* |
+| `20260620_cleanup_scraper_jobs_cron.sql` | pg_cron cleanup diário de `telegram_scraper_jobs` ✅ aplicado |
 
 ---
 
@@ -253,7 +253,7 @@ Sistema de gamificação completo:
 | U4 | UX | Sem "Esqueci senha" | 🟡 MÉDIO | ✅ Concluído |
 | A5 | Deps | `three`/`potrace` em package.json | 🟢 BAIXO | ✅ Concluído |
 | A7 | Arquitetura | Logout duplicado | 🟢 BAIXO | ✅ Concluído |
-| D6 | Infra | scraper_jobs sem archival | 🟢 BAIXO | ✅ Migration pg_cron criada (apply manual) |
+| D6 | Infra | scraper_jobs sem archival | 🟢 BAIXO | ✅ pg_cron agendado — cleanup diário 02:00 UTC, 30d retention |
 | D9 | Performance | Polling → Realtime | 🟢 BAIXO | ✅ Concluído |
 | U2 | Produto | Onboarding ausente | 🟢 BAIXO | ✅ Concluído (migration manual pendente) |
 | U5 | UX | Dot grid login cor incorreta (indigo → cyan) | 🟢 BAIXO | ✅ Concluído |
@@ -341,7 +341,7 @@ Sistema de gamificação completo:
 
 **Migrations manuais pendentes (aplicar no Supabase Dashboard antes do deploy):**
 - `supabase/migrations/20260619002000_onboarding_flag.sql` — coluna `onboarding_completed` em `profiles`
-- `supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql` — pg_cron para limpeza de jobs antigos
+- ~~`supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql`~~ — ✅ aplicado (pg_cron agendado, 1 row confirmado)
 
 **Produto:**
 - U8: Exibir custo de crédito no card do STL antes do download
