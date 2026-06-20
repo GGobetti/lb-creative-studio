@@ -2,12 +2,22 @@
 
 import { useAppStore } from "@/store/store"
 import { Zap, Check, CreditCard, Loader2, Rocket, Crown, Star, Sparkles, ArrowRight } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslation } from "@/lib/translations"
 import { useToast } from "@/components/ui/Toast"
 import { PageHeader } from "@/components/ui/PageHeader"
 import { StatusBadge } from "@/components/ui/StatusBadge"
 import { motion } from "framer-motion"
+import { getSupabaseBrowser } from "@/lib/supabase"
+
+interface PricingPlan {
+  id: number
+  name: string
+  credits: number
+  price_cents: number
+  stripe_price_id: string
+  active: boolean
+}
 
 const CREDIT_PACKAGES = [
   {
@@ -80,6 +90,41 @@ export default function BillingPage() {
   const { t, language } = useTranslation()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [creditPlans, setCreditPlans] = useState<PricingPlan[]>([])
+  const [plansLoading, setPlansLoading] = useState(true)
+
+  // Load pricing plans from Supabase on mount
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const supabase = getSupabaseBrowser()
+        const { data, error } = await supabase
+          .from('pricing_plans')
+          .select('*')
+          .eq('active', true)
+          .lt('credits', 999) // Only credit packages, not subscriptions
+          .order('price_cents', { ascending: true })
+
+        if (error) throw error
+        setCreditPlans(data || [])
+      } catch (err) {
+        console.error('Failed to load pricing plans:', err)
+        // Fall back to hardcoded if fetch fails
+        setCreditPlans(CREDIT_PACKAGES.map(p => ({
+          id: p.id,
+          name: `Pacote ${p.credits} Créditos`,
+          credits: p.credits,
+          price_cents: Math.round(p.price * 100),
+          stripe_price_id: '',
+          active: true,
+        })))
+      } finally {
+        setPlansLoading(false)
+      }
+    }
+
+    fetchPlans()
+  }, [])
 
   const handleCheckout = async (planId: number) => {
     setLoadingId(String(planId))
@@ -222,8 +267,8 @@ export default function BillingPage() {
                 </ul>
 
                 <button
-                  onClick={() => handleCheckout(plan.id, "subscription")}
-                  disabled={isCurrentPlan || loadingId === plan.id}
+                  onClick={() => {}}
+                  disabled={true}
                   className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
                     isCurrentPlan
                       ? "bg-muted text-muted-foreground cursor-not-allowed"
@@ -257,66 +302,74 @@ export default function BillingPage() {
           <h2 className="text-heading text-lg text-foreground">{t("billing.buyCredits")}</h2>
           <p className="text-xs text-muted-foreground">{t("billing.noExpiry")}</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {CREDIT_PACKAGES.map((pack, idx) => (
-            <motion.div
-              key={pack.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18 + idx * 0.06 }}
-              className={`relative rounded-2xl p-6 border transition-all flex flex-col gap-4 bg-card ${
-                pack.popular
-                  ? "border-primary/40 shadow-elevated ring-1 ring-primary/20"
-                  : "border-border hover:border-primary/30 hover:shadow-elevated"
-              }`}
-            >
-              {pack.popular && (
-                <div className="absolute -top-3 left-5 px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-primary-foreground uppercase tracking-wider shadow-primary">
-                  {t("billing.bestValue")}
-                </div>
-              )}
+        {plansLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {creditPlans.map((plan, idx) => {
+              const isPopular = plan.credits === 200
+              const pricePerCredit = (plan.price_cents / 100 / plan.credits).toFixed(2)
 
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-primary fill-primary" />
+              return (
+                <motion.div
+                  key={plan.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.18 + idx * 0.06 }}
+                  className={`relative rounded-2xl p-6 border transition-all flex flex-col gap-4 bg-card ${
+                    isPopular
+                      ? "border-primary/40 shadow-elevated ring-1 ring-primary/20"
+                      : "border-border hover:border-primary/30 hover:shadow-elevated"
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3 left-5 px-3 py-1 rounded-full text-[10px] font-bold bg-primary text-primary-foreground uppercase tracking-wider shadow-primary">
+                      {t("billing.bestValue")}
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Zap className="w-4 h-4 text-primary fill-primary" />
+                      </div>
+                      <div>
+                        <p className="text-heading text-2xl text-foreground leading-none">{plan.credits}</p>
+                        <p className="text-xs text-muted-foreground">{t("billing.credits")}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-heading text-2xl text-foreground leading-none">{pack.credits}</p>
-                    <p className="text-xs text-muted-foreground">{t("billing.credits")}</p>
+
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-heading text-2xl text-foreground">{formatBRL(plan.price_cents / 100)}</span>
+                    <span className="text-xs text-muted-foreground">R$ {pricePerCredit}/crd</span>
                   </div>
-                </div>
-                {pack.saving && (
-                  <StatusBadge variant="success" size="sm">{pack.saving}</StatusBadge>
-                )}
-              </div>
 
-              <div className="flex items-baseline justify-between">
-                <span className="text-heading text-2xl text-foreground">{formatBRL(pack.price)}</span>
-                <span className="text-xs text-muted-foreground">{pack.pricePerCredit}</span>
-              </div>
-
-              <button
-                onClick={() => handleCheckout(pack.id, "credits")}
-                disabled={loadingId === pack.id}
-                className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
-                  pack.popular
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary"
-                    : "bg-muted text-foreground hover:bg-primary hover:text-primary-foreground"
-                }`}
-              >
-                {loadingId === pack.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4" />
-                    {t("billing.buy")} {pack.credits} crd
-                  </>
-                )}
-              </button>
-            </motion.div>
-          ))}
-        </div>
+                  <button
+                    onClick={() => handleCheckout(plan.id)}
+                    disabled={loadingId === String(plan.id)}
+                    className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 ${
+                      isPopular
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary"
+                        : "bg-muted text-foreground hover:bg-primary hover:text-primary-foreground"
+                    }`}
+                  >
+                    {loadingId === String(plan.id) ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4" />
+                        {t("billing.buy")} {plan.credits} crd
+                      </>
+                    )}
+                  </button>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
