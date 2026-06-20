@@ -159,8 +159,18 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err)
-    console.error('subscription-change error:', errorMsg)
+    let errorMsg = 'Erro desconhecido'
+    if (err instanceof Error) {
+      errorMsg = err.message
+      console.error('subscription-change error:', err.message)
+      console.error('subscription-change stack:', err.stack)
+    } else if (typeof err === 'object' && err !== null) {
+      errorMsg = JSON.stringify(err)
+      console.error('subscription-change error object:', err)
+    } else {
+      errorMsg = String(err)
+      console.error('subscription-change error:', errorMsg)
+    }
     return NextResponse.json({ error: errorMsg }, { status: 500 })
   }
 }
