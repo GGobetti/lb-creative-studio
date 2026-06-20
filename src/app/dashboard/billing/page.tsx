@@ -91,6 +91,7 @@ export default function BillingPage() {
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [creditPlans, setCreditPlans] = useState<PricingPlan[]>([])
+  const [allPlans, setAllPlans] = useState<any[]>([])
   const [plansLoading, setPlansLoading] = useState(true)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelConfirmed, setCancelConfirmed] = useState(false)
@@ -106,11 +107,12 @@ export default function BillingPage() {
           .from('pricing_plans')
           .select('*')
           .eq('active', true)
-          .lt('credits', 999) // Only credit packages, not subscriptions
           .order('price_cents', { ascending: true })
 
         if (error) throw error
-        setCreditPlans(data || [])
+        const allData = data || []
+        setAllPlans(allData)
+        setCreditPlans(allData.filter(p => p.credits < 999)) // Only credit packages for credit section
       } catch (err) {
         console.error('Failed to load pricing plans:', err)
         // Fall back to hardcoded if fetch fails
@@ -215,6 +217,18 @@ export default function BillingPage() {
     }).format(value)
 
   const currentPlan = profile?.plan || "free"
+
+  // Helper to find plan and get its benefits
+  const getPlanData = (planId: number | string) => {
+    if (typeof planId === 'string') {
+      return allPlans.find(p => p.name.toLowerCase().includes(planId)) || null
+    }
+    return allPlans.find(p => p.id === planId) || null
+  }
+
+  const getSuggestedPlanId = (from: string) => {
+    return from === "max" ? 4 : from === "pro" ? 5 : null
+  }
 
   // Load subscription on mount
   useEffect(() => {
@@ -542,63 +556,86 @@ export default function BillingPage() {
                   </div>
                   <div className="mt-2">
                     <h4 className="text-lg font-bold text-foreground capitalize">{currentPlan}</h4>
-                    {currentPlan === "max" && (
+                    {subscription && (
                       <>
-                        <p className="text-2xl font-bold text-warning mt-2">R$ 79,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
-                        <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                          <li>✓ 300+ créditos/mês</li>
-                          <li>✓ Prioridade máxima</li>
-                          <li>✓ Suporte 24/7</li>
-                        </ul>
-                      </>
-                    )}
-                    {currentPlan === "pro" && (
-                      <>
-                        <p className="text-2xl font-bold text-primary mt-2">R$ 29,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
-                        <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                          <li>✓ 100+ créditos/mês</li>
-                          <li>✓ Suporte padrão</li>
-                          <li>✓ Atualizações grátis</li>
-                        </ul>
+                        <p className="text-2xl font-bold text-warning mt-2">
+                          {subscription.plan?.price_cents ? formatBRL(subscription.plan.price_cents / 100) : '—'}
+                          <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                        </p>
+                        {subscription.plan?.benefits && subscription.plan.benefits.length > 0 && (
+                          <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                            {(subscription.plan.benefits as string[]).map((benefit, idx) => (
+                              <li key={idx}>✓ {benefit}</li>
+                            ))}
+                          </ul>
+                        )}
                       </>
                     )}
                   </div>
                 </div>
 
                 {/* Suggested Plan */}
-                {currentPlan === "max" && (
-                  <div className="bg-card border border-red-200 dark:border-red-800 rounded-xl p-4 relative">
-                    <div className="absolute -top-3 left-4 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
-                      Você Perde
-                    </div>
-                    <div className="mt-2">
-                      <h4 className="text-lg font-bold text-foreground">Pro</h4>
-                      <p className="text-2xl font-bold text-primary mt-2">R$ 29,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
-                      <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                        <li>✗ <span className="line-through">300+ créditos</span> → 100+ créditos</li>
-                        <li>✗ <span className="line-through">Prioridade máxima</span> → Padrão</li>
-                        <li>✗ <span className="line-through">Suporte 24/7</span> → Suporte padrão</li>
-                      </ul>
-                    </div>
-                  </div>
+                {currentPlan === "max" && getSuggestedPlanId("max") && (
+                  (() => {
+                    const suggestedPlan = getPlanData(4)
+                    return (
+                      <div className="bg-card border border-red-200 dark:border-red-800 rounded-xl p-4 relative">
+                        <div className="absolute -top-3 left-4 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
+                          Você Perde
+                        </div>
+                        <div className="mt-2">
+                          <h4 className="text-lg font-bold text-foreground">{suggestedPlan?.name}</h4>
+                          <p className="text-2xl font-bold text-primary mt-2">
+                            {formatBRL(suggestedPlan?.price_cents / 100)}
+                            <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                          </p>
+                          {suggestedPlan?.benefits && subscription?.plan?.benefits && (
+                            <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                              {(subscription.plan.benefits as string[]).map((benefit, idx) => {
+                                const isLost = !(suggestedPlan.benefits as string[]).includes(benefit)
+                                return (
+                                  <li key={idx}>
+                                    {isLost ? (
+                                      <>✗ <span className="line-through">{benefit}</span></>
+                                    ) : (
+                                      <>✓ {benefit}</>
+                                    )}
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()
                 )}
 
-                {currentPlan === "pro" && (
-                  <div className="bg-card border border-warning/40 rounded-xl p-4 relative">
-                    <div className="absolute -top-3 left-4 px-2 py-1 bg-warning text-white text-xs font-bold rounded">
-                      Melhore 3x
-                    </div>
-                    <div className="mt-2">
-                      <h4 className="text-lg font-bold text-foreground">Max</h4>
-                      <p className="text-2xl font-bold text-warning mt-2">R$ 79,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
-                      <p className="text-xs text-warning font-medium mt-1">Apenas R$ 50 a mais</p>
-                      <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                        <li>✓ 300+ créditos/mês</li>
-                        <li>✓ Prioridade máxima</li>
-                        <li>✓ Suporte 24/7</li>
-                      </ul>
-                    </div>
-                  </div>
+                {currentPlan === "pro" && getSuggestedPlanId("pro") && (
+                  (() => {
+                    const suggestedPlan = getPlanData(5)
+                    return (
+                      <div className="bg-card border border-warning/40 rounded-xl p-4 relative">
+                        <div className="absolute -top-3 left-4 px-2 py-1 bg-warning text-white text-xs font-bold rounded">
+                          Ganhe Mais
+                        </div>
+                        <div className="mt-2">
+                          <h4 className="text-lg font-bold text-foreground">{suggestedPlan?.name}</h4>
+                          <p className="text-2xl font-bold text-warning mt-2">
+                            {formatBRL(suggestedPlan?.price_cents / 100)}
+                            <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                          </p>
+                          {suggestedPlan?.benefits && (
+                            <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+                              {(suggestedPlan.benefits as string[]).map((benefit, idx) => (
+                                <li key={idx}>✓ {benefit}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })()
                 )}
               </div>
 

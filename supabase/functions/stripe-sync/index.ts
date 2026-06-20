@@ -26,6 +26,20 @@ serve(async (req) => {
 
     // ========== PRICING PLAN EVENTS ==========
 
+    // Handle product creation/update
+    if (eventType === 'product.created' || eventType === 'product.updated') {
+      const product = event.data.object
+      const benefits = product.metadata?.benefits ? JSON.parse(product.metadata.benefits) : []
+
+      const { error } = await supabase
+        .from('pricing_plans')
+        .update({ benefits })
+        .eq('stripe_product_id', product.id)
+
+      if (error) console.error(`Failed to sync product benefits for ${product.id}:`, error)
+      else console.log(`Synced benefits for product: ${product.id}`)
+    }
+
     // Handle product deletions
     if (eventType === 'product.deleted') {
       const product = event.data.object
