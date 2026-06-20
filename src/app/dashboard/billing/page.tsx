@@ -156,18 +156,16 @@ export default function BillingPage() {
   const handleUpgradeDowngrade = async (toplanId: number) => {
     setLoadingId(`change-${toplanId}`)
     try {
-      // Map plan IDs
-      const currentPlanId = currentPlan === "max" ? 5 : currentPlan === "pro" ? 4 : 0
-
-      if (!currentPlanId) {
-        throw new Error("Plano atual inválido")
+      // Use subscription plan ID, not profile plan (they can be out of sync)
+      if (!subscription?.current_plan_id) {
+        throw new Error("Nenhuma assinatura ativa")
       }
 
       const response = await fetch("/api/subscription-change", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fromPlanId: currentPlanId,
+          fromPlanId: subscription.current_plan_id,
           toPlanId: toplanId,
         }),
       })
