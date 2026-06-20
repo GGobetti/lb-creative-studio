@@ -123,11 +123,25 @@ export async function POST(req: NextRequest) {
       updateParams
     )
 
-    // Update database
+    console.log('Updated subscription from Stripe:', {
+      current_period_start: updatedSubscription.current_period_start,
+      current_period_end: updatedSubscription.current_period_end,
+      status: updatedSubscription.status,
+    })
+
+    // Update database with safe values
+    const periodStart = updatedSubscription.current_period_start
+      ? new Date(updatedSubscription.current_period_start * 1000)
+      : subscription.period_start || new Date()
+
+    const periodEnd = updatedSubscription.current_period_end
+      ? new Date(updatedSubscription.current_period_end * 1000)
+      : subscription.period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+
     const updateData = {
       current_plan_id: toPlanId,
-      period_start: new Date(updatedSubscription.current_period_start * 1000),
-      period_end: new Date(updatedSubscription.current_period_end * 1000),
+      period_start: periodStart,
+      period_end: periodEnd,
       updated_at: new Date(),
     }
     console.log('Updating subscription with:', updateData)
