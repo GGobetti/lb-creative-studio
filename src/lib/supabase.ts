@@ -77,6 +77,7 @@ export interface Profile {
   avatar_url?: string | null
   address?: string | null
   language?: 'pt' | 'en' | 'es' | null
+  onboarding_completed: boolean
 }
 
 export interface CatalogItem {

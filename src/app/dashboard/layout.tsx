@@ -23,6 +23,7 @@ import { useLogout } from "@/hooks/useLogout"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import { OnboardingTour } from "@/components/onboarding/OnboardingTour"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -122,6 +123,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Credits button */}
             {profile && (
               <button
+                data-tour="credits"
                 onClick={() => setCreditModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
                            bg-primary/8 text-primary border border-primary/20
@@ -157,6 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {profile && (
               <div className="relative">
                 <button
+                  data-tour="profile"
                   onClick={() => setMenuOpen((v) => !v)}
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-border bg-card hover:bg-muted text-foreground transition-colors cursor-pointer select-none"
                 >
@@ -255,6 +258,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       <CreditModal open={creditModalOpen} onOpenChange={setCreditModalOpen} />
+      <OnboardingTour />
     </div>
   )
 }

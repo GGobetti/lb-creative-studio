@@ -233,6 +233,11 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                       key={item.name}
                       href={item.href}
                       onClick={onClose}
+                      data-tour={
+                        item.href === '/dashboard/stl-search' ? 'stl-search' :
+                        item.href === '/dashboard/games' ? 'games' :
+                        undefined
+                      }
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm transition-all relative group ${
                         isActive
                           ? "text-primary font-semibold"
