@@ -31,7 +31,7 @@ export function UserPositionCard({
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-warning/20 hover:bg-warning/30 text-warning font-medium text-sm transition-colors"
         >
           <Zap size={16} />
-          Jogar Agora
+          {t('leaderboard.playNow')}
         </Link>
       </div>
     )

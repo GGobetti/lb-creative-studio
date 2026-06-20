@@ -34,6 +34,7 @@ export function LeaderboardTable({
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p className="text-sm">
           {t('leaderboard.noGamesYet')}
+          {period === 'week' ? ' (essa semana)' : ''}
         </p>
       </div>
     )
@@ -68,9 +69,7 @@ export function LeaderboardTable({
           {rankings.map((user, idx) => (
             <tr
               key={user.userId}
-              className={`border-b border-border/30 transition-colors ${
-                idx % 2 === 0 ? 'bg-muted/10' : 'hover:bg-muted/20'
-              }`}
+              className={`border-b border-border/30 transition hover:bg-muted/20 ${idx % 2 === 0 ? 'bg-muted/10' : ''}`}
             >
               <td className="px-4 py-3">
                 <span className="font-bold text-primary">#{user.rank}</span>
