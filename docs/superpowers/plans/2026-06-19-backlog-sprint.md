@@ -2,11 +2,17 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implementar todos os itens pendentes do backlog: 2 cosméticos, 1 teaser de leaderboard, 1 archival de jobs, 1 limpeza do store, e 1 onboarding tour guiado.
+**Goal:** Implementar todos os itens pendentes do backlog: 2 cosméticos, 1 teaser de leaderboard, 1 archival de jobs no banco, 1 limpeza do store, e 1 onboarding tour guiado.
 
-**Architecture:** 6 tarefas independentes sequenciadas do menor ao maior esforço. S1–S2 são edições pontuais em arquivos existentes. S3 extrai um novo componente `WeeklyLeaderboardTeaser`. S4 adiciona uma Edge Function + migration de cron. S5 remove código morto do store e renomeia o export. S6 adiciona coluna na tabela `profiles`, cria `OnboardingTour` com spotlight Framer Motion e monta no `DashboardLayout`.
+**Architecture:** 6 tarefas independentes sequenciadas do menor ao maior esforço. T1–T2 são edições pontuais em arquivos existentes. T3 extrai um novo componente `WeeklyLeaderboardTeaser`. T4 adiciona SQL direto via pg_cron para limpeza periódica da tabela `telegram_scraper_jobs` no Supabase. T5 remove código morto do store e renomeia o export. T6 adiciona coluna na tabela `profiles`, cria `OnboardingTour` com spotlight Framer Motion e monta no `DashboardLayout`.
 
 **Tech Stack:** Next.js 16 App Router · React 19 · TypeScript · TailwindCSS v4 · Framer Motion v12 · Supabase (PostgreSQL + Edge Functions) · Lucide React · Zustand v5
+
+## Contexto Importante (atualizado 2026-06-20)
+
+- **Scraper migrado:** O `telegram-scraper/` foi extraído para repositório próprio [`lb-creative-scrapper`](https://github.com/GGobetti/lb-creative-scrapper) e refatorado para CLI (`npm run scan`). Não existe mais Express server nem endpoints `/approve`, `/cancel`, `/retry` neste repo.
+- **Impacto na Task 4:** A limpeza de `telegram_scraper_jobs` ainda é necessária pois a tabela vive no Supabase compartilhado. Porém, como o scraper agora roda sob demanda, jobs orphaned são menos frequentes — a prioridade de D6 é baixa.
+- **Tasks pendentes verificadas:** T1 (blobs), T2 (emojis), T3 (leaderboard), T5 (rename store), T6 (onboarding) — nenhuma foi implementada ainda.
 
 ## Global Constraints
 
@@ -257,89 +263,44 @@ git commit -m "feat(games): leaderboard teaser honesto com contagem real de make
 
 ---
 
-## Task 4: Archival de `telegram_scraper_jobs` (D6)
+## Task 4: Archival de `telegram_scraper_jobs` (D6) — *Baixa prioridade*
+
+> **Contexto atualizado:** O scraper virou CLI (`npm run scan`) e não roda 24/7 mais. Jobs orphaned são raros agora. Esta task ainda vale para evitar crescimento ilimitado da tabela ao longo do tempo, mas pode ser feita por último.
 
 **Files:**
-- Create: `supabase/functions/cleanup-scraper-jobs/index.ts`
-- Create: `supabase/migrations/20260619001000_cleanup_scraper_jobs_cron.sql`
+- Create: `supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql`
 
 **Interfaces:**
-- Produces: Edge Function acessível via POST e cron diário às 02:00 UTC
+- Produces: cron job pg_cron que limpa jobs antigos diariamente às 02:00 UTC
 
-- [ ] **Step 1: Criar a Edge Function**
+> **Nota de plano:** O Free plan do Supabase **não tem pg_net** disponível. Portanto a abordagem correta é SQL direto via pg_cron, sem Edge Function.
 
-Criar `supabase/functions/cleanup-scraper-jobs/index.ts`:
+- [ ] **Step 1: Verificar se pg_cron está disponível**
 
-```ts
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-Deno.serve(async (req: Request) => {
-  // Aceita apenas chamadas do cron (Authorization com service role) ou POST manual com Authorization header
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  )
-
-  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-
-  const { error, count } = await supabase
-    .from('telegram_scraper_jobs')
-    .delete({ count: 'exact' })
-    .in('status', ['completed', 'failed', 'rejected'])
-    .lt('created_at', cutoff)
-
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-
-  return new Response(JSON.stringify({ deleted: count, cutoff }), {
-    headers: { 'Content-Type': 'application/json' },
-  })
-})
+No Supabase Dashboard → SQL Editor:
+```sql
+select * from pg_extension where extname = 'pg_cron';
 ```
+Expected: 1 row. Se vazio, habilitar em Database → Extensions → pg_cron.
 
-- [ ] **Step 2: Criar migration para agendar o cron**
+- [ ] **Step 2: Criar migration**
 
-Criar `supabase/migrations/20260619001000_cleanup_scraper_jobs_cron.sql`:
+Criar `supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql`:
 
 ```sql
--- Habilitar extensão pg_cron (disponível em todos os planos Supabase)
-create extension if not exists pg_cron;
+-- Habilitar pg_cron se ainda não estiver ativo
+create extension if not exists pg_cron schema pg_catalog;
 
 -- Remover agendamento anterior se existir
-select cron.unschedule('cleanup-scraper-jobs') where exists (
-  select 1 from cron.job where jobname = 'cleanup-scraper-jobs'
-);
+do $$
+begin
+  if exists (select 1 from cron.job where jobname = 'cleanup-scraper-jobs') then
+    perform cron.unschedule('cleanup-scraper-jobs');
+  end if;
+end;
+$$;
 
--- Agendar limpeza diária às 02:00 UTC via chamada à Edge Function
-select cron.schedule(
-  'cleanup-scraper-jobs',
-  '0 2 * * *',
-  $$
-    select net.http_post(
-      url := current_setting('app.supabase_url') || '/functions/v1/cleanup-scraper-jobs',
-      headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || current_setting('app.service_role_key'),
-        'Content-Type', 'application/json'
-      ),
-      body := '{}'::jsonb
-    );
-  $$
-);
-```
-
-> **Nota:** Se `net.http_post` não estiver disponível (Free plan sem `pg_net`), usar a alternativa abaixo que executa SQL direto sem Edge Function:
-
-```sql
--- Alternativa: SQL direto via cron (sem pg_net)
+-- Agendar limpeza diária às 02:00 UTC — SQL direto (sem pg_net)
 select cron.schedule(
   'cleanup-scraper-jobs',
   '0 2 * * *',
@@ -351,38 +312,19 @@ select cron.schedule(
 );
 ```
 
-- [ ] **Step 3: Deploy da Edge Function via CLI**
+- [ ] **Step 3: Aplicar no Supabase Dashboard → SQL Editor**
 
-```bash
-npx supabase functions deploy cleanup-scraper-jobs --project-ref yruoiwtnxopcbiiuvxxa
-```
-
-Expected output: `Deployed cleanup-scraper-jobs`
-
-- [ ] **Step 4: Aplicar a migration**
-
-Via Supabase Dashboard → SQL Editor, executar o conteúdo da migration.
-
-Verificar que o job foi criado:
+Rodar o conteúdo da migration e verificar:
 ```sql
-select jobname, schedule, command from cron.job where jobname = 'cleanup-scraper-jobs';
+select jobname, schedule from cron.job where jobname = 'cleanup-scraper-jobs';
 ```
 Expected: 1 row com `schedule = '0 2 * * *'`
 
-- [ ] **Step 5: Testar a Edge Function manualmente**
-
-No Supabase Dashboard → Edge Functions → cleanup-scraper-jobs → Invoke, ou via curl:
-```bash
-curl -X POST https://yruoiwtnxopcbiiuvxxa.supabase.co/functions/v1/cleanup-scraper-jobs \
-  -H "Authorization: Bearer <SERVICE_ROLE_KEY>"
-```
-Expected: `{"deleted": N, "cutoff": "..."}`
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add supabase/functions/cleanup-scraper-jobs/index.ts supabase/migrations/20260619001000_cleanup_scraper_jobs_cron.sql
-git commit -m "feat(infra): Edge Function + cron daily archival de telegram_scraper_jobs (30d)"
+git add supabase/migrations/20260620_cleanup_scraper_jobs_cron.sql
+git commit -m "feat(infra): pg_cron cleanup diário de telegram_scraper_jobs (30d retention)"
 ```
 
 ---
@@ -977,18 +919,24 @@ git commit -m "feat(ux): onboarding tour guiado 4 passos com spotlight Framer Mo
 
 ---
 
-## Self-Review
+## Self-Review (atualizado 2026-06-20)
 
-**Spec coverage:**
-- U5 (login blob) → Task 1 ✅
-- U6 (emoji → icons) → Task 2 ✅
-- U7 (leaderboard teaser) → Task 3 ✅
-- D6 (archival scraper jobs) → Task 4 ✅
-- S5 (store cleanup + rename) → Task 5 ✅
-- U2 (onboarding tour) → Task 6 ✅
+**Status das tasks:**
+| Task | Item | Status |
+|------|------|--------|
+| T1 | Login blobs cyan (U5) | ⏳ Pendente |
+| T2 | Emoji → Lucide icons (U6) | ⏳ Pendente |
+| T3 | Leaderboard teaser honesto (U7) | ⏳ Pendente |
+| T4 | Archival telegram_scraper_jobs (D6) | ⏳ Pendente (baixa prioridade) |
+| T5 | Store cleanup + rename (S5) | ⏳ Pendente — 35 arquivos ainda usam `useConfiguratorStore` |
+| T6 | Onboarding tour guiado (U2) | ⏳ Pendente — `onboarding_completed` não existe ainda |
 
 **Dependências entre tasks:**
-- Task 5 (rename) deve ser executada antes de Task 6 (onboarding usa `useAppStore`)
-- Tasks 1–4 são completamente independentes entre si
+- T5 (rename store) **deve ser executada antes de T6** — onboarding usa `useAppStore`
+- T1, T2, T3, T4 são completamente independentes entre si
 
-**Ordem recomendada:** T1 → T2 → T3 → T4 → T5 → T6
+**Ordem recomendada:** T1 → T2 → T3 → T5 → T6 → T4 (T4 por último, menor urgência)
+
+**Mudanças desde a criação do plano:**
+- Scraper extraído para repo separado — referências a Express/endpoints removidas da Task 4
+- Task 4 simplificada: só SQL direto via pg_cron (Free plan não tem pg_net)
