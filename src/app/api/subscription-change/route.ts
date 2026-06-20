@@ -60,6 +60,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 400 })
     }
 
+    // Get user profile to access stripe_customer_id
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile?.stripe_customer_id) {
+      return NextResponse.json({ error: 'Usuário não vinculado ao Stripe' }, { status: 400 })
+    }
+
     // Get user's current subscription
     const { data: subscription, error: subError } = await supabase
       .from('subscriptions')

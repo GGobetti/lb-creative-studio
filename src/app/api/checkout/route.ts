@@ -47,6 +47,37 @@ export async function POST(req: Request) {
 
     const numPlanId = Number(planId)
 
+    // Get user profile
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('stripe_customer_id, email')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Perfil do usuário não encontrado' }, { status: 400 })
+    }
+
+    // Get or create Stripe customer
+    let customerId = profile.stripe_customer_id
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { userId: user.id },
+      })
+      customerId = customer.id
+
+      // Update user profile with customer ID
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id)
+
+      if (updateError) {
+        console.error('Failed to update stripe_customer_id:', updateError)
+      }
+    }
+
     const { data: plan, error: planError } = await supabase
       .from('pricing_plans')
       .select('*')
@@ -106,7 +137,7 @@ export async function POST(req: Request) {
       payment_method_options: {},
       line_items: lineItems,
       mode,
-      customer_email: user.email,
+      customer: customerId,
       success_url: `${appUrl}/dashboard/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/dashboard/billing?canceled=true`,
       metadata,
