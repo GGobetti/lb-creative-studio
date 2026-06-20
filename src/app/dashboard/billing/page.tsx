@@ -359,6 +359,10 @@ export default function BillingPage() {
             const isCurrentPlan = currentPlan === plan.id
             const Icon = plan.icon
 
+            // Get dynamic benefits from allPlans if available
+            const dynamicPlan = allPlans.find(p => p.name.toLowerCase().includes(plan.id))
+            const benefits = dynamicPlan?.benefits || []
+
             // Tier hierarchy: free (0) < pro (1) < max (2)
             const tierMap = { free: 0, pro: 1, max: 2 }
             const currentTier = tierMap[currentPlan as keyof typeof tierMap] || 0
@@ -413,12 +417,21 @@ export default function BillingPage() {
                 </div>
 
                 <ul className="space-y-2.5 mb-6 flex-1">
-                  {plan.featureKeys.map((key, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.color}`} />
-                      <span>{t(key)}</span>
-                    </li>
-                  ))}
+                  {benefits.length > 0 ? (
+                    (benefits as any[]).map((benefit, i) => (
+                      <li key={benefit.id || i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.color}`} />
+                        <span>{benefit.label || benefit}</span>
+                      </li>
+                    ))
+                  ) : (
+                    plan.featureKeys.map((key, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.color}`} />
+                        <span>{t(key)}</span>
+                      </li>
+                    ))
+                  )}
                 </ul>
 
                 <button
