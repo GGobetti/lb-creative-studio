@@ -46,7 +46,6 @@ export async function POST(req: Request) {
     }
 
     const numPlanId = Number(planId)
-    console.log('Buscando planId:', planId, '→ Number:', numPlanId)
 
     const { data: plan, error: planError } = await supabase
       .from('pricing_plans')
@@ -55,10 +54,8 @@ export async function POST(req: Request) {
       .eq('active', true)
       .single()
 
-    console.log('Plan result:', { plan, planError })
-
     if (planError || !plan) {
-      return NextResponse.json({ error: 'Plano não encontrado', details: planError }, { status: 400 })
+      return NextResponse.json({ error: 'Plano não encontrado' }, { status: 400 })
     }
 
     let lineItems = []
