@@ -422,7 +422,8 @@ export default function BillingPage() {
                     t("billing.currentPlanBtn")
                   ) : isDisabledDowngrade ? (
                     <>
-                      Cancelar primeiro
+                      {t("billing.subscribe")} {plan.name}
+                      <ArrowRight className="w-4 h-4" />
                     </>
                   ) : (
                     <>
@@ -637,20 +638,12 @@ export default function BillingPage() {
                   </button>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setShowCancelDialog(false)}
-                    className="px-4 py-2 rounded-lg bg-muted text-foreground text-sm font-semibold hover:bg-muted/80 transition-colors"
-                  >
-                    Voltar
-                  </button>
-                  <button
-                    onClick={() => setCancelConfirmed(true)}
-                    className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
+                <button
+                  onClick={() => setCancelConfirmed(true)}
+                  className="w-full px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+                >
+                  Cancelar Assinatura
+                </button>
               </div>
 
               {/* Final confirmation */}
