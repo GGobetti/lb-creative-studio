@@ -47,10 +47,13 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
           .eq('active', true)
           .order('price_cents', { ascending: true })
 
+        console.log('Pricing plans fetched:', { data, error: err })
+
         if (err) throw err
         setPackages(data || [])
         if (data && data.length > 0) {
           setSelectedPkgId(data[0].id)
+          console.log('Selected first plan:', data[0].id)
         }
       } catch (err) {
         console.error('Failed to load pricing plans:', err)
@@ -76,6 +79,8 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
   const selectedPackage = packages.find((p) => p.id === selectedPkgId)
 
   const handlePurchase = async () => {
+    console.log('handlePurchase:', { selectedPkgId, selectedPackage, packages })
+
     if (!selectedPackage) {
       setError('Selecione um pacote')
       return
@@ -89,6 +94,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sessão expirada')
 
+      console.log('Enviando planId:', selectedPackage.id)
       // Call Stripe checkout with the plan ID
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -97,6 +103,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
       })
 
       const json = await res.json()
+      console.log('Checkout response:', res.status, json)
       if (!res.ok) throw new Error(json.error || 'Falha na compra')
 
       refreshCredits((profile?.credits ?? 0) + selectedPackage.credits)

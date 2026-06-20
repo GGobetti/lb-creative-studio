@@ -81,13 +81,13 @@ export default function BillingPage() {
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
-  const handleCheckout = async (itemId: string, type: "credits" | "subscription") => {
-    setLoadingId(itemId)
+  const handleCheckout = async (planId: number) => {
+    setLoadingId(String(planId))
     try {
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, type }),
+        body: JSON.stringify({ planId }),
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || t("billing.errorCheckout"))
@@ -129,11 +129,11 @@ export default function BillingPage() {
             </div>
           </div>
           <button
-            onClick={() => handleCheckout("pack_200", "credits")}
+            onClick={() => handleCheckout(2)}
             disabled={loadingId !== null}
             className="ml-auto flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-primary shrink-0 disabled:opacity-50"
           >
-            {loadingId === "pack_200" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            {loadingId === "2" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             {t("billing.reload")}
           </button>
         </div>
