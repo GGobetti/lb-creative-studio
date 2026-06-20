@@ -74,10 +74,17 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
     : 0
 
   const selectedPackage = packages.find((p) => p.id === selectedPkgId)
+  const userCredits = profile?.credits ?? 0
+  const isInsufficientUpgrade = selectedPackage && selectedPackage.credits <= userCredits
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
       setError('Selecione um pacote')
+      return
+    }
+
+    if (isInsufficientUpgrade) {
+      setError(`Você já tem ${userCredits} créditos. Escolha um pacote com mais créditos.`)
       return
     }
 
@@ -236,9 +243,9 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                 <motion.button
                   id="btn-purchase-credits"
                   onClick={handlePurchase}
-                  disabled={loading}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  disabled={loading || isInsufficientUpgrade}
+                  whileHover={{ scale: !loading && !isInsufficientUpgrade ? 1.02 : 1 }}
+                  whileTap={{ scale: !loading && !isInsufficientUpgrade ? 0.98 : 1 }}
                   className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl
                              bg-gradient-to-r from-violet-600 to-indigo-600
                              hover:from-violet-500 hover:to-indigo-500
@@ -251,6 +258,11 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                     <>
                       <Loader2 size={16} className="animate-spin" />
                       Processando...
+                    </>
+                  ) : isInsufficientUpgrade ? (
+                    <>
+                      <Zap size={16} />
+                      Plano insuficiente
                     </>
                   ) : (
                     <>
