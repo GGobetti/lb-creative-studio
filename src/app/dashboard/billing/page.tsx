@@ -171,6 +171,7 @@ export default function BillingPage() {
       })
 
       const data = await response.json()
+      console.log('Subscription change response:', { status: response.status, data })
       if (!response.ok) throw new Error(data.error || "Erro ao mudar plano")
 
       const planName = toplanId === 5 ? "Max" : "Pro"
