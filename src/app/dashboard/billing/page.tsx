@@ -527,7 +527,7 @@ export default function BillingPage() {
             <div className="bg-gradient-to-r from-primary/10 to-warning/10 border-b border-border p-6">
               <h3 className="text-xl font-bold text-foreground mb-2">Espera aí! 👀</h3>
               <p className="text-sm text-muted-foreground">
-                Antes de cancelar, veja como você pode economizar fazendo um downgrade
+                Veja o que você vai perder ao fazer downgrade
               </p>
             </div>
 
@@ -566,18 +566,17 @@ export default function BillingPage() {
 
                 {/* Suggested Plan */}
                 {currentPlan === "max" && (
-                  <div className="bg-card border border-primary/40 rounded-xl p-4 relative">
-                    <div className="absolute -top-3 left-4 px-2 py-1 bg-green-600 text-white text-xs font-bold rounded">
-                      Economize 62%
+                  <div className="bg-card border border-red-200 dark:border-red-800 rounded-xl p-4 relative">
+                    <div className="absolute -top-3 left-4 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
+                      Você Perde
                     </div>
                     <div className="mt-2">
                       <h4 className="text-lg font-bold text-foreground">Pro</h4>
                       <p className="text-2xl font-bold text-primary mt-2">R$ 29,90<span className="text-sm font-normal text-muted-foreground">/mês</span></p>
-                      <p className="text-xs text-green-600 font-medium mt-1">Economiza R$ 50/mês</p>
                       <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                        <li>✓ 100+ créditos/mês</li>
-                        <li>✓ Suporte padrão</li>
-                        <li>✓ Atualizações grátis</li>
+                        <li>✗ <span className="line-through">300+ créditos</span> → 100+ créditos</li>
+                        <li>✗ <span className="line-through">Prioridade máxima</span> → Padrão</li>
+                        <li>✗ <span className="line-through">Suporte 24/7</span> → Suporte padrão</li>
                       </ul>
                     </div>
                   </div>
@@ -608,7 +607,7 @@ export default function BillingPage() {
                   <button
                     onClick={() => handleUpgradeDowngrade(4)}
                     disabled={loadingId?.startsWith("change-")}
-                    className="w-full px-4 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    className="w-full px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                   >
                     {loadingId === "change-4" ? (
                       <>
@@ -616,7 +615,7 @@ export default function BillingPage() {
                         Processando...
                       </>
                     ) : (
-                      "Fazer Downgrade para Pro (Economize R$ 50/mês)"
+                      "Fazer Downgrade para Pro"
                     )}
                   </button>
                 )}
@@ -649,7 +648,7 @@ export default function BillingPage() {
                     onClick={() => setCancelConfirmed(true)}
                     className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors"
                   >
-                    Mesmo assim Cancelar
+                    Cancelar
                   </button>
                 </div>
               </div>
