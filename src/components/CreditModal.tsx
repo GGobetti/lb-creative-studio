@@ -74,17 +74,11 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
     : 0
 
   const selectedPackage = packages.find((p) => p.id === selectedPkgId)
-  const userCredits = profile?.credits ?? 0
-  const isInsufficientUpgrade = selectedPackage && selectedPackage.credits <= userCredits
+  const creditPlans = packages.filter((p) => !p.is_recurring)
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
       setError('Selecione um pacote')
-      return
-    }
-
-    if (isInsufficientUpgrade) {
-      setError(`Você já tem ${userCredits} créditos. Escolha um pacote com mais créditos.`)
       return
     }
 
@@ -178,20 +172,21 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
               Simulação — sem cobrança real. Créditos adicionados instantaneamente.
             </div>
 
-            {/* Packages */}
+            {/* Packages - Only credit packages, not subscriptions */}
             <div className="p-6 space-y-3">
               {plansLoading ? (
                 <div className="flex items-center justify-center py-8 text-white/50">
                   <Loader2 size={20} className="animate-spin" />
                 </div>
-              ) : packages.length === 0 ? (
+              ) : creditPlans.length === 0 ? (
                 <p className="text-center text-white/50 text-sm py-8">Nenhum plano disponível</p>
               ) : (
-                packages.map((pkg) => {
+                creditPlans.map((pkg) => {
                   const priceInReais = (pkg.price_cents / 100).toLocaleString('pt-BR', {
                     style: 'currency',
                     currency: 'BRL',
                   })
+                  const pricePerCredit = ((pkg.price_cents / 100) / pkg.credits).toFixed(2)
 
                   return (
                     <motion.button
@@ -200,7 +195,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                       whileHover={{ scale: 1.015, y: -1 }}
                       whileTap={{ scale: 0.985 }}
                       className={`
-                        w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-150 relative overflow-hidden cursor-pointer
+                        w-full flex items-center justify-between gap-4 p-4 rounded-xl border transition-all duration-150 relative overflow-hidden cursor-pointer
                         ${selectedPkgId === pkg.id
                           ? 'bg-gradient-to-r from-violet-700/40 to-indigo-700/40 border-violet-500/50 shadow-lg shadow-violet-500/15'
                           : 'bg-white/5 border-white/10 hover:border-white/20'
@@ -216,12 +211,14 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
 
                       <div className="flex-1 text-left">
                         <span className="font-semibold text-white">{pkg.name}</span>
-                        <span className="text-sm text-white/60 block">
-                          {pkg.credits === 999 ? '∞ créditos' : `${pkg.credits} créditos`}
+                        <span className="text-xs text-white/50 block">
+                          {pkg.credits === 999 ? '∞ créditos' : `${pkg.credits} créditos • R$ ${pricePerCredit}/crd`}
                         </span>
                       </div>
 
-                      <span className="text-lg font-bold text-white">{priceInReais}</span>
+                      <div className="text-right shrink-0">
+                        <span className="text-lg font-bold text-white block">{priceInReais}</span>
+                      </div>
                     </motion.button>
                   )
                 })
@@ -243,9 +240,9 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                 <motion.button
                   id="btn-purchase-credits"
                   onClick={handlePurchase}
-                  disabled={loading || isInsufficientUpgrade}
-                  whileHover={{ scale: !loading && !isInsufficientUpgrade ? 1.02 : 1 }}
-                  whileTap={{ scale: !loading && !isInsufficientUpgrade ? 0.98 : 1 }}
+                  disabled={loading}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl
                              bg-gradient-to-r from-violet-600 to-indigo-600
                              hover:from-violet-500 hover:to-indigo-500
@@ -258,11 +255,6 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                     <>
                       <Loader2 size={16} className="animate-spin" />
                       Processando...
-                    </>
-                  ) : isInsufficientUpgrade ? (
-                    <>
-                      <Zap size={16} />
-                      Plano insuficiente
                     </>
                   ) : (
                     <>
