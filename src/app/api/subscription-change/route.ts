@@ -124,14 +124,17 @@ export async function POST(req: NextRequest) {
     )
 
     // Update database
+    const updateData = {
+      current_plan_id: toPlanId,
+      period_start: new Date(updatedSubscription.current_period_start * 1000),
+      period_end: new Date(updatedSubscription.current_period_end * 1000),
+      updated_at: new Date(),
+    }
+    console.log('Updating subscription with:', updateData)
+
     const { error: updateError } = await supabase
       .from('subscriptions')
-      .update({
-        current_plan_id: toPlanId,
-        period_start: new Date(updatedSubscription.current_period_start * 1000),
-        period_end: new Date(updatedSubscription.current_period_end * 1000),
-        updated_at: new Date(),
-      })
+      .update(updateData)
       .eq('id', subscription.id)
 
     if (updateError) throw updateError
