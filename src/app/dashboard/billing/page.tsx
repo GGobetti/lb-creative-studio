@@ -11,14 +11,14 @@ import { motion } from "framer-motion"
 
 const CREDIT_PACKAGES = [
   {
-    id: "pack_50",
+    id: 1,
     credits: 50,
     price: 10.00,
     popular: false,
     pricePerCredit: "R$ 0,20/crd",
   },
   {
-    id: "pack_200",
+    id: 2,
     credits: 200,
     price: 35.00,
     popular: true,
@@ -26,7 +26,7 @@ const CREDIT_PACKAGES = [
     saving: "15% off",
   },
   {
-    id: "pack_500",
+    id: 3,
     credits: 500,
     price: 80.00,
     popular: false,
