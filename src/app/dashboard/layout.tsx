@@ -93,8 +93,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {/* Sidebar — relative z-10 so it sits above the z-0 mesh */}
-      <div className="print:hidden relative z-10">
+      {/* Sidebar — relative z-50 so it sits above backdrop and mesh */}
+      <div className="print:hidden relative z-50">
         <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
