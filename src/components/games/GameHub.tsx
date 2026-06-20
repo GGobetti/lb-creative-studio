@@ -7,7 +7,7 @@ import { Zap, Flame, Camera, Tag, LayoutGrid, ShieldCheck, Award, Gem, Trophy } 
 import { useAppStore } from '@/store/store'
 import { BADGES } from '@/types/games'
 import { getSupabaseBrowser } from '@/lib/supabase'
-import { WeeklyLeaderboardTeaser } from './WeeklyLeaderboardTeaser'
+import { LeaderboardCard } from './LeaderboardCard'
 
 const GAMES = [
   {
@@ -232,8 +232,8 @@ export function GameHub() {
         </div>
       )}
 
-      {/* Leaderboard teaser */}
-      <WeeklyLeaderboardTeaser />
+      {/* Leaderboard card */}
+      <LeaderboardCard />
     </div>
   )
 }
