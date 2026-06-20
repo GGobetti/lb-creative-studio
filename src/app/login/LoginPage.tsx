@@ -94,14 +94,17 @@ function LoginContent() {
     <div className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
       {/* Liquid Glass mesh background */}
       <div aria-hidden className="absolute inset-0 z-0 overflow-hidden pointer-events-none dark:block hidden">
+        {/* Blob 1 — primary cyan (era violeta/indigo) */}
         <div
           className="absolute -top-[20%] -left-[10%] w-[70%] h-[80%] animate-blob-1 rounded-full"
-          style={{ background: 'radial-gradient(ellipse, rgba(120,80,255,0.22) 0%, transparent 65%)' }}
+          style={{ background: 'radial-gradient(ellipse, rgba(6,182,212,0.20) 0%, transparent 65%)' }}
         />
+        {/* Blob 2 — accent violet */}
         <div
           className="absolute -bottom-[10%] -right-[10%] w-[55%] h-[70%] animate-blob-2 rounded-full"
-          style={{ background: 'radial-gradient(ellipse, rgba(0,160,255,0.16) 0%, transparent 65%)' }}
+          style={{ background: 'radial-gradient(ellipse, rgba(124,58,237,0.15) 0%, transparent 65%)' }}
         />
+        {/* Blob 3 — pink accent (mantém) */}
         <div
           className="absolute top-[35%] left-[35%] w-[40%] h-[45%] animate-blob-3 rounded-full"
           style={{ background: 'radial-gradient(ellipse, rgba(255,80,120,0.10) 0%, transparent 65%)' }}
