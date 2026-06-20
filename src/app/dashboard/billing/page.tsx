@@ -230,6 +230,17 @@ export default function BillingPage() {
     return from === "max" ? 4 : from === "pro" ? 5 : null
   }
 
+  // Compare benefits by ID (robust comparison)
+  const getBenefitIds = (benefits: any[]) => {
+    return new Set((benefits || []).map(b => b.id || b))
+  }
+
+  const getLostBenefits = (currentBenefits: any[], suggestedBenefits: any[]) => {
+    const currentIds = getBenefitIds(currentBenefits)
+    const suggestedIds = getBenefitIds(suggestedBenefits)
+    return currentBenefits.filter(b => !suggestedIds.has(b.id || b))
+  }
+
   // Load subscription on mount
   useEffect(() => {
     const loadSubscription = async () => {
@@ -564,8 +575,8 @@ export default function BillingPage() {
                         </p>
                         {subscription.plan?.benefits && subscription.plan.benefits.length > 0 && (
                           <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                            {(subscription.plan.benefits as string[]).map((benefit, idx) => (
-                              <li key={idx}>✓ {benefit}</li>
+                            {(subscription.plan.benefits as any[]).map((benefit, idx) => (
+                              <li key={benefit.id || idx}>✓ {benefit.label || benefit}</li>
                             ))}
                           </ul>
                         )}
@@ -578,6 +589,9 @@ export default function BillingPage() {
                 {currentPlan === "max" && getSuggestedPlanId("max") && (
                   (() => {
                     const suggestedPlan = getPlanData(4)
+                    const lostBenefits = getLostBenefits(subscription?.plan?.benefits || [], suggestedPlan?.benefits || [])
+                    const keptBenefits = (subscription?.plan?.benefits || []).filter(b => !lostBenefits.find(lb => lb.id === b.id || lb === b))
+
                     return (
                       <div className="bg-card border border-red-200 dark:border-red-800 rounded-xl p-4 relative">
                         <div className="absolute -top-3 left-4 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
@@ -589,20 +603,18 @@ export default function BillingPage() {
                             {formatBRL(suggestedPlan?.price_cents / 100)}
                             <span className="text-sm font-normal text-muted-foreground">/mês</span>
                           </p>
-                          {suggestedPlan?.benefits && subscription?.plan?.benefits && (
+                          {(keptBenefits.length > 0 || lostBenefits.length > 0) && (
                             <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                              {(subscription.plan.benefits as string[]).map((benefit, idx) => {
-                                const isLost = !(suggestedPlan.benefits as string[]).includes(benefit)
-                                return (
-                                  <li key={idx}>
-                                    {isLost ? (
-                                      <>✗ <span className="line-through">{benefit}</span></>
-                                    ) : (
-                                      <>✓ {benefit}</>
-                                    )}
-                                  </li>
-                                )
-                              })}
+                              {lostBenefits.map((benefit) => (
+                                <li key={benefit.id || benefit}>
+                                  ✗ <span className="line-through">{benefit.label || benefit}</span>
+                                </li>
+                              ))}
+                              {keptBenefits.map((benefit) => (
+                                <li key={benefit.id || benefit}>
+                                  ✓ {benefit.label || benefit}
+                                </li>
+                              ))}
                             </ul>
                           )}
                         </div>
@@ -614,6 +626,10 @@ export default function BillingPage() {
                 {currentPlan === "pro" && getSuggestedPlanId("pro") && (
                   (() => {
                     const suggestedPlan = getPlanData(5)
+                    const newBenefits = (suggestedPlan?.benefits || []).filter(
+                      b => !getBenefitIds(subscription?.plan?.benefits || []).has(b.id || b)
+                    )
+
                     return (
                       <div className="bg-card border border-warning/40 rounded-xl p-4 relative">
                         <div className="absolute -top-3 left-4 px-2 py-1 bg-warning text-white text-xs font-bold rounded">
@@ -625,10 +641,10 @@ export default function BillingPage() {
                             {formatBRL(suggestedPlan?.price_cents / 100)}
                             <span className="text-sm font-normal text-muted-foreground">/mês</span>
                           </p>
-                          {suggestedPlan?.benefits && (
+                          {suggestedPlan?.benefits && suggestedPlan.benefits.length > 0 && (
                             <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                              {(suggestedPlan.benefits as string[]).map((benefit, idx) => (
-                                <li key={idx}>✓ {benefit}</li>
+                              {(suggestedPlan.benefits as any[]).map((benefit) => (
+                                <li key={benefit.id || benefit}>✓ {benefit.label || benefit}</li>
                               ))}
                             </ul>
                           )}

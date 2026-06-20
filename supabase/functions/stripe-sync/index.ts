@@ -29,15 +29,23 @@ serve(async (req) => {
     // Handle product creation/update
     if (eventType === 'product.created' || eventType === 'product.updated') {
       const product = event.data.object
-      const benefits = product.metadata?.benefits ? JSON.parse(product.metadata.benefits) : []
+      let benefits: any[] = []
+
+      try {
+        if (product.metadata?.benefits) {
+          benefits = JSON.parse(product.metadata.benefits)
+        }
+      } catch (parseErr) {
+        console.warn(`Failed to parse benefits JSON for product ${product.id}:`, parseErr)
+      }
 
       const { error } = await supabase
         .from('pricing_plans')
-        .update({ benefits })
+        .update({ benefits: benefits.length > 0 ? benefits : [] })
         .eq('stripe_product_id', product.id)
 
       if (error) console.error(`Failed to sync product benefits for ${product.id}:`, error)
-      else console.log(`Synced benefits for product: ${product.id}`)
+      else console.log(`Synced ${benefits.length} benefits for product: ${product.id}`)
     }
 
     // Handle product deletions
