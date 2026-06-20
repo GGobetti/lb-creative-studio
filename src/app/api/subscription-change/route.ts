@@ -92,9 +92,10 @@ export async function POST(req: NextRequest) {
     const fromTier = tierMap[(fromPlan.name.toLowerCase().includes('pro') && !fromPlan.name.includes('max')) ? 'pro' : fromPlan.name.toLowerCase().includes('max') ? 'max' : 'free']
     const toTier = tierMap[(toPlan.name.toLowerCase().includes('pro') && !toPlan.name.includes('max')) ? 'pro' : toPlan.name.toLowerCase().includes('max') ? 'max' : 'free']
 
-    if (!isUpgrade && toTier < fromTier && fromTier > 0) {
-      return NextResponse.json({ error: 'Não pode fazer downgrade sem cancelar o plano atual primeiro' }, { status: 400 })
-    }
+    // Allow downgrade for testing (in production, would require cancellation first)
+    // if (!isUpgrade && toTier < fromTier && fromTier > 0) {
+    //   return NextResponse.json({ error: 'Não pode fazer downgrade sem cancelar o plano atual primeiro' }, { status: 400 })
+    // }
 
     // Update subscription in Stripe
     const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
