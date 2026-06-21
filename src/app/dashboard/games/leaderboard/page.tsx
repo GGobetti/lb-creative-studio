@@ -15,39 +15,43 @@ export default function LeaderboardPage() {
   const [allTimeData, setAllTimeData] = useState<LeaderboardResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchBoth = async () => {
-      try {
-        const supabase = getSupabaseBrowser()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          setIsLoading(false)
-          return
-        }
-
-        const headers = { Authorization: `Bearer ${session.access_token}` }
-
-        const [weekRes, allTimeRes] = await Promise.all([
-          fetch('/api/leaderboard?period=week&limit=10', { headers }),
-          fetch('/api/leaderboard?period=alltime&limit=10', { headers }),
-        ])
-
-        if (weekRes.ok) {
-          const json = await weekRes.json()
-          setWeekData(json)
-        }
-        if (allTimeRes.ok) {
-          const json = await allTimeRes.json()
-          setAllTimeData(json)
-        }
-      } catch {
-        // silently handle fetch errors; data stays null
-      } finally {
+  const fetchBoth = async () => {
+    try {
+      const supabase = getSupabaseBrowser()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
         setIsLoading(false)
+        return
       }
-    }
 
+      const headers = { Authorization: `Bearer ${session.access_token}` }
+
+      const [weekRes, allTimeRes] = await Promise.all([
+        fetch('/api/leaderboard?period=week&limit=10', { headers }),
+        fetch('/api/leaderboard?period=alltime&limit=10', { headers }),
+      ])
+
+      if (weekRes.ok) {
+        const json = await weekRes.json()
+        setWeekData(json)
+      }
+      if (allTimeRes.ok) {
+        const json = await allTimeRes.json()
+        setAllTimeData(json)
+      }
+    } catch {
+      // silently handle fetch errors; data stays null
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchBoth()
+
+    // Revalidate leaderboard every 30s
+    const interval = setInterval(fetchBoth, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const currentData = activePeriod === 'week' ? weekData : allTimeData
