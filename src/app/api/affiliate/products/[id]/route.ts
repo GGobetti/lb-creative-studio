@@ -14,7 +14,14 @@ async function getAdminUser(req: NextRequest) {
   const { data: user, error } = await supabase.auth.getUser(token);
 
   if (error || !user?.user?.id) return null;
-  if (user.user.user_metadata?.is_admin !== true) return null;
+
+  // Check admin role (project's canonical model: profiles.role = 'sysadmin')
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.user.id)
+    .single();
+  if (profile?.role !== 'sysadmin') return null;
 
   return user.user;
 }
@@ -30,8 +37,7 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const { name, description, price, image_url, affiliate_link, marketplace, is_active } =
-      await req.json();
+    const data = await req.json();
 
     // Verify ownership
     const { data: existing } = await supabase
@@ -47,18 +53,20 @@ export async function PUT(
       );
     }
 
+    // Partial update: only touch keys the caller actually provided, so that
+    // single-field calls (e.g. the active-toggle) don't NULL other columns.
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if ('name' in data) updates.name = data.name;
+    if ('description' in data) updates.description = data.description || null;
+    if ('price' in data) updates.price = parseFloat(data.price);
+    if ('image_url' in data) updates.image_url = data.image_url;
+    if ('affiliate_link' in data) updates.affiliate_link = data.affiliate_link;
+    if ('marketplace' in data) updates.marketplace = data.marketplace;
+    if ('is_active' in data) updates.is_active = data.is_active;
+
     const { data: product, error: updateError } = await supabase
       .from('affiliate_products')
-      .update({
-        name,
-        description: description || null,
-        price: parseFloat(price),
-        image_url,
-        affiliate_link,
-        marketplace,
-        is_active: is_active !== undefined ? is_active : true,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', id)
       .select()
       .single();

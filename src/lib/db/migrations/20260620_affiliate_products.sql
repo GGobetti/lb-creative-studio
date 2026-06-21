@@ -36,9 +36,7 @@ CREATE POLICY "admin_manage_all_products" ON affiliate_products
 ALTER TABLE affiliate_clicks ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "admin_read_clicks" ON affiliate_clicks
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM auth.users WHERE id = auth.uid() AND raw_user_meta_data->>'is_admin' = 'true')
-  );
+  FOR SELECT USING (public.is_admin());
 
 CREATE POLICY "anyone_can_log_click" ON affiliate_clicks
   FOR INSERT WITH CHECK (TRUE);

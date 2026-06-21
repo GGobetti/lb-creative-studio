@@ -41,9 +41,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check is_admin in metadata
-    const isAdmin = user.user.user_metadata?.is_admin === true;
-    if (!isAdmin) {
+    // Check admin role (project's canonical model: profiles.role = 'sysadmin')
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.user.id)
+      .single();
+    if (profile?.role !== 'sysadmin') {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 });
     }
 
