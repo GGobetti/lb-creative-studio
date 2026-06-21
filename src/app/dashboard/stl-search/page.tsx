@@ -385,17 +385,27 @@ export default function StlSearchPage() {
 
   const handleDeleteSelected = async () => {
     if (deleteSelection.length === 0) return;
-    if (!confirm(`Tem certeza que deseja deletar ${deleteSelection.length} STL(s)? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm(`Tem certeza que deseja deletar ${deleteSelection.length} STL(s)? Não será possível recuperar.`)) return;
 
     setIsDeleting(true);
     try {
       const supabase = getSupabaseBrowser();
-      const { error } = await supabase
-        .from("telegram_indexed_stls")
-        .delete()
-        .in("id", deleteSelection);
 
-      if (error) throw error;
+      // Get the items to delete (for file_name and file_size_bytes)
+      const itemsToDelete = items.filter((i) => deleteSelection.includes(i.id));
+
+      // Insert into user_deleted_files (soft delete)
+      const deletedRecords = itemsToDelete.map((item) => ({
+        file_name: item.title || item.name || "untitled",
+        file_size_bytes: item.fileSizeBytes || 0,
+        deleted_at: new Date().toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from("user_deleted_files")
+        .insert(deletedRecords);
+
+      if (insertError) throw insertError;
 
       // Remove from local state
       setItems((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
@@ -404,7 +414,7 @@ export default function StlSearchPage() {
 
       toast({
         title: "✅ Sucesso",
-        description: `${deleteSelection.length} STL(s) deletado(s) com sucesso`,
+        description: `${deleteSelection.length} STL(s) movido(s) para lixeira. Não será(ão) reprocessado(s)`,
         type: "success"
       });
 
