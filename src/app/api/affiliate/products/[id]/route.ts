@@ -21,7 +21,7 @@ async function getAdminUser(req: NextRequest) {
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const adminUser = await getAdminUser(req);
@@ -29,7 +29,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Admin only' }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const { name, description, price, image_url, affiliate_link, marketplace, is_active } =
       await req.json();
 
@@ -74,7 +74,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const adminUser = await getAdminUser(req);
@@ -82,7 +82,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Admin only' }, { status: 403 });
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Verify ownership
     const { data: existing } = await supabase
