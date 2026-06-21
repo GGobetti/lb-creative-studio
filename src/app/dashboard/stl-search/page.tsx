@@ -6,7 +6,7 @@ import { StlGrid } from "@/components/stl-search/StlGrid";
 import { StlDetailsModal } from "@/components/stl-search/StlDetailsModal";
 import { MergePartsModal } from "@/components/stl-search/MergePartsModal";
 import { StlItem } from "@/lib/mockStlData";
-import { PackageSearch, Heart, Trophy, TrendingUp, Loader2, Download, GitMerge, X as XIcon, CheckSquare } from "lucide-react";
+import { PackageSearch, Heart, Trophy, TrendingUp, Loader2, Download, GitMerge, Trash2, X as XIcon, CheckSquare } from "lucide-react";
 import { useAppStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
@@ -52,6 +52,12 @@ export default function StlSearchPage() {
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSelection, setMergeSelection] = useState<string[]>([]);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+
+  // Delete mode (admin only)
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [deleteSelection, setDeleteSelection] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const isAdmin = profile?.role === "sysadmin";
 
   // Debounce input search query (300ms)
@@ -327,6 +333,14 @@ export default function StlSearchPage() {
       return;
     }
 
+    // Se estiver em deleteMode, faz seleção em vez de abrir modal
+    if (deleteMode) {
+      setDeleteSelection((prev) =>
+        prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+      );
+      return;
+    }
+
     try {
       const supabase = getSupabaseBrowser();
       const { data: parts } = await supabase
@@ -367,6 +381,45 @@ export default function StlSearchPage() {
     setMergeMode(false);
     setMergeSelection([]);
     setIsMergeModalOpen(false);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (deleteSelection.length === 0) return;
+    if (!confirm(`Tem certeza que deseja deletar ${deleteSelection.length} STL(s)? Esta ação não pode ser desfeita.`)) return;
+
+    setIsDeleting(true);
+    try {
+      const supabase = getSupabaseBrowser();
+      const { error } = await supabase
+        .from("telegram_indexed_stls")
+        .delete()
+        .in("id", deleteSelection);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setItems((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
+      setTopDownloads((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
+      setTopFavorites((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
+
+      toast({
+        title: "✅ Sucesso",
+        description: `${deleteSelection.length} STL(s) deletado(s) com sucesso`,
+        type: "success"
+      });
+
+      setDeleteMode(false);
+      setDeleteSelection([]);
+    } catch (err) {
+      console.error("Erro ao deletar STLs:", err);
+      toast({
+        title: "❌ Erro",
+        description: "Falha ao deletar STLs",
+        type: "error"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleUnmergeSuccess = (parentId: string) => {
@@ -645,13 +698,24 @@ export default function StlSearchPage() {
               )}
 
               {/* Merge Mode (Admin only) */}
-              {isAdmin && !mergeMode && (
+              {isAdmin && !mergeMode && !deleteMode && (
                 <button
                   onClick={() => { setMergeMode(true); setMergeSelection([]); }}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-primary/30 bg-primary/8 text-primary hover:bg-primary/15 transition-all cursor-pointer"
                 >
                   <GitMerge className="w-4 h-4" />
                   <span>Mesclar Partes</span>
+                </button>
+              )}
+
+              {/* Delete Mode (Admin only) */}
+              {isAdmin && !mergeMode && !deleteMode && (
+                <button
+                  onClick={() => { setDeleteMode(true); setDeleteSelection([]); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-rose-500/30 bg-rose-500/8 text-rose-500 hover:bg-rose-500/15 transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Deletar em Massa</span>
                 </button>
               )}
 
@@ -675,6 +739,27 @@ export default function StlSearchPage() {
                   </button>
                 </>
               )}
+
+              {/* Delete mode actions */}
+              {isAdmin && deleteMode && (
+                <>
+                  <button
+                    onClick={() => { setDeleteMode(false); setDeleteSelection([]); }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                  >
+                    <XIcon className="w-4 h-4" />
+                    Cancelar
+                  </button>
+                  <button
+                    disabled={deleteSelection.length === 0 || isDeleting}
+                    onClick={handleDeleteSelected}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border border-rose-600 bg-rose-600 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-rose-600/20"
+                  >
+                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    Deletar ({deleteSelection.length})
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -689,6 +774,8 @@ export default function StlSearchPage() {
             downloadingIds={downloadingIds}
             mergeMode={mergeMode}
             mergeSelection={mergeSelection}
+            deleteMode={deleteMode}
+            deleteSelection={deleteSelection}
           />
 
           {hasMore && !showOnlyFavorites && (

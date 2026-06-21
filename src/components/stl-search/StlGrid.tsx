@@ -16,6 +16,10 @@ interface StlGridProps {
   mergeMode?: boolean;
   /** IDs dos itens atualmente selecionados para merge */
   mergeSelection?: string[];
+  /** Ativa o modo de seleção múltipla para delete (admin only) */
+  deleteMode?: boolean;
+  /** IDs dos itens atualmente selecionados para delete */
+  deleteSelection?: string[];
 }
 
 export function StlGrid({
@@ -29,6 +33,8 @@ export function StlGrid({
   downloadingIds = [],
   mergeMode = false,
   mergeSelection = [],
+  deleteMode = false,
+  deleteSelection = [],
 }: StlGridProps) {
   if (isLoading) {
     return (
@@ -57,7 +63,8 @@ export function StlGrid({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
       {items.map((item) => {
-        const isSelected = mergeSelection.includes(item.id);
+        const isSelectedMerge = mergeSelection.includes(item.id);
+        const isSelectedDelete = deleteSelection.includes(item.id);
         return (
           <div key={item.id} className="relative">
             <StlCard
@@ -74,16 +81,34 @@ export function StlGrid({
               <button
                 onClick={() => onCardClick(item)}
                 className={`absolute inset-0 rounded-2xl border-2 transition-all cursor-pointer z-10 flex items-start justify-end p-3 ${
-                  isSelected
+                  isSelectedMerge
                     ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
                     : "border-transparent hover:border-primary/30 hover:bg-primary/5"
                 }`}
-                aria-label={isSelected ? "Desselecionar" : "Selecionar para merge"}
+                aria-label={isSelectedMerge ? "Desselecionar" : "Selecionar para merge"}
               >
-                {isSelected ? (
+                {isSelectedMerge ? (
                   <CheckCircle2 className="w-6 h-6 text-primary drop-shadow-md" />
                 ) : (
                   <Circle className="w-6 h-6 text-primary/40" />
+                )}
+              </button>
+            )}
+            {/* Overlay de seleção no modo delete */}
+            {deleteMode && (
+              <button
+                onClick={() => onCardClick(item)}
+                className={`absolute inset-0 rounded-2xl border-2 transition-all cursor-pointer z-10 flex items-start justify-end p-3 ${
+                  isSelectedDelete
+                    ? "border-rose-500 bg-rose-500/10 shadow-lg shadow-rose-500/20"
+                    : "border-transparent hover:border-rose-500/30 hover:bg-rose-500/5"
+                }`}
+                aria-label={isSelectedDelete ? "Desselecionar" : "Selecionar para deletar"}
+              >
+                {isSelectedDelete ? (
+                  <CheckCircle2 className="w-6 h-6 text-rose-500 drop-shadow-md" />
+                ) : (
+                  <Circle className="w-6 h-6 text-rose-500/40" />
                 )}
               </button>
             )}
