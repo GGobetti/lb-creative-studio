@@ -390,6 +390,116 @@ export function ScraperMonitor() {
           </div>
         </div>
       </div>
+
+      {/* Job Details Modal Portal */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {selectedJobDetails && (
+            <div key="job-modal" className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+                onClick={() => setSelectedJobDetails(null)}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-4xl bg-card border border-border rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]"
+              >
+                {/* Left: Gallery */}
+                <div className="w-full md:w-3/5 bg-muted/50 relative flex items-center justify-center min-h-[300px]">
+                  {selectedJobDetails.photos?.length > 0 ? (
+                    <>
+                      <img
+                        src={selectedJobDetails.photos[activePhotoIndex]}
+                        alt={`Foto ${activePhotoIndex + 1}`}
+                        className="max-w-full max-h-[60vh] object-contain"
+                      />
+                      {selectedJobDetails.photos.length > 1 && (
+                        <>
+                          <button
+                            onClick={e => { e.stopPropagation(); setActivePhotoIndex(p => p > 0 ? p - 1 : selectedJobDetails.photos.length - 1) }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
+                          >❮</button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setActivePhotoIndex(p => p < selectedJobDetails.photos.length - 1 ? p + 1 : 0) }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
+                          >❯</button>
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 p-2 rounded-full bg-black/30">
+                            {selectedJobDetails.photos.map((_: any, idx: number) => (
+                              <button key={idx} onClick={e => { e.stopPropagation(); setActivePhotoIndex(idx) }}
+                                className={`w-2 h-2 rounded-full transition-all cursor-pointer ${idx === activePhotoIndex ? "bg-white scale-125" : "bg-white/50"}`}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
+                      <span className="text-sm">Nenhuma foto disponível</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Info */}
+                <div className="w-full md:w-2/5 p-6 flex flex-col bg-card">
+                  <div className="flex justify-between items-start mb-6">
+                    <h3 className="text-lg font-bold text-foreground">Detalhes do Arquivo</h3>
+                    <button onClick={() => setSelectedJobDetails(null)} className="p-1 rounded-md text-muted-foreground hover:bg-muted cursor-pointer">✕</button>
+                  </div>
+                  <div className="space-y-5 flex-1 overflow-y-auto">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Nome Original</p>
+                      <p className="text-sm font-medium break-all">{selectedJobDetails.file_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Origem</p>
+                      <p className="text-sm">{selectedJobDetails.chat_title}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Tamanho</p>
+                        <p className="text-sm font-mono">
+                          {selectedJobDetails.file_size_bytes
+                            ? `${(selectedJobDetails.file_size_bytes / (1024 ** 3)).toFixed(2)} GB`
+                            : "---"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Fotos</p>
+                        <p className="text-sm">{selectedJobDetails.photos?.length || 0}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Criado em</p>
+                      <p className="text-sm">{new Date(selectedJobDetails.created_at).toLocaleString("pt-BR")}</p>
+                    </div>
+                  </div>
+                  <div className="pt-6 border-t border-border mt-6 grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => { handleApproveJob(selectedJobDetails.id); setSelectedJobDetails(null) }}
+                      disabled={actingJobId !== null}
+                      className="py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      ✅ Aprovar
+                    </button>
+                    <button
+                      onClick={() => { handleRejectJob(selectedJobDetails.id); setSelectedJobDetails(null) }}
+                      disabled={actingJobId !== null}
+                      className="py-2.5 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 text-rose-400 border border-rose-500/20 text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      ❌ Rejeitar
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }
