@@ -14,6 +14,9 @@ export function ScraperMonitor() {
   const [selectedJobDetails, setSelectedJobDetails] = useState<any | null>(null)
   const [actingJobId, setActingJobId] = useState<string | null>(null)
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
+  const [selectedBans, setSelectedBans] = useState<string[]>([])
+  const [dismissedPhotos, setDismissedPhotosState] = useState<string[]>([])
+  const [isBanningPhotos, setIsBanningPhotos] = useState(false)
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -45,6 +48,21 @@ export function ScraperMonitor() {
       console.error("Erro ao carregar configurações:", err)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const saved = localStorage.getItem("dismissedAdminPhotos")
+    if (saved) {
+      try {
+        setDismissedPhotosState(JSON.parse(saved))
+      } catch {}
+    }
+  }, [])
+
+  const persistDismissed = (next: string[]) => {
+    setDismissedPhotosState(next)
+    if (typeof window !== "undefined") localStorage.setItem("dismissedAdminPhotos", JSON.stringify(next))
+  }
 
   useEffect(() => {
     fetchJobs()
@@ -177,6 +195,42 @@ export function ScraperMonitor() {
       setActingJobId(null)
     }
   }, [fetchJobs])
+
+  const handleBanPhotos = useCallback(async () => {
+    if (selectedBans.length === 0) return
+    if (!confirm(`Banir ${selectedBans.length} imagem(ns)?`)) return
+    setIsBanningPhotos(true)
+    try {
+      const supabase = getSupabaseBrowser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error("Sessão não encontrada")
+
+      const { getPerceptualHash } = await import("@/lib/imageHash")
+
+      for (const key of selectedBans) {
+        const pipeIdx = key.indexOf("|")
+        const url = key.slice(pipeIdx + 1)
+        try {
+          const hash = await getPerceptualHash(url)
+          await fetch("/api/telegram/banned-images", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ image_hash: hash, image_url: url })
+          })
+        } catch (err) {
+          console.error("Erro ao banir imagem:", err)
+        }
+      }
+      persistDismissed([...dismissedPhotos, ...selectedBans])
+      setSelectedBans([])
+      alert("Fotos banidas com sucesso!")
+    } catch (err: any) {
+      alert(`Erro ao banir: ${err.message}`)
+    } finally {
+      setIsBanningPhotos(false)
+    }
+  }, [selectedBans, dismissedPhotos])
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -382,8 +436,102 @@ export function ScraperMonitor() {
 
             {/* PHOTOS TAB */}
             {activeTab === "photos" && (
-              <div className="p-6">
-                <p className="text-sm text-muted-foreground">Moderação de fotos — próximo task</p>
+              <div className="p-6 space-y-4">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground mb-1">Moderação de Fotos</h3>
+                  <p className="text-xs text-muted-foreground">Selecione fotos indesejadas e bana para a blacklist</p>
+                </div>
+
+                {(() => {
+                  const seen = new Set<string>()
+                  let allPhotos: { jobId: string; url: string; jobTitle: string }[] = []
+                  scraperJobs.forEach(job => {
+                    (job.photos || []).forEach((url: string) => {
+                      const key = `${job.id}|${url}`
+                      if (!seen.has(key)) {
+                        seen.add(key)
+                        allPhotos.push({ jobId: job.id, url, jobTitle: job.file_name })
+                      }
+                    })
+                  })
+                  allPhotos = allPhotos.filter(p => !dismissedPhotos.includes(`${p.jobId}|${p.url}`))
+
+                  if (allPhotos.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-sm border border-dashed border-border bg-muted/20 rounded-2xl text-muted-foreground">
+                        Nenhuma foto aguardando moderação.
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <button
+                          onClick={() => setSelectedBans(
+                            selectedBans.length === allPhotos.length ? [] : allPhotos.map(p => `${p.jobId}|${p.url}`)
+                          )}
+                          className="px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-[11px] font-bold rounded-lg border border-border cursor-pointer"
+                        >
+                          {selectedBans.length === allPhotos.length ? "Desmarcar Todos" : "Selecionar Todos"}
+                        </button>
+                        {selectedBans.length > 0 && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => { persistDismissed([...dismissedPhotos, ...selectedBans]); setSelectedBans([]) }}
+                              className="px-4 py-2 bg-zinc-600 hover:bg-zinc-500 text-white text-xs font-bold rounded-xl cursor-pointer"
+                            >
+                              Ignorar ({selectedBans.length})
+                            </button>
+                            <button
+                              onClick={handleBanPhotos}
+                              disabled={isBanningPhotos}
+                              className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer"
+                            >
+                              {isBanningPhotos ? <Loader2 size={14} className="animate-spin" /> : "🚫"}
+                              Banir ({selectedBans.length})
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {allPhotos.map((p, idx) => {
+                          const key = `${p.jobId}|${p.url}`
+                          const isSelected = selectedBans.includes(key)
+                          return (
+                            <div
+                              key={`${p.jobId}-${idx}`}
+                              onClick={() => setSelectedBans(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])}
+                              className={`group relative aspect-square rounded-xl overflow-hidden bg-muted border-2 cursor-pointer transition-all ${
+                                isSelected ? "border-red-500 scale-95" : "border-border hover:border-red-500/50"
+                              }`}
+                            >
+                              <img
+                                src={p.url}
+                                alt={p.jobTitle}
+                                className={`w-full h-full object-cover ${isSelected ? "opacity-80" : ""}`}
+                                onError={e => {
+                                  (e.currentTarget as HTMLImageElement).style.display = "none"
+                                  const el = document.createElement("span")
+                                  el.className = "text-xs text-red-400 font-bold p-2 text-center"
+                                  el.innerText = "Foto Expirada"
+                                  e.currentTarget.parentElement?.classList.add("flex", "items-center", "justify-center", "bg-red-500/10")
+                                  e.currentTarget.parentElement?.appendChild(el)
+                                }}
+                              />
+                              <div className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors ${
+                                isSelected ? "bg-red-500 border-red-500 text-white" : "bg-black/50 border-white/50 opacity-0 group-hover:opacity-100"
+                              }`}>
+                                {isSelected && "✓"}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
 
