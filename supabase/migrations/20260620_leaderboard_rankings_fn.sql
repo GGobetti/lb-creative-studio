@@ -22,7 +22,15 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  WITH user_xp AS (
+  WITH badge_levels AS (
+    SELECT 'bronze' as tier, 1 as level
+    UNION ALL SELECT 'silver', 2
+    UNION ALL SELECT 'gold', 3
+    UNION ALL SELECT 'platinum', 4
+    UNION ALL SELECT 'diamond', 5
+    UNION ALL SELECT 'legend', 6
+  ),
+  user_xp AS (
     SELECT
       xt.user_id,
       SUM(xt.xp_amount) as total_xp,
@@ -33,7 +41,8 @@ BEGIN
     FROM xp_transactions xt
     JOIN profiles p ON p.id = xt.user_id
     LEFT JOIN game_user_stats gus ON gus.user_id = xt.user_id
-    LEFT JOIN xp_levels xl ON xl.level = COALESCE((gus.badge_tier::int), 1)
+    LEFT JOIN badge_levels bl ON bl.tier = LOWER(COALESCE(gus.badge_tier, 'bronze'))
+    LEFT JOIN xp_levels xl ON xl.level = COALESCE(bl.level, 1)
     WHERE xt.created_at >= v_start_date
       AND xt.source = 'earned'
     GROUP BY xt.user_id, p.full_name, gus.current_streak, gus.total_points, xl.badge_icon
