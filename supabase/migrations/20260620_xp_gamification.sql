@@ -116,6 +116,12 @@ BEGIN
   FROM public.xp_transactions
   WHERE user_id = p_user_id AND source = 'earned';
 
+  -- Sync total_points in game_user_stats
+  INSERT INTO public.game_user_stats (user_id, total_points)
+  VALUES (p_user_id, v_xp_earned_total)
+  ON CONFLICT (user_id) DO UPDATE
+  SET total_points = v_xp_earned_total, updated_at = now();
+
   -- Detect first unlocked level above threshold (only one level-up per action)
   SELECT l.level, l.credits_reward INTO v_level
   FROM public.xp_levels l
