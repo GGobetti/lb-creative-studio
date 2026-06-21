@@ -412,21 +412,13 @@ export default function StlSearchPage() {
       setTopDownloads((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
       setTopFavorites((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
 
-      toast({
-        title: "✅ Sucesso",
-        description: `${deleteSelection.length} STL(s) movido(s) para lixeira. Não será(ão) reprocessado(s)`,
-        type: "success"
-      });
+      toast(`${deleteSelection.length} STL(s) movido(s) para lixeira. Não será(ão) reprocessado(s)`, "success");
 
       setDeleteMode(false);
       setDeleteSelection([]);
     } catch (err) {
       console.error("Erro ao deletar STLs:", err);
-      toast({
-        title: "❌ Erro",
-        description: "Falha ao deletar STLs",
-        type: "error"
-      });
+      toast("Falha ao deletar STLs", "error");
     } finally {
       setIsDeleting(false);
     }
