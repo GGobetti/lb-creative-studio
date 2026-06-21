@@ -1,16 +1,11 @@
 'use client';
 
 import { useAppStore } from '@/store/store';
-import { useEffect, useState } from 'react';
 
 export function useAuth() {
-  const { user, profile } = useAppStore();
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // If auth provider has initialized (user is set or null), mark as loaded
-    setLoading(false);
-  }, []);
-
-  return { user, profile, loading };
+  const { user, profile, authInitialized } = useAppStore();
+  // `loading` reflects the real auth bootstrap: it stays true until
+  // AuthProvider's onAuthStateChange resolves the initial session. This avoids
+  // flashing a login redirect for an already-authenticated user on hard reload.
+  return { user, profile, loading: !authInitialized };
 }

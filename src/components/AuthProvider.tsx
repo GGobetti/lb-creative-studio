@@ -25,11 +25,12 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, setUser, setProfile, logout, pricingSettings, setPricingSettings, refreshXpSummary } = useAppStore(
+  const { user, setUser, setProfile, setAuthInitialized, logout, pricingSettings, setPricingSettings, refreshXpSummary } = useAppStore(
     useShallow((s) => ({
       user: s.user,
       setUser: s.setUser,
       setProfile: s.setProfile,
+      setAuthInitialized: s.setAuthInitialized,
       logout: s.logout,
       pricingSettings: s.pricingSettings,
       setPricingSettings: s.setPricingSettings,
@@ -51,6 +52,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           logout()
           skipSyncRef.current = true
         }
+        // First event resolves the initial session (logged in or out);
+        // mark auth as initialized so consumers stop showing the loading state.
+        if (isMounted) setAuthInitialized(true)
       },
     )
 
@@ -58,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [setUser, logout])
+  }, [setUser, logout, setAuthInitialized])
 
   // 2. Fetch profile and pricing settings when user changes
   useEffect(() => {

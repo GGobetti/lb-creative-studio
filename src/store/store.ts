@@ -15,9 +15,11 @@ import type { XpSummary } from '@/types/xp'
 interface AuthSlice {
   user: User | null
   profile: Profile | null
+  authInitialized: boolean
   language: 'pt' | 'en' | 'es'
   setUser: (user: User | null) => void
   setProfile: (profile: Profile | null) => void
+  setAuthInitialized: (v: boolean) => void
   setLanguage: (lang: 'pt' | 'en' | 'es') => void
   refreshCredits: (credits: number) => void
   logout: () => void
@@ -121,10 +123,15 @@ export const useAppStore = create<Store>()(
       // ── Auth ──────────────────────────────────────────────────
       user: null,
       profile: null,
+      authInitialized: false,
       language: 'pt',
       setUser: (user) =>
         set((s) => {
           s.user = user
+        }),
+      setAuthInitialized: (v) =>
+        set((s) => {
+          s.authInitialized = v
         }),
       setProfile: (profile) =>
         set((s) => {
