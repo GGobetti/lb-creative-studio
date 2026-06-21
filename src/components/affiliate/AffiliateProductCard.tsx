@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { AffiliateProduct, trackClick } from '@/lib/api/affiliate';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -32,11 +31,14 @@ export function AffiliateProductCard({
     <div className="glass-panel rounded-lg overflow-hidden flex flex-col hover:shadow-lg transition-shadow duration-300">
       {/* Image */}
       <div className="relative w-full h-48 bg-slate-900 overflow-hidden">
-        <Image
+        {/* Plain <img>: image_url points to arbitrary marketplace hosts
+            (AliExpress/Shopee/etc.) that next/image's remotePatterns can't
+            enumerate, so we skip optimization to avoid render crashes. */}
+        <img
           src={product.image_url}
           alt={product.name}
-          fill
-          className="object-cover hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           onError={(e) => {
             e.currentTarget.src = '/images/placeholder-product.png';
           }}
