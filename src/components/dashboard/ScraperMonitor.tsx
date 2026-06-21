@@ -12,6 +12,8 @@ export function ScraperMonitor() {
   const [scraperHeartbeat, setScraperHeartbeat] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"approvals" | "photos">("approvals")
   const [selectedJobDetails, setSelectedJobDetails] = useState<any | null>(null)
+  const [actingJobId, setActingJobId] = useState<string | null>(null)
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -128,6 +130,54 @@ export function ScraperMonitor() {
     }
   }
 
+  const handleApproveJob = useCallback(async (jobId: string) => {
+    setActingJobId(jobId)
+    try {
+      const supabase = getSupabaseBrowser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error("Sessão não encontrada")
+      const res = await fetch("/api/telegram/jobs", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", jobId })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Erro ${res.status}`)
+      }
+      await fetchJobs()
+    } catch (err: any) {
+      alert(`Erro ao aprovar: ${err.message}`)
+    } finally {
+      setActingJobId(null)
+    }
+  }, [fetchJobs])
+
+  const handleRejectJob = useCallback(async (jobId: string) => {
+    setActingJobId(jobId)
+    try {
+      const supabase = getSupabaseBrowser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error("Sessão não encontrada")
+      const res = await fetch("/api/telegram/jobs", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", jobId })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Erro ${res.status}`)
+      }
+      await fetchJobs()
+    } catch (err: any) {
+      alert(`Erro ao rejeitar: ${err.message}`)
+    } finally {
+      setActingJobId(null)
+    }
+  }, [fetchJobs])
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -224,8 +274,120 @@ export function ScraperMonitor() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-6">
-          <div className="text-sm text-muted-foreground p-4 border border-dashed border-border rounded-xl">Right column — approvals & photos</div>
+        <div className="flex flex-col gap-4">
+          {/* Tabs */}
+          <div className="bg-card border border-border rounded-xl p-1 flex gap-1">
+            {([
+              { key: "approvals" as const, label: "Fila de Aprovação" },
+              { key: "photos" as const, label: "Moderação de Fotos" },
+            ] as const).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === tab.key
+                    ? "bg-primary/10 text-primary border border-primary/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Content */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+
+            {/* APPROVALS TAB */}
+            {activeTab === "approvals" && (
+              <div className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground mb-1">Arquivos Aguardando Aprovação</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Arquivos acima do limite de {scraperSettings?.size_limit_mb || 750} MB
+                  </p>
+                </div>
+
+                {(() => {
+                  const pendingJobs = scraperJobs.filter(j => j.status === "pending_approval")
+                  if (pendingJobs.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-sm border border-dashed border-border bg-muted/20 rounded-2xl text-muted-foreground">
+                        Nenhum arquivo aguardando aprovação no momento.
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {pendingJobs.map(job => {
+                        const hasPhotos = job.photos && job.photos.length > 0
+                        const thumbUrl = hasPhotos ? job.photos[0] : null
+                        const formattedSize = job.file_size_bytes
+                          ? `${(job.file_size_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+                          : "---"
+
+                        return (
+                          <div key={job.id} className="group relative bg-muted border border-border rounded-2xl overflow-hidden hover:border-amber-500/30 transition-all flex flex-col shadow-sm">
+                            <div className="relative aspect-video w-full bg-muted/50 overflow-hidden">
+                              {thumbUrl ? (
+                                <img src={thumbUrl} alt={job.file_name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-bold uppercase opacity-50">
+                                  Sem Foto
+                                </div>
+                              )}
+                              <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-[10px] font-bold text-amber-400">
+                                {formattedSize}
+                              </div>
+                              <button
+                                onClick={() => { setSelectedJobDetails(job); setActivePhotoIndex(0) }}
+                                className="absolute inset-0 z-10 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-bold backdrop-blur-sm cursor-pointer"
+                              >
+                                Ver Detalhes {hasPhotos && `(${job.photos.length})`}
+                              </button>
+                            </div>
+                            <div className="p-5 flex flex-col gap-4">
+                              <div>
+                                <h4 className="font-bold text-sm text-foreground line-clamp-2 mb-1">{job.file_name}</h4>
+                                <div className="text-[11px] text-muted-foreground space-y-0.5">
+                                  <div>Origem: <span className="font-medium text-foreground">{job.chat_title}</span></div>
+                                  <div>{new Date(job.created_at).toLocaleString("pt-BR")}</div>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <button
+                                  onClick={() => handleApproveJob(job.id)}
+                                  disabled={actingJobId === job.id}
+                                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                  {actingJobId === job.id ? <Loader2 size={12} className="animate-spin" /> : "✅"} Aprovar
+                                </button>
+                                <button
+                                  onClick={() => handleRejectJob(job.id)}
+                                  disabled={actingJobId === job.id}
+                                  className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 text-rose-400 border border-rose-500/20 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                  ❌ Rejeitar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* PHOTOS TAB */}
+            {activeTab === "photos" && (
+              <div className="p-6">
+                <p className="text-sm text-muted-foreground">Moderação de fotos — próximo task</p>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </div>
