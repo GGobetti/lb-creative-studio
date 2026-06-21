@@ -1,10 +1,12 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { createPortal } from "react-dom"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { RefreshCw, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useAppStore } from "@/store/store"
+import { useShallow } from "zustand/react/shallow"
 
 interface ScraperJob {
   id: string
@@ -21,6 +23,7 @@ interface ScraperJob {
 }
 
 export function ScraperMonitor() {
+  const { profile } = useAppStore(useShallow((s) => ({ profile: s.profile })))
   const [scraperJobs, setScraperJobs] = useState<ScraperJob[]>([])
   const [scraperSettings, setScraperSettings] = useState<{ size_limit_mb: number; last_heartbeat?: string } | null>(null)
   const [scraperHeartbeat, setScraperHeartbeat] = useState<string | null>(null)
@@ -31,6 +34,7 @@ export function ScraperMonitor() {
   const [selectedBans, setSelectedBans] = useState<string[]>([])
   const [dismissedPhotos, setDismissedPhotosState] = useState<string[]>([])
   const [isBanningPhotos, setIsBanningPhotos] = useState(false)
+  const scraperJobsRef = useRef<ScraperJob[]>([])
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -41,7 +45,9 @@ export function ScraperMonitor() {
         .order("created_at", { ascending: false })
         .limit(300)
       if (error) throw error
-      setScraperJobs(data || [])
+      const jobs = data || []
+      setScraperJobs(jobs)
+      scraperJobsRef.current = jobs
     } catch (err) {
       console.error("Erro ao carregar jobs:", err)
     }
@@ -94,26 +100,33 @@ export function ScraperMonitor() {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      const downloadingJobs = scraperJobs.filter(j => j.status === "downloading_file")
+      const currentJobs = scraperJobsRef.current
+      const downloadingJobs = currentJobs.filter(j => j.status === "downloading_file")
       if (downloadingJobs.length === 0) return
-      let updated = false
-      const newJobs = [...scraperJobs]
+
       for (const job of downloadingJobs) {
         try {
           const res = await fetch(`/api/telegram/progress?job_id=${job.id}`)
-          if (res.ok) {
-            const data = await res.json()
-            if (data.progress !== undefined && data.progress !== job.progress) {
-              const idx = newJobs.findIndex(j => j.id === job.id)
-              if (idx > -1) { newJobs[idx] = { ...newJobs[idx], progress: data.progress }; updated = true }
-            }
-          }
-        } catch {}
+          if (!res.ok) continue
+          const data = await res.json()
+          if (typeof data.progress !== "number") continue
+          if (data.progress === job.progress) continue
+
+          setScraperJobs(prev => {
+            const idx = prev.findIndex(j => j.id === job.id)
+            if (idx === -1) return prev
+            const next = [...prev]
+            next[idx] = { ...next[idx], progress: data.progress }
+            scraperJobsRef.current = next
+            return next
+          })
+        } catch {
+          // silent — polling failures don't need UI feedback
+        }
       }
-      if (updated) setScraperJobs(newJobs)
     }, 3000)
     return () => clearInterval(interval)
-  }, [scraperJobs])
+  }, []) // empty deps — ref always has fresh data
 
   const getScraperStatus = (): "healthy" | "warning" | "offline" | "unknown" => {
     if (!scraperHeartbeat) return "unknown"
@@ -124,6 +137,15 @@ export function ScraperMonitor() {
   }
 
   const scraperStatus = getScraperStatus()
+
+  // Restrict access to sysadmin only
+  if (profile !== null && profile?.role !== "sysadmin") {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] text-muted-foreground text-sm">
+        Acesso restrito a sysadmin.
+      </div>
+    )
+  }
 
   const getTimeText = () => {
     if (!scraperHeartbeat) return ""
@@ -214,6 +236,10 @@ export function ScraperMonitor() {
     if (selectedBans.length === 0) return
     if (!confirm(`Banir ${selectedBans.length} imagem(ns)?`)) return
     setIsBanningPhotos(true)
+
+    let successCount = 0
+    let failCount = 0
+
     try {
       const supabase = getSupabaseBrowser()
       const { data: sessionData } = await supabase.auth.getSession()
@@ -227,18 +253,32 @@ export function ScraperMonitor() {
         const url = key.slice(pipeIdx + 1)
         try {
           const hash = await getPerceptualHash(url)
-          await fetch("/api/telegram/banned-images", {
+          const res = await fetch("/api/telegram/banned-images", {
             method: "POST",
             headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify({ image_hash: hash, image_url: url })
           })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            throw new Error((err as any).error || `HTTP ${res.status}`)
+          }
+          successCount++
         } catch (err) {
           console.error("Erro ao banir imagem:", err)
+          failCount++
         }
       }
+
       persistDismissed([...dismissedPhotos, ...selectedBans])
       setSelectedBans([])
-      alert("Fotos banidas com sucesso!")
+
+      if (failCount === 0) {
+        alert(`${successCount} foto(s) banida(s) com sucesso!`)
+      } else if (successCount === 0) {
+        alert(`Falha ao banir todas as fotos. Verifique o console.`)
+      } else {
+        alert(`${successCount} foto(s) banida(s). ${failCount} falharam (veja o console).`)
+      }
     } catch (err: any) {
       alert(`Erro ao banir: ${err.message}`)
     } finally {
