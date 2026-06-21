@@ -6,12 +6,26 @@ import { getSupabaseBrowser } from "@/lib/supabase"
 import { RefreshCw, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
+interface ScraperJob {
+  id: string
+  file_name: string
+  chat_title: string
+  status: string
+  file_size_bytes: number
+  progress?: number
+  photos?: string[]
+  created_at: string
+  updated_at: string
+  error_message?: string
+  printer_type?: string
+}
+
 export function ScraperMonitor() {
-  const [scraperJobs, setScraperJobs] = useState<any[]>([])
-  const [scraperSettings, setScraperSettings] = useState<any>(null)
+  const [scraperJobs, setScraperJobs] = useState<ScraperJob[]>([])
+  const [scraperSettings, setScraperSettings] = useState<{ size_limit_mb: number; last_heartbeat?: string } | null>(null)
   const [scraperHeartbeat, setScraperHeartbeat] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"approvals" | "photos">("approvals")
-  const [selectedJobDetails, setSelectedJobDetails] = useState<any | null>(null)
+  const [selectedJobDetails, setSelectedJobDetails] = useState<ScraperJob | null>(null)
   const [actingJobId, setActingJobId] = useState<string | null>(null)
   const [activePhotoIndex, setActivePhotoIndex] = useState(0)
   const [selectedBans, setSelectedBans] = useState<string[]>([])
@@ -233,8 +247,8 @@ export function ScraperMonitor() {
   }, [selectedBans, dismissedPhotos])
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
         <div className="flex flex-col gap-6">
           {/* Status Card */}
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
@@ -374,8 +388,8 @@ export function ScraperMonitor() {
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {pendingJobs.map(job => {
-                        const hasPhotos = job.photos && job.photos.length > 0
-                        const thumbUrl = hasPhotos ? job.photos[0] : null
+                        const hasPhotos = (job.photos?.length ?? 0) > 0
+                        const thumbUrl = hasPhotos ? job.photos?.[0] ?? null : null
                         const formattedSize = job.file_size_bytes
                           ? `${(job.file_size_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
                           : "---"
@@ -397,7 +411,7 @@ export function ScraperMonitor() {
                                 onClick={() => { setSelectedJobDetails(job); setActivePhotoIndex(0) }}
                                 className="absolute inset-0 z-10 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-bold backdrop-blur-sm cursor-pointer"
                               >
-                                Ver Detalhes {hasPhotos && `(${job.photos.length})`}
+                                Ver Detalhes {hasPhotos && `(${job.photos?.length ?? 0})`}
                               </button>
                             </div>
                             <div className="p-5 flex flex-col gap-4">
@@ -557,25 +571,25 @@ export function ScraperMonitor() {
               >
                 {/* Left: Gallery */}
                 <div className="w-full md:w-3/5 bg-muted/50 relative flex items-center justify-center min-h-[300px]">
-                  {selectedJobDetails.photos?.length > 0 ? (
+                  {(selectedJobDetails.photos?.length ?? 0) > 0 ? (
                     <>
                       <img
-                        src={selectedJobDetails.photos[activePhotoIndex]}
+                        src={selectedJobDetails.photos?.[activePhotoIndex] ?? ""}
                         alt={`Foto ${activePhotoIndex + 1}`}
                         className="max-w-full max-h-[60vh] object-contain"
                       />
-                      {selectedJobDetails.photos.length > 1 && (
+                      {(selectedJobDetails.photos?.length ?? 0) > 1 && (
                         <>
                           <button
-                            onClick={e => { e.stopPropagation(); setActivePhotoIndex(p => p > 0 ? p - 1 : selectedJobDetails.photos.length - 1) }}
+                            onClick={e => { e.stopPropagation(); setActivePhotoIndex(p => p > 0 ? p - 1 : (selectedJobDetails.photos?.length ?? 1) - 1) }}
                             className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
                           >❮</button>
                           <button
-                            onClick={e => { e.stopPropagation(); setActivePhotoIndex(p => p < selectedJobDetails.photos.length - 1 ? p + 1 : 0) }}
+                            onClick={e => { e.stopPropagation(); setActivePhotoIndex(p => p < (selectedJobDetails.photos?.length ?? 1) - 1 ? p + 1 : 0) }}
                             className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 cursor-pointer"
                           >❯</button>
                           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 p-2 rounded-full bg-black/30">
-                            {selectedJobDetails.photos.map((_: any, idx: number) => (
+                            {selectedJobDetails.photos?.map((_url: string, idx: number) => (
                               <button key={idx} onClick={e => { e.stopPropagation(); setActivePhotoIndex(idx) }}
                                 className={`w-2 h-2 rounded-full transition-all cursor-pointer ${idx === activePhotoIndex ? "bg-white scale-125" : "bg-white/50"}`}
                               />
