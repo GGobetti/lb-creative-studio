@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   LifeBuoy,
   ToggleRight,
+  ShoppingCart,
   X
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -32,12 +33,13 @@ import { AnalyticsTab } from "@/components/admin/AnalyticsTab"
 import { ScraperTab } from "@/components/admin/ScraperTab"
 import { AcervoTab } from "@/components/admin/AcervoTab"
 import { XpConfigPanel } from "@/components/admin/XpConfigPanel"
+import { AffiliateProductsTab } from "@/components/admin/AffiliateProductsTab"
 // import { GameAdminShortcuts } from "@/components/admin/GameAdminShortcuts"
 
 export default function AdminPage() {
   const { profile } = useAppStore()
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "scraper" | "analytics" | "tickets" | "flags" | "acervo" | "xp">("features")
+  const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "scraper" | "analytics" | "tickets" | "flags" | "acervo" | "xp" | "affiliate">("features")
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null)
@@ -390,6 +392,7 @@ export default function AdminPage() {
     { key: "tickets",   icon: LifeBuoy,     label: t('admin.tabTickets', "Chamados") },
     { key: "flags",     icon: ToggleRight,  label: t('admin.tabFlags', "Feature Flags") },
     { key: "xp",        icon: Zap,          label: "XP & Badges" },
+    { key: "affiliate", icon: ShoppingCart, label: "Produtos Afiliados" },
   ]
 
   return (
@@ -618,6 +621,16 @@ export default function AdminPage() {
               animate={{ opacity: 1, y: 0 }}
             >
               <XpConfigPanel />
+            </motion.div>
+          )}
+
+          {/* TAB 9: AFFILIATE PRODUCTS */}
+          {activeTab === "affiliate" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <AffiliateProductsTab />
             </motion.div>
           )}
 
