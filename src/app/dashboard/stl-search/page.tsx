@@ -394,25 +394,52 @@ export default function StlSearchPage() {
       // Get the items to delete (for file_name and file_size_bytes)
       const itemsToDelete = items.filter((i) => deleteSelection.includes(i.id));
 
-      // Insert into user_deleted_files (soft delete)
-      const deletedRecords = itemsToDelete.map((item) => ({
-        file_name: item.title || item.name || "untitled",
-        file_size_bytes: item.fileSizeBytes || 0,
-        deleted_at: new Date().toISOString()
-      }));
-
-      const { error: insertError } = await supabase
+      // Check which items are already in user_deleted_files
+      const fileName = itemsToDelete.map((item) => item.title || item.name || "untitled");
+      const { data: existingDeleted } = await supabase
         .from("user_deleted_files")
-        .insert(deletedRecords);
+        .select("file_name, file_size_bytes")
+        .in("file_name", fileName);
 
-      if (insertError) throw insertError;
+      // Filter out items that are already deleted
+      const newlyDeletedRecords = itemsToDelete
+        .filter((item) => {
+          const existing = existingDeleted?.find(
+            (e) => e.file_name === (item.title || item.name || "untitled") &&
+                   e.file_size_bytes === (item.fileSizeBytes || 0)
+          );
+          return !existing;
+        })
+        .map((item) => ({
+          file_name: item.title || item.name || "untitled",
+          file_size_bytes: item.fileSizeBytes || 0,
+          deleted_at: new Date().toISOString()
+        }));
 
-      // Remove from local state
+      // Insert only new records
+      if (newlyDeletedRecords.length > 0) {
+        const { error: insertError } = await supabase
+          .from("user_deleted_files")
+          .insert(newlyDeletedRecords);
+
+        if (insertError) throw insertError;
+      }
+
+      // Remove all from local state
       setItems((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
       setTopDownloads((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
       setTopFavorites((prev) => prev.filter((i) => !deleteSelection.includes(i.id)));
 
-      toast(`${deleteSelection.length} STL(s) movido(s) para lixeira. Não será(ão) reprocessado(s)`, "success");
+      const newCount = newlyDeletedRecords.length;
+      const alreadyDeletedCount = deleteSelection.length - newCount;
+
+      let message = `${newCount} STL(s) movido(s) para lixeira`;
+      if (alreadyDeletedCount > 0) {
+        message += ` (${alreadyDeletedCount} já estava(m) deletado(s))`;
+      }
+      message += ". Não será(ão) reprocessado(s)";
+
+      toast(message, "success");
 
       setDeleteMode(false);
       setDeleteSelection([]);
