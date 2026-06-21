@@ -4,24 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Trophy, ArrowRight } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase'
-
-interface LeaderboardUser {
-  rank: number
-  userId: string
-  name: string
-  xp: number
-  badge: string
-  streak: number
-  gamesPlayed: number
-}
-
-interface LeaderboardResponse {
-  period: string
-  rankings: LeaderboardUser[]
-  userPosition: LeaderboardUser | null
-}
+import { useTranslation } from '@/lib/translations'
+import type { LeaderboardUser, LeaderboardResponse } from '@/types/leaderboard'
 
 export function LeaderboardCard() {
+  const { t } = useTranslation()
   const [data, setData] = useState<LeaderboardResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isError, setIsError] = useState(false)
@@ -65,7 +52,7 @@ export function LeaderboardCard() {
         <div className="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
           <Trophy size={18} className="text-warning" />
         </div>
-        <h3 className="text-sm font-semibold text-foreground">Ranking Semanal</h3>
+        <h3 className="text-sm font-semibold text-foreground">{t('leaderboard.title')}</h3>
       </div>
 
       {/* Loading State */}
@@ -122,7 +109,7 @@ export function LeaderboardCard() {
         href="/dashboard/games/leaderboard"
         className="flex items-center justify-center gap-2 mt-2 px-3 py-2 text-xs font-medium rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition group"
       >
-        Ver ranking completo
+        {t('leaderboard.viewFullRanking')}
         <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
       </Link>
     </div>

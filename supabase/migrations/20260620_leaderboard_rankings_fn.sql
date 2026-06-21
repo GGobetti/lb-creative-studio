@@ -26,7 +26,7 @@ BEGIN
     SELECT
       xt.user_id,
       SUM(xt.xp_amount) as total_xp,
-      p.full_name as name,
+      COALESCE(p.full_name, 'Maker') as name,
       gus.current_streak,
       gus.games_played,
       COALESCE(ub.badge_icon, '🥉') as badge_icon
@@ -61,4 +61,5 @@ BEGIN
   WHERE r.rank <= p_limit OR r.user_id = p_user_id
   ORDER BY r.rank;
 END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public;

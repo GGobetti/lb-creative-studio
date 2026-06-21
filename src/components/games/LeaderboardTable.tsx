@@ -33,8 +33,7 @@ export function LeaderboardTable({
     return (
       <div className="flex items-center justify-center py-12 text-muted-foreground">
         <p className="text-sm">
-          {t('leaderboard.noGamesYet')}
-          {period === 'week' ? ' (essa semana)' : ''}
+          {period === 'week' ? t('leaderboard.noGamesWeek') : t('leaderboard.noGamesYet')}
         </p>
       </div>
     )
