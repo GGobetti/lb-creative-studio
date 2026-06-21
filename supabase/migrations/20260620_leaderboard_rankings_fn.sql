@@ -27,21 +27,16 @@ BEGIN
       xt.user_id,
       SUM(xt.xp_amount) as total_xp,
       COALESCE(p.full_name, 'Maker') as name,
-      gus.current_streak,
-      gus.games_played,
-      COALESCE(ub.badge_icon, '🥉') as badge_icon
+      COALESCE(gus.current_streak, 0) as current_streak,
+      COALESCE(gus.total_points, 0) as games_played,
+      COALESCE(xl.badge_icon, '🥉') as badge_icon
     FROM xp_transactions xt
     JOIN profiles p ON p.id = xt.user_id
     LEFT JOIN game_user_stats gus ON gus.user_id = xt.user_id
-    LEFT JOIN (
-      SELECT DISTINCT ON (ub2.user_id) ub2.user_id, xl.badge_icon
-      FROM user_badges ub2
-      JOIN xp_levels xl ON xl.level = ub2.level
-      ORDER BY ub2.user_id, ub2.level DESC
-    ) ub ON ub.user_id = xt.user_id
+    LEFT JOIN xp_levels xl ON xl.level = COALESCE((gus.badge_tier::int), 1)
     WHERE xt.created_at >= v_start_date
       AND xt.source = 'earned'
-    GROUP BY xt.user_id, p.full_name, gus.current_streak, gus.games_played, ub.badge_icon
+    GROUP BY xt.user_id, p.full_name, gus.current_streak, gus.total_points, xl.badge_icon
   ),
   ranked AS (
     SELECT
