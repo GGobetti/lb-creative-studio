@@ -19,6 +19,7 @@ interface PricingPlan {
   price_cents: number
   stripe_price_id: string
   active: boolean
+  is_recurring?: boolean
 }
 
 interface CreditModalProps {

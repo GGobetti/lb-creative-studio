@@ -3,7 +3,7 @@ import { createServerClient, CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-27' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-27' as any })
 
 interface CancelSubscriptionRequest {
   planIdToDowngradeTo?: number // Se fornecido, agenda esse plano pra começar após cancelamento

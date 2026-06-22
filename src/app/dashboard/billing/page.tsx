@@ -17,6 +17,8 @@ interface PricingPlan {
   price_cents: number
   stripe_price_id: string
   active: boolean
+  is_recurring?: boolean
+  benefits?: string[]
 }
 
 const CREDIT_PACKAGES = [
@@ -112,7 +114,7 @@ export default function BillingPage() {
         if (error) throw error
         const allData = data || []
         setAllPlans(allData)
-        setCreditPlans(allData.filter(p => p.credits < 999)) // Only credit packages for credit section
+        setCreditPlans(allData.filter((p: PricingPlan) => p.credits < 999)) // Only credit packages for credit section
       } catch (err) {
         console.error('Failed to load pricing plans:', err)
         // Fall back to hardcoded if fetch fails
@@ -603,7 +605,7 @@ export default function BillingPage() {
                   (() => {
                     const suggestedPlan = getPlanData(4)
                     const lostBenefits = getLostBenefits(subscription?.plan?.benefits || [], suggestedPlan?.benefits || [])
-                    const keptBenefits = (subscription?.plan?.benefits || []).filter(b => !lostBenefits.find(lb => lb.id === b.id || lb === b))
+                    const keptBenefits = (subscription?.plan?.benefits || []).filter((b: any) => !lostBenefits.find((lb: any) => lb.id === b.id || lb === b))
 
                     return (
                       <div className="bg-card border border-red-200 dark:border-red-800 rounded-xl p-4 relative">
@@ -618,12 +620,12 @@ export default function BillingPage() {
                           </p>
                           {(keptBenefits.length > 0 || lostBenefits.length > 0) && (
                             <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
-                              {lostBenefits.map((benefit) => (
+                              {lostBenefits.map((benefit: any) => (
                                 <li key={benefit.id || benefit}>
                                   ✗ <span className="line-through">{benefit.label || benefit}</span>
                                 </li>
                               ))}
-                              {keptBenefits.map((benefit) => (
+                              {keptBenefits.map((benefit: any) => (
                                 <li key={benefit.id || benefit}>
                                   ✓ {benefit.label || benefit}
                                 </li>
@@ -640,7 +642,7 @@ export default function BillingPage() {
                   (() => {
                     const suggestedPlan = getPlanData(5)
                     const newBenefits = (suggestedPlan?.benefits || []).filter(
-                      b => !getBenefitIds(subscription?.plan?.benefits || []).has(b.id || b)
+                      (b: any) => !getBenefitIds(subscription?.plan?.benefits || []).has(b.id || b)
                     )
 
                     return (

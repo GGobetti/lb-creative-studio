@@ -449,7 +449,7 @@ export default function StlSearchPage() {
       const newlyDeletedRecords = itemsToDelete
         .filter((item) => {
           const existing = existingDeleted?.find(
-            (e) => e.file_name === item.fileName &&
+            (e: any) => e.file_name === item.fileName &&
                    e.file_size_bytes === item.fileSizeBytes
           );
           return !existing;

@@ -91,10 +91,20 @@ export async function POST(req: Request) {
 
     let lineItems = []
     let mode: 'payment' | 'subscription' = plan.is_recurring ? 'subscription' : 'payment'
+
+    // Tier do plano para assinaturas (consistente com a derivação em subscription-change)
+    const planTier = plan.is_recurring
+      ? (plan.name.toLowerCase().includes('max') ? 'max'
+        : plan.name.toLowerCase().includes('pro') ? 'pro' : 'free')
+      : ''
+
+    // Contrato consumido pelo webhook (/api/webhooks/stripe). Stripe exige strings no metadata.
     let metadata: any = {
       userId: user.id,
-      planId: plan.id,
-      credits: plan.credits,
+      planId: String(plan.id),
+      credits: String(plan.credits),
+      kind: plan.is_recurring ? 'subscription' : 'credits',
+      planTier,
     }
 
     lineItems.push({ price: plan.stripe_price_id, quantity: 1 })
