@@ -1,19 +1,21 @@
 # 🏭 LB Creative Studio
 
+> 📐 **Arquitetura completa e fonte de verdade:** [`ARCHITECTURE.md`](ARCHITECTURE.md). Onde este README divergir, o ARCHITECTURE prevalece.
+
 LB Creative Studio é uma plataforma SaaS voltada para o ecossistema de **impressão 3D e makers brasileiros**. A plataforma permite que usuários criem placas, chaveiros e cortadores parametrizados em 3D, precifiquem custos de filamentos e impressões, gerenciem portfólios, elaborem cotações comerciais completas em PDF e busquem arquivos STL compartilhados em canais do Telegram com controle inteligente de créditos, fila de processamento e aprovação de moderação.
 
 ---
 
-## 🏗️ Estrutura do Projeto
+## 🏗️ Estrutura do Ecossistema
 
-O projeto é dividido em dois serviços principais:
+São **dois projetos separados** (repos independentes):
 
-1.  **Frontend & App SaaS (Next.js):** 
-    *   Localizado na raiz do repositório.
-    *   Painel do usuário, configurador 3D (Three.js), calculadora de impressão, CRM básico de clientes, cotações e visualização de arquivos indexados do Telegram.
-2.  **Serviço de Scraper & Proxy (Node.js):**
-    *   Localizado no diretório [telegram-scraper](file:///Users/ggobetti/Projetos%20Pessoais/lb-creative-studio/telegram-scraper).
-    *   Userbot baseado em GramJS que monitora grupos configurados no Telegram, filtra arquivos STL/3MF/comprimidos, agrupa mídias de um mesmo post, realiza o envio seguro dos arquivos para um canal privado (Vault) e gerencia uma fila sequencial inteligente de processamento.
+1.  **`lb-creative-studio` (este repo) — Frontend & App SaaS (Next.js):**
+    *   Painel do usuário, configurador 3D (Three.js), calculadora de impressão, CRM, cotações, games de curadoria e busca de STLs indexados.
+    *   Deploy futuro: Vercel. Integra Supabase (banco/auth) e Stripe (pagamentos).
+2.  **`lb-creative-scrapper` (repo separado) — Worker de ingestão (Node/GramJS):**
+    *   Roda **local** na máquina do dono. Userbot GramJS que monitora grupos do Telegram, filtra STL/3MF/comprimidos, agrupa mídias e indexa no Supabase.
+    *   ⚠️ Arquitetura-alvo: os binários vão para o **Cloudflare R2** (não mais o Telegram Vault) — ver [`ARCHITECTURE.md`](ARCHITECTURE.md) §6.
 
 ---
 
@@ -45,28 +47,11 @@ O projeto é dividido em dois serviços principais:
 
 ---
 
-### 🤖 Passo 2: Executando o Scraper do Telegram
+### 🤖 Passo 2: Scraper (repo separado)
 
-1.  Navegue até a pasta do scraper:
-    ```bash
-    cd telegram-scraper
-    ```
-2.  Instale as dependências:
-    ```bash
-    npm install
-    ```
-3.  Crie um arquivo `.env` baseado no exemplo `.env.example`:
-    ```bash
-    cp .env.example .env
-    ```
-4.  Preencha com suas credenciais do Telegram (`TELEGRAM_API_ID`, `TELEGRAM_API_HASH`), as chaves do Supabase e o ID do canal Vault.
-5.  Execute o scraper em modo de desenvolvimento:
-    ```bash
-    npm run dev
-    ```
-    *Na primeira inicialização, ele solicitará seu número de telefone e o código enviado pelo Telegram para gerar a string de sessão (`TELEGRAM_SESSION`). Copie a string exibida no terminal e cole no seu `.env` para evitar logins futuros.*
-    
-    O proxy de download do scraper rodará localmente na porta `5001`.
+O scraper **não vive mais neste repositório**. Ele é o projeto separado **`lb-creative-scrapper`**, rodado localmente. Consulte o `README`/`AGENTS.md` daquele repo para setup (Telegram + Supabase + R2) e os comandos `npm run scan` / `npm run daemon`.
+
+> Os antigos `start.sh`/`stop.sh`/`ecosystem.config.js` (PM2 do scraper interno) foram removidos nesta limpeza — o studio sobe apenas com `npm run dev`.
 
 ---
 
