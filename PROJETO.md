@@ -1,5 +1,7 @@
 # 🏭 LB Creative Studio — Documentação do Projeto
 
+> ⚠️ **Documento histórico.** Para a arquitetura atual (pós-separação do scraper + migração para Cloudflare R2), a fonte de verdade é [`ARCHITECTURE.md`](ARCHITECTURE.md). Trechos abaixo sobre o scraper interno (`telegram-scraper/`) e proxy de download estão **obsoletos**.
+
 > **Última atualização:** 17 de Junho de 2026 — Sessão 6 (01:06)
 > **Stack:** Next.js 16.2.4 · React 19 · Supabase · Three.js r184 · TailwindCSS v4 · Zustand v5
 
