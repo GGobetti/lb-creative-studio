@@ -9,7 +9,7 @@
 - ✅ **Fix** — bugs no core do scraper (ReferenceError fileName, ThemeProvider) — mergeado.
 - ✅ **Fase 1A** — Entrega via Cloudflare R2 (upload no scraper + presigned URL no studio + migration `r2_object_key` aplicada) — mergeada, **com degradação graciosa** (dormente até credenciais R2).
 - ✅ **Fase 1C** — Custo de download dinâmico (`feature_costs.download_stl` por plano) — mergeada.
-- ⏳ **Fase 1D** — Moderação por tamanho (oversized → `pending_approval` + loop de jobs aprovados). **Pendente** — requer credenciais R2 + teste com Telegram/arquivo grande (subsistema novo, não fazer às cegas).
+- ✅ **Fase 1D** — Moderação por tamanho: oversized → `pending_approval`; `core.processApprovedJobs()` processa aprovados; rota `jobs` do studio opera via banco (sem proxy). **Mergeada** (tsc 0, build OK). ⚠️ Teste end-to-end pendente (requer Telegram + arquivo grande; e R2 ou Vault).
 - ⏳ **Fase 2** — Consolidar monitoramento no dashboard do scraper / remover front do studio. **Adiada pelo dono ("depois").**
 - ⏳ **Fase 3** — Imagens no R2. **Adiada** (decisão #8 — só após estabilizar; conta Cloudflare ainda não criada).
 

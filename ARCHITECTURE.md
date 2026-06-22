@@ -10,9 +10,9 @@
 
 Plano: [`docs/superpowers/plans/2026-06-21-ecosystem-cleanup-and-fixes.md`](docs/superpowers/plans/2026-06-21-ecosystem-cleanup-and-fixes.md).
 
-- ✅ **Fase 0** (limpeza), **1A** (entrega R2 + migration `r2_object_key` aplicada), **1B** (Stripe — bug de créditos corrigido, tsc 16→0, build deploy-ready), **1C** (custo dinâmico) — **mergeadas na main** nos dois repos. R2 com degradação graciosa (dormente até credenciais).
+- ✅ **Fase 0** (limpeza), **1A** (entrega R2 + migration `r2_object_key` aplicada), **1B** (Stripe — bug de créditos corrigido, tsc 16→0, build deploy-ready), **1C** (custo dinâmico), **1D** (moderação por tamanho → `pending_approval` + `processApprovedJobs` + rota `jobs` via banco) — **mergeadas na main** nos dois repos. R2 com degradação graciosa (dormente até credenciais).
 - ✅ **Stripe validado via API** (22/06): conta `acct_…CqX27` = **sandbox/test** (`livemode:false`); 5 preços de `pricing_plans` existem e estão **ativos** com valores corretos (Pacote 50=R$10, 200=R$35, 500=R$80, Pro=R$29,90, Max=R$79,90); Pro/Max são **recorrentes mensais**. Falta só o teste de compra real (browser + `stripe listen`).
-- ⏳ **Pendente**: Fase 1D (moderação por tamanho — requer R2 + Telegram p/ testar), Fase 2 (consolidar monitor — adiada "depois"), Fase 3 (imagens no R2 — adiada). **Backfill** dos STLs já indexados (do Vault p/ R2) quando as credenciais existirem.
+- ⏳ **Pendente**: Fase 2 (consolidar monitor — adiada "depois"), Fase 3 (imagens no R2 — adiada). **Backfill** dos STLs já indexados (do Vault p/ R2 via `npm run backfill:r2`) quando as credenciais existirem. **Testes end-to-end** pendentes: download via R2, compra Stripe real, e moderação de arquivo grande (Telegram).
 - 🔑 **Bloqueio externo**: credenciais Cloudflare R2 (4 vars nos `.env`) + `stripe listen` p/ teste end-to-end.
 
 ---
