@@ -30,8 +30,6 @@ import { TicketsTab } from "@/components/admin/TicketsTab"
 import { UserDetailsModal } from "@/components/admin/UserDetailsModal"
 import { FlagsTab } from "@/components/admin/FlagsTab"
 import { AnalyticsTab } from "@/components/admin/AnalyticsTab"
-import { ScraperTab } from "@/components/admin/ScraperTab"
-import { AcervoTab } from "@/components/admin/AcervoTab"
 import { XpConfigPanel } from "@/components/admin/XpConfigPanel"
 import { AffiliateProductsTab } from "@/components/admin/AffiliateProductsTab"
 // import { GameAdminShortcuts } from "@/components/admin/GameAdminShortcuts"
@@ -39,7 +37,7 @@ import { AffiliateProductsTab } from "@/components/admin/AffiliateProductsTab"
 export default function AdminPage() {
   const { profile } = useAppStore()
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "scraper" | "analytics" | "tickets" | "flags" | "acervo" | "xp" | "affiliate">("features")
+  const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "analytics" | "tickets" | "flags" | "xp" | "affiliate">("features")
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null)
@@ -53,8 +51,6 @@ export default function AdminPage() {
   const [errorMsg, setErrorMsg] = useState("")
 
 
-  // Scraper heartbeat — drives the header status card
-  const [scraperHeartbeat, setScraperHeartbeat] = useState<string | null>(null)
 
   // Analytics State
   const [downloadHistory, setDownloadHistory] = useState<any[]>([])
@@ -361,33 +357,10 @@ export default function AdminPage() {
     }
   }
 
-  const getScraperStatus = () => {
-    if (!scraperHeartbeat) return "unknown"
-    const diff = (Date.now() - new Date(scraperHeartbeat).getTime()) / 1000
-    if (diff < 120) return "healthy"
-    if (diff < 300) return "warning"
-    return "offline"
-  }
-
-  const scraperStatus = getScraperStatus()
-  const scraperStatusConfig = {
-    healthy:  { label: "Scraper Online",       color: "text-success",     bg: "bg-success/10",     border: "border-success/20",     dot: "bg-success badge-pulse-success" },
-    warning:  { label: "Scraper Lento",        color: "text-warning",     bg: "bg-warning/10",     border: "border-warning/20",     dot: "bg-warning badge-pulse-warning" },
-    offline:  { label: "Scraper Offline",      color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/20", dot: "bg-destructive badge-pulse-destructive" },
-    unknown:  { label: "Status Desconhecido",  color: "text-muted-foreground", bg: "bg-muted",    border: "border-border",         dot: "bg-muted-foreground/40" },
-  }[scraperStatus]
-
-  const lastHeartbeatFormatted = scraperHeartbeat
-    ? new Date(scraperHeartbeat).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })
-    : "—"
-
-  const scraperTabAlert = scraperStatus !== "healthy" && scraperStatus !== "unknown"
   const adminTabs: { key: typeof activeTab; icon: any; label: string; alert?: boolean }[] = [
     { key: "features",  icon: Settings,     label: t('admin.tabFeatures', "Custos por Feature") },
     { key: "models",    icon: Package,      label: t('admin.tabModels', "Preço dos Modelos") },
     { key: "users",     icon: Users,        label: `${t('admin.tabUsers', "Usuários")} (${users.length})` },
-    { key: "scraper",   icon: Activity,     label: t('admin.tabScraper', "Scraper"), alert: scraperTabAlert },
-    { key: "acervo",    icon: Package,      label: "Revisão de Fotos" },
     { key: "analytics", icon: Activity,     label: t('admin.tabAnalytics', "Uso da Plataforma") },
     { key: "tickets",   icon: LifeBuoy,     label: t('admin.tabTickets', "Chamados") },
     { key: "flags",     icon: ToggleRight,  label: t('admin.tabFlags', "Feature Flags") },
@@ -415,26 +388,6 @@ export default function AdminPage() {
             </p>
           </div>
 
-          {/* Scraper Status Card */}
-          <button
-            onClick={() => setActiveTab("scraper")}
-            className={`flex items-center gap-4 px-5 py-4 rounded-2xl border transition-all hover:scale-[1.02] cursor-pointer text-left shrink-0 ${scraperStatusConfig.bg} ${scraperStatusConfig.border}`}
-          >
-            <div className="relative flex h-3 w-3 shrink-0">
-              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${scraperStatusConfig.dot}`} />
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${scraperStatusConfig.dot.split(" ")[0]}`} />
-            </div>
-            <div>
-              <p className={`text-sm font-bold ${scraperStatusConfig.color}`}>{scraperStatusConfig.label}</p>
-              <p className="text-xs text-white/35 mt-0.5">
-                Heartbeat: {lastHeartbeatFormatted}
-              </p>
-            </div>
-            <RefreshCw
-              size={14}
-              className={`ml-2 text-white/30 ${scraperStatus === "healthy" ? "text-success/60" : ""}`}
-            />
-          </button>
         </div>
       </div>
 
@@ -575,15 +528,6 @@ export default function AdminPage() {
             </motion.div>
           )}
 
-          {/* TAB 4: SCRAPER STATUS */}
-          {activeTab === "scraper" && (
-            <ScraperTab onHeartbeatChange={setScraperHeartbeat} />
-          )}
-
-          {/* ABA: ACERVO (REVISÃO DE FOTOS) */}
-          {activeTab === "acervo" && (
-            <AcervoTab />
-          )}
 
           {/* TAB 5: PLATFORM ANALYTICS */}
           {activeTab === "analytics" && (

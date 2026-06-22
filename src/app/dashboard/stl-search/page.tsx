@@ -163,24 +163,38 @@ export default function StlSearchPage() {
         if (error) throw error;
 
         if (data) {
-          const mapped = data.map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            imageUrl: item.thumbnail_url?.includes("unsplash") ? "" : item.thumbnail_url || "",
-            telegramGroupId: item.telegram_group_id,
-            telegramGroupName: item.telegram_group_name,
-            telegramMessageId: Number(item.telegram_message_id),
-            fileSize: formatBytes(item.file_size_bytes),
-            fileSizeBytes: item.file_size_bytes,
-            addedAt: item.created_at,
-            photos: item.photos || [],
-            downloadCount: item.download_count || 0,
-            tags: item.tags || [],
-            fileName: item.file_name,
-            parent_id: item.parent_id ?? null,
-            parts_count: item.parts_count ?? 0,
-            printer_type: item.printer_type || "fdm"
-          }));
+          // Fetch deleted files to filter them out
+          const { data: deletedFiles } = await supabase
+            .from("user_deleted_files")
+            .select("file_name, file_size_bytes");
+
+          const deletedSet = new Set(
+            (deletedFiles || []).map((d: any) => `${d.file_name}|${d.file_size_bytes}`)
+          );
+
+          const mapped = data
+            .filter((item: any) => {
+              const key = `${item.file_name}|${item.file_size_bytes}`;
+              return !deletedSet.has(key);
+            })
+            .map((item: any) => ({
+              id: item.id,
+              title: item.title,
+              imageUrl: item.thumbnail_url?.includes("unsplash") ? "" : item.thumbnail_url || "",
+              telegramGroupId: item.telegram_group_id,
+              telegramGroupName: item.telegram_group_name,
+              telegramMessageId: Number(item.telegram_message_id),
+              fileSize: formatBytes(item.file_size_bytes),
+              fileSizeBytes: item.file_size_bytes,
+              addedAt: item.created_at,
+              photos: item.photos || [],
+              downloadCount: item.download_count || 0,
+              tags: item.tags || [],
+              fileName: item.file_name,
+              parent_id: item.parent_id ?? null,
+              parts_count: item.parts_count ?? 0,
+              printer_type: item.printer_type || "fdm"
+            }));
 
           setItems((prev) => page === 0 ? mapped : [...prev, ...mapped]);
           setHasMore(data.length === PAGE_SIZE);
@@ -199,13 +213,22 @@ export default function StlSearchPage() {
     setIsLoadingRankings(true);
     try {
       const supabase = getSupabaseBrowser();
-      
+
+      // Fetch deleted files to filter them out
+      const { data: deletedFiles } = await supabase
+        .from("user_deleted_files")
+        .select("file_name, file_size_bytes");
+
+      const deletedSet = new Set(
+        (deletedFiles || []).map((d: any) => `${d.file_name}|${d.file_size_bytes}`)
+      );
+
       const { data: dlData, error: dlErr } = await supabase
         .from("telegram_indexed_stls")
         .select("*")
         .order("download_count", { ascending: false })
         .limit(10);
-      
+
       if (dlErr) throw dlErr;
 
       const { data: favData, error: favErr } = await supabase
@@ -213,7 +236,7 @@ export default function StlSearchPage() {
         .select("*")
         .order("favorites_count", { ascending: false })
         .limit(10);
-      
+
       if (favErr) throw favErr;
 
       const mapItem = (item: any) => ({
@@ -232,8 +255,14 @@ export default function StlSearchPage() {
         fileName: item.file_name,
       });
 
-      setTopDownloads(dlData ? dlData.map(mapItem) : []);
-      setTopFavorites(favData ? favData.map(mapItem) : []);
+      const filterDeleted = (items: any[]) =>
+        items.filter((item: any) => {
+          const key = `${item.file_name}|${item.file_size_bytes}`;
+          return !deletedSet.has(key);
+        });
+
+      setTopDownloads(dlData ? filterDeleted(dlData).map(mapItem) : []);
+      setTopFavorites(favData ? filterDeleted(favData).map(mapItem) : []);
     } catch (err) {
       console.error("Error fetching rankings:", err);
     } finally {
@@ -343,15 +372,30 @@ export default function StlSearchPage() {
 
     try {
       const supabase = getSupabaseBrowser();
+
+      // Fetch deleted files to filter them out
+      const { data: deletedFiles } = await supabase
+        .from("user_deleted_files")
+        .select("file_name, file_size_bytes");
+
+      const deletedSet = new Set(
+        (deletedFiles || []).map((d: any) => `${d.file_name}|${d.file_size_bytes}`)
+      );
+
       const { data: parts } = await supabase
         .from("telegram_indexed_stls")
         .select("id, title, file_name, file_size_bytes, photos")
         .eq("parent_id", item.id)
         .order("created_at", { ascending: true });
 
+      const filteredParts = (parts || []).filter((p: any) => {
+        const key = `${p.file_name}|${p.file_size_bytes}`;
+        return !deletedSet.has(key);
+      });
+
       const itemWithParts: StlItem = {
         ...item,
-        parts: (parts || []).map((p: any) => ({
+        parts: filteredParts.map((p: any) => ({
           id: p.id,
           title: p.title,
           fileName: p.file_name,
@@ -395,24 +439,24 @@ export default function StlSearchPage() {
       const itemsToDelete = items.filter((i) => deleteSelection.includes(i.id));
 
       // Check which items are already in user_deleted_files
-      const fileName = itemsToDelete.map((item) => item.title || item.name || "untitled");
+      const fileNames = itemsToDelete.map((item) => item.fileName);
       const { data: existingDeleted } = await supabase
         .from("user_deleted_files")
         .select("file_name, file_size_bytes")
-        .in("file_name", fileName);
+        .in("file_name", fileNames);
 
       // Filter out items that are already deleted
       const newlyDeletedRecords = itemsToDelete
         .filter((item) => {
           const existing = existingDeleted?.find(
-            (e) => e.file_name === (item.title || item.name || "untitled") &&
-                   e.file_size_bytes === (item.fileSizeBytes || 0)
+            (e) => e.file_name === item.fileName &&
+                   e.file_size_bytes === item.fileSizeBytes
           );
           return !existing;
         })
         .map((item) => ({
-          file_name: item.title || item.name || "untitled",
-          file_size_bytes: item.fileSizeBytes || 0,
+          file_name: item.fileName,
+          file_size_bytes: item.fileSizeBytes,
           deleted_at: new Date().toISOString()
         }));
 
@@ -462,32 +506,46 @@ export default function StlSearchPage() {
     // Full re-fetch to show the unmerged items
     const supabase = getSupabaseBrowser();
     supabase
-      .from("telegram_indexed_stls")
-      .select("*")
-      .is("parent_id", null)
-      .order("created_at", { ascending: false })
-      .then(({ data }: { data: any[] | null }) => {
-        if (data) {
-          setItems(
-            data.map((item: any) => ({
-              id: item.id,
-              title: item.title,
-              imageUrl: item.thumbnail_url?.includes("unsplash") ? "" : item.thumbnail_url || "",
-              telegramGroupId: item.telegram_group_id,
-              telegramGroupName: item.telegram_group_name,
-              telegramMessageId: Number(item.telegram_message_id),
-              fileSize: formatBytes(item.file_size_bytes),
-              fileSizeBytes: item.file_size_bytes,
-              addedAt: item.created_at,
-              photos: item.photos || [],
-              downloadCount: item.download_count || 0,
-              tags: item.tags || [],
-              fileName: item.file_name,
-              parent_id: item.parent_id ?? null,
-              parts_count: item.parts_count ?? 0,
-            }))
-          );
-        }
+      .from("user_deleted_files")
+      .select("file_name, file_size_bytes")
+      .then(({ data: deletedFiles }: { data: any[] | null }) => {
+        const deletedSet = new Set(
+          (deletedFiles || []).map((d: any) => `${d.file_name}|${d.file_size_bytes}`)
+        );
+
+        supabase
+          .from("telegram_indexed_stls")
+          .select("*")
+          .is("parent_id", null)
+          .order("created_at", { ascending: false })
+          .then(({ data }: { data: any[] | null }) => {
+            if (data) {
+              const filteredData = data.filter((item: any) => {
+                const key = `${item.file_name}|${item.file_size_bytes}`;
+                return !deletedSet.has(key);
+              });
+
+              setItems(
+                filteredData.map((item: any) => ({
+                  id: item.id,
+                  title: item.title,
+                  imageUrl: item.thumbnail_url?.includes("unsplash") ? "" : item.thumbnail_url || "",
+                  telegramGroupId: item.telegram_group_id,
+                  telegramGroupName: item.telegram_group_name,
+                  telegramMessageId: Number(item.telegram_message_id),
+                  fileSize: formatBytes(item.file_size_bytes),
+                  fileSizeBytes: item.file_size_bytes,
+                  addedAt: item.created_at,
+                  photos: item.photos || [],
+                  downloadCount: item.download_count || 0,
+                  tags: item.tags || [],
+                  fileName: item.file_name,
+                  parent_id: item.parent_id ?? null,
+                  parts_count: item.parts_count ?? 0,
+                }))
+              );
+            }
+          });
       });
   };
 

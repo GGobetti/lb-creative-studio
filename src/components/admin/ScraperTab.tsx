@@ -94,7 +94,7 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
 
       const checkAndFilterBanned = async (currentJobs: any[]) => {
         try {
-          const res = await fetch("/api/telegram/banned-images")
+          const res = await fetch("http://localhost:3001/api/telegram/banned-images")
           if (!res.ok) return
           const { banned_hashes } = await res.json()
           if (!banned_hashes || banned_hashes.length === 0) return
@@ -173,7 +173,7 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
       const newJobs = [...scraperJobs]
       for (const job of downloadingJobs) {
         try {
-          const res = await fetch(`/api/telegram/progress?job_id=${job.id}`)
+          const res = await fetch(`http://localhost:3001/api/telegram/progress?job_id=${job.id}`)
           if (res.ok) {
             const data = await res.json()
             if (data.progress !== undefined && data.progress !== job.progress) {

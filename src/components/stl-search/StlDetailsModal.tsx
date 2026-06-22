@@ -140,9 +140,18 @@ export function StlDetailsModal({
     try {
       setIsDeleting(true);
       const supabase = getSupabaseBrowser();
-      const { data, error } = await supabase.from("telegram_indexed_stls").delete().eq("id", item.id).select();
-      if (error) throw error;
-      if (!data || data.length === 0) throw new Error("Permissão negada ou registro não encontrado.");
+
+      // Soft delete: insert into user_deleted_files
+      const { error: insertError } = await supabase
+        .from("user_deleted_files")
+        .insert({
+          file_name: item.fileName,
+          file_size_bytes: item.fileSizeBytes,
+          deleted_at: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+
       alert(t("stlSearch.modelDeletedSuccess", `Modelo "{title}" excluído com sucesso.`).replace("{title}", item.title));
       if (onDeleteSuccess) onDeleteSuccess(item.id);
       onClose();
