@@ -599,26 +599,39 @@ export default function StlSearchPage() {
         throw new Error(json.error || "Erro ao processar download.");
       }
 
-      // Stream download bytes to browser
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      
-      const contentDisposition = res.headers.get("Content-Disposition");
-      let filename = `${item.title.replace(/\s+/g, "_")}.stl`;
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = decodeURIComponent(filenameMatch[1]);
+      const contentType = res.headers.get("Content-Type") || "";
+
+      if (contentType.includes("application/json")) {
+        // Caminho R2: a API devolve uma presigned URL; baixamos direto do R2
+        const { url: r2Url, fileName: r2Name } = await res.json();
+        const a = document.createElement("a");
+        a.href = r2Url;
+        a.download = r2Name || `${item.title.replace(/\s+/g, "_")}.stl`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        // Caminho legado: stream binário vindo do proxy
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+
+        const contentDisposition = res.headers.get("Content-Disposition");
+        let filename = `${item.title.replace(/\s+/g, "_")}.stl`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = decodeURIComponent(filenameMatch[1]);
+          }
         }
+
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
       }
-      
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
 
       // Increment download counter locally for instant screen feedback
       setItems((prev) =>
