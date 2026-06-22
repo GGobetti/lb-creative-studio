@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/store/store"
 import { User, Mail, MapPin, Camera, Save, Loader2, Globe, Zap, ArrowUpRight, ArrowDownLeft, Receipt } from "lucide-react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { useToast } from "@/components/ui/Toast"
@@ -17,6 +17,14 @@ interface Transaction {
 }
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfileContent />
+    </Suspense>
+  )
+}
+
+function ProfileContent() {
   const { profile, setProfile, setLanguage, setCreditModalOpen } = useAppStore()
   const { toast } = useToast()
   const { t } = useTranslation()

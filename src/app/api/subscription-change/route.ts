@@ -100,12 +100,12 @@ export async function POST(req: NextRequest) {
     const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id)
 
     const updateParams: Stripe.SubscriptionUpdateParams = {
-      items: {
-        0: {
+      items: [
+        {
           id: stripeSubscription.items.data[0].id,
           price: toPlan.stripe_price_id,
         },
-      },
+      ],
       trial_end: 'now', // End trial immediately to avoid conflicts
     }
 
@@ -121,18 +121,18 @@ export async function POST(req: NextRequest) {
     )
 
     console.log('Updated subscription from Stripe:', {
-      current_period_start: updatedSubscription.current_period_start,
-      current_period_end: updatedSubscription.current_period_end,
+      current_period_start: (updatedSubscription as any).current_period_start,
+      current_period_end: (updatedSubscription as any).current_period_end,
       status: updatedSubscription.status,
     })
 
     // Update database with safe values
-    const periodStart = updatedSubscription.current_period_start
-      ? new Date(updatedSubscription.current_period_start * 1000)
+    const periodStart = (updatedSubscription as any).current_period_start
+      ? new Date((updatedSubscription as any).current_period_start * 1000)
       : subscription.period_start || new Date()
 
-    const periodEnd = updatedSubscription.current_period_end
-      ? new Date(updatedSubscription.current_period_end * 1000)
+    const periodEnd = (updatedSubscription as any).current_period_end
+      ? new Date((updatedSubscription as any).current_period_end * 1000)
       : subscription.period_end || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
     const updateData = {
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
         from_plan_id: fromPlanId,
         to_plan_id: toPlanId,
         change_type: isUpgrade ? 'upgrade' : 'downgrade',
-        effective_date: isUpgrade ? new Date() : new Date(updatedSubscription.current_period_end * 1000),
+        effective_date: isUpgrade ? new Date() : new Date((updatedSubscription as any).current_period_end * 1000),
         proration_credit: updatedSubscription.latest_invoice ? parseFloat(String((updatedSubscription.latest_invoice as any).amount_due || 0)) / 100 : 0,
       })
 
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
         id: subscription.id,
         planId: toPlanId,
         status: updatedSubscription.status,
-        periodEnd: new Date(updatedSubscription.current_period_end * 1000),
+        periodEnd: new Date((updatedSubscription as any).current_period_end * 1000),
       },
     })
   } catch (err: unknown) {
