@@ -1,7 +1,19 @@
 # Plano — Limpeza do Ecossistema & Correções Pós-Separação
 
-> **Data:** 2026-06-21 · **Base:** `ARCHITECTURE.md` (§7, §8) · **Status:** planejamento (nada executado)
-> Decisões do dono já incorporadas. Execução só após aprovação.
+> **Data:** 2026-06-21 · **Base:** `ARCHITECTURE.md` (§7, §8)
+> Decisões do dono já incorporadas.
+
+## STATUS DE EXECUÇÃO (atualizado 22/06/2026)
+- ✅ **Fase 0** — Limpeza segura (studio + scraper) — mergeada na main.
+- ✅ **Fase 1B** — Stripe (metadata checkout↔webhook, renovação via pricing_plans, tsc 16→0, build deploy-ready) — mergeada.
+- ✅ **Fix** — bugs no core do scraper (ReferenceError fileName, ThemeProvider) — mergeado.
+- ✅ **Fase 1A** — Entrega via Cloudflare R2 (upload no scraper + presigned URL no studio + migration `r2_object_key` aplicada) — mergeada, **com degradação graciosa** (dormente até credenciais R2).
+- ✅ **Fase 1C** — Custo de download dinâmico (`feature_costs.download_stl` por plano) — mergeada.
+- ⏳ **Fase 1D** — Moderação por tamanho (oversized → `pending_approval` + loop de jobs aprovados). **Pendente** — requer credenciais R2 + teste com Telegram/arquivo grande (subsistema novo, não fazer às cegas).
+- ⏳ **Fase 2** — Consolidar monitoramento no dashboard do scraper / remover front do studio. **Adiada pelo dono ("depois").**
+- ⏳ **Fase 3** — Imagens no R2. **Adiada** (decisão #8 — só após estabilizar; conta Cloudflare ainda não criada).
+
+> **Bloqueio externo p/ ativar R2/1D/teste Stripe:** credenciais Cloudflare R2 e `stripe listen`. Ver seção final.
 
 ## Objetivo
 Concluir a separação `studio` ↔ `scrapper`, remover débito técnico residual e destravar os fluxos quebrados (download, Stripe), deixando o studio pronto para beta web.
