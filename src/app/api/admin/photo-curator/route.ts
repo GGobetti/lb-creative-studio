@@ -15,6 +15,20 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const STORAGE_BUCKET = 'portfolio'
 
+// Remove exatamente N instâncias de cada URL (N = ocorrências em toRemove).
+// Evita apagar todas as cópias quando a mesma URL aparece mais de uma vez no array.
+function removeOneEach(arr: string[], toRemove: string[]): string[] {
+  const pending = new Map<string, number>()
+  for (const u of toRemove) pending.set(u, (pending.get(u) || 0) + 1)
+  const result: string[] = []
+  for (const p of arr) {
+    const rem = pending.get(p) || 0
+    if (rem > 0) pending.set(p, rem - 1)
+    else result.push(p)
+  }
+  return result
+}
+
 // Extrai o caminho dentro do bucket a partir da URL pública do Supabase Storage.
 // Ex.: https://<proj>.supabase.co/storage/v1/object/public/portfolio/telegram/x.jpg
 //      → telegram/x.jpg
@@ -65,7 +79,7 @@ export async function POST(request: NextRequest) {
         const toRow = rows?.find(r => r.id === to_stl_id)
         if (!fromRow || !toRow) return NextResponse.json({ error: 'STL não encontrado' }, { status: 404 })
 
-        const fromPhotos = (fromRow.photos || []).filter((p: string) => p !== photo_url)
+        const fromPhotos = removeOneEach(fromRow.photos || [], [photo_url])
         const toPhotos = [...(toRow.photos || [])]
         if (!toPhotos.includes(photo_url)) toPhotos.push(photo_url)
 
@@ -110,8 +124,7 @@ export async function POST(request: NextRequest) {
           .single()
         if (fetchErr) throw fetchErr
 
-        const toDelete = new Set(photo_urls)
-        const remaining = (row?.photos || []).filter((p: string) => !toDelete.has(p))
+        const remaining = removeOneEach(row?.photos || [], photo_urls)
 
         // Atualiza o array no DB primeiro (fonte da verdade)
         const { error: updErr } = await admin

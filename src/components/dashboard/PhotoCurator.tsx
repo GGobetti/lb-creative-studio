@@ -222,6 +222,20 @@ export function PhotoCurator() {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, photos } : r)))
   }, [])
 
+  // Remove exatamente N instâncias de cada URL de um array (N = vezes que aparece em `toRemove`).
+  // Necessário porque a mesma URL pode aparecer mais de uma vez no array de fotos.
+  const removeOneEach = (arr: string[], toRemove: string[]): string[] => {
+    const pending = new Map<string, number>()
+    for (const u of toRemove) pending.set(u, (pending.get(u) || 0) + 1)
+    const result: string[] = []
+    for (const p of arr) {
+      const rem = pending.get(p) || 0
+      if (rem > 0) pending.set(p, rem - 1)
+      else result.push(p)
+    }
+    return result
+  }
+
   /* ---------- sugestões de destino (vizinhos temporais da foto segurada) ----------
    * Uma foto mal-associada quase sempre pertence a um arquivo indexado no mesmo
    * "burst" do scraping. Então, dado o arquivo de origem da foto segurada,
@@ -252,7 +266,7 @@ export function PhotoCurator() {
     if (!fromRow || !toRow) return
 
     // otimista
-    const fromPhotos = (fromRow.photos || []).filter((p) => p !== url)
+    const fromPhotos = removeOneEach(fromRow.photos || [], [url])
     const toPhotos = toRow.photos?.includes(url)
       ? [...(toRow.photos || [])]
       : [...(toRow.photos || []), url]
@@ -336,7 +350,7 @@ export function PhotoCurator() {
     if (!row) return
     if (!confirm("Excluir esta foto? O arquivo será apagado do Storage permanentemente.")) return
     setBusyId(stlId)
-    const optimistic = (row.photos || []).filter((p) => p !== url)
+    const optimistic = removeOneEach(row.photos || [], [url])
     patchRowPhotos(stlId, optimistic)
     try {
       await callApi({ action: "delete_photos", stl_id: stlId, photo_urls: [url] })
@@ -407,7 +421,7 @@ export function PhotoCurator() {
     const row = rows.find((r) => r.id === stlId)
     if (!row) return
     setBusyId(stlId)
-    const optimistic = (row.photos || []).filter((p) => !marks.has(p))
+    const optimistic = removeOneEach(row.photos || [], urls)
     patchRowPhotos(stlId, optimistic)
     try {
       await callApi({ action: "delete_photos", stl_id: stlId, photo_urls: urls })
