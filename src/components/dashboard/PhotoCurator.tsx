@@ -1094,6 +1094,8 @@ export function PhotoCurator() {
           )}
         </div>
       )}
+        </div>
+      </div>
     </div>
   )
 }
