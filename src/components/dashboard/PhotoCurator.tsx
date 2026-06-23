@@ -127,6 +127,7 @@ export function PhotoCurator() {
   // Caixinha de fotos órfãs (persistida no banco, linha PHOTO_BUCKET_ID)
   const [bucketPhotos, setBucketPhotos] = useState<string[]>([])
   const [bucketOpen, setBucketOpen] = useState(false)
+  const [bucketSelected, setBucketSelected] = useState<Set<string>>(new Set()) // URLs selecionadas no bucket
 
   const persistReviewed = useCallback((next: Set<string>) => {
     setReviewed(next)
@@ -411,7 +412,12 @@ export function PhotoCurator() {
     dragData.current = null
     setDropTarget(null)
     if (!drag) return
-    await movePhoto(drag.stlId, targetStlId, drag.url)
+    // Se é múltiplas fotos do bucket
+    if (drag.stlId === "bucket-multi") {
+      await moveSelectedFromBucket(targetStlId)
+    } else {
+      await movePhoto(drag.stlId, targetStlId, drag.url)
+    }
   }
 
   /* ---------- jogar foto na caixinha ---------- */
@@ -449,6 +455,40 @@ export function PhotoCurator() {
       }
     } else {
       await movePhoto(h.stlId, targetStlId, h.url)
+    }
+  }
+
+  /* ---------- seleção no bucket ---------- */
+  const toggleBucketSelected = (url: string) => {
+    setBucketSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(url)) next.delete(url)
+      else next.add(url)
+      return next
+    })
+  }
+
+  // Move múltiplas fotos selecionadas do bucket pra um STL
+  const moveSelectedFromBucket = async (targetStlId: string) => {
+    if (bucketSelected.size === 0) return
+    const urls = [...bucketSelected]
+    const toRow = rows.find((r) => r.id === targetStlId)
+    if (!toRow) return
+
+    // Otimista
+    setBucketPhotos((prev) => removeOneEach(prev, urls))
+    patchRowPhotos(targetStlId, [...(toRow.photos || []), ...urls])
+    setBucketSelected(new Set())
+
+    try {
+      for (const url of urls) {
+        await callApi({ action: "move_photo", from_stl_id: PHOTO_BUCKET_ID, to_stl_id: targetStlId, photo_url: url })
+      }
+    } catch (e: any) {
+      // Revert
+      setBucketPhotos((prev) => [...prev, ...urls])
+      patchRowPhotos(targetStlId, toRow.photos || [])
+      alert(`Erro ao mover da caixinha: ${e.message}`)
     }
   }
 
@@ -853,22 +893,36 @@ export function PhotoCurator() {
                               <div className="absolute -bottom-2 -right-2 w-20 h-20 rounded-lg border-2 border-amber-400/30 bg-amber-500/3" />
                             </>
                           )}
-                          <div
-                            draggable
-                            onDragStart={() => onDragStart(PHOTO_BUCKET_ID, masterUrl)}
-                            className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group cursor-grab active:cursor-grabbing z-10 ${
-                              isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
-                            }`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={masterUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
-                            <button
-                              onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url: masterUrl })}
-                              className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition hover:bg-primary/60"
-                              title="Segurar para associar"
+                          <div className="relative">
+                            {/* Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={bucketSelected.has(masterUrl)}
+                              onChange={() => toggleBucketSelected(masterUrl)}
+                              className="absolute -top-2 -left-2 w-5 h-5 z-20 cursor-pointer"
+                            />
+                            <div
+                              draggable={bucketSelected.size === 0}
+                              onDragStart={() => {
+                                if (bucketSelected.size > 0) {
+                                  dragData.current = { stlId: `bucket-multi`, url: "" }
+                                } else {
+                                  onDragStart(PHOTO_BUCKET_ID, masterUrl)
+                                }
+                              }}
+                              className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group cursor-grab active:cursor-grabbing z-10 ${
+                                isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : bucketSelected.has(masterUrl) ? "border-primary ring-2 ring-primary" : "border-amber-400/60"
+                              }`}
                             >
-                              <Hand className="w-3 h-3 text-white" />
-                            </button>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={masterUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
+                              <button
+                                onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url: masterUrl })}
+                                className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition hover:bg-primary/60"
+                                title="Segurar para associar"
+                              >
+                                <Hand className="w-3 h-3 text-white" />
+                              </button>
                             {count > 1 && (
                               <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
                                 {count}
@@ -890,6 +944,7 @@ export function PhotoCurator() {
                             >
                               ✕
                             </button>
+                            </div>
                           </div>
                         </div>
                       )
@@ -1144,20 +1199,34 @@ export function PhotoCurator() {
                                   <div className="absolute -bottom-2 -right-2 inset-0 rounded-lg border-2 border-amber-400/20" />
                                 </>
                               )}
-                              <div
-                                draggable
-                                onDragStart={() => onDragStart(PHOTO_BUCKET_ID, masterUrl)}
-                                className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
-                                  isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
-                                }`}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={masterUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
-                                <button
-                                  onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url: masterUrl })}
-                                  className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition"
-                                  title="Segurar para associar"
+                              <div className="relative">
+                                {/* Checkbox */}
+                                <input
+                                  type="checkbox"
+                                  checked={bucketSelected.has(masterUrl)}
+                                  onChange={() => toggleBucketSelected(masterUrl)}
+                                  className="absolute -top-2 -left-2 w-5 h-5 z-20 cursor-pointer"
+                                />
+                                <div
+                                  draggable={bucketSelected.size === 0}
+                                  onDragStart={() => {
+                                    if (bucketSelected.size > 0) {
+                                      dragData.current = { stlId: `bucket-multi`, url: "" }
+                                    } else {
+                                      onDragStart(PHOTO_BUCKET_ID, masterUrl)
+                                    }
+                                  }}
+                                  className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
+                                    isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : bucketSelected.has(masterUrl) ? "border-primary ring-2 ring-primary" : "border-amber-400/60"
+                                  }`}
                                 >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={masterUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
+                                  <button
+                                    onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url: masterUrl })}
+                                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition"
+                                    title="Segurar para associar"
+                                  >
                                   <Hand className="w-4 h-4 text-white" />
                                 </button>
                                 {count > 1 && (
@@ -1165,6 +1234,7 @@ export function PhotoCurator() {
                                     {count}
                                   </span>
                                 )}
+                                </div>
                               </div>
                             </div>
                           )
