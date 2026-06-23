@@ -7,7 +7,7 @@ import { useShallow } from "zustand/react/shallow"
 import {
   RefreshCw, Loader2, Trash2, Check, ScanSearch, X,
   ImageOff, AlertTriangle, Search as SearchIcon,
-  Hand, ArrowDownToLine,
+  Hand, ArrowDownToLine, Combine, CheckSquare, Square,
 } from "lucide-react"
 
 interface StlRow {
@@ -115,6 +115,11 @@ export function PhotoCurator() {
   // "Segurar foto": pega uma foto, busca o destino, solta — funciona entre
   // buscas/páginas (origem e destino não precisam estar visíveis juntos).
   const [held, setHeld] = useState<{ stlId: string; url: string } | null>(null)
+
+  // Merge: seleção de arquivos + escolha do principal
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [mergePrimary, setMergePrimary] = useState<string | null>(null)
+  const [merging, setMerging] = useState(false)
 
   /* ---------- carregar reviewed do localStorage ---------- */
   useEffect(() => {
@@ -285,6 +290,55 @@ export function PhotoCurator() {
     await movePhoto(h.stlId, targetStlId, h.url)
   }
 
+  /* ---------- seleção p/ merge ---------- */
+  const toggleSelected = (stlId: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(stlId)) {
+        next.delete(stlId)
+        if (mergePrimary === stlId) setMergePrimary(null)
+      } else {
+        next.add(stlId)
+      }
+      return next
+    })
+  }
+  const clearSelection = () => { setSelected(new Set()); setMergePrimary(null) }
+
+  const doMerge = async () => {
+    if (!mergePrimary || selected.size < 2) return
+    const mergedIds = [...selected].filter((id) => id !== mergePrimary)
+    const primaryRow = rows.find((r) => r.id === mergePrimary)
+    if (!primaryRow) return
+    if (!confirm(
+      `Mesclar ${mergedIds.length} arquivo(s) em "${primaryRow.title || primaryRow.file_name}"?\n` +
+      `As fotos vão todas para o principal. Os outros viram ocultos (soft-delete) — o R2 não é afetado.`
+    )) return
+
+    setMerging(true)
+    // otimista: une fotos no principal e remove os mesclados da lista
+    const union = new Set<string>(primaryRow.photos || [])
+    for (const id of mergedIds) {
+      const r = rows.find((x) => x.id === id)
+      for (const p of (r?.photos || [])) union.add(p)
+    }
+    const snapshot = rows
+    setRows((prev) =>
+      prev
+        .filter((r) => !mergedIds.includes(r.id))
+        .map((r) => (r.id === mergePrimary ? { ...r, photos: [...union] } : r))
+    )
+    try {
+      await callApi({ action: "merge_stls", primary_id: mergePrimary, merged_ids: mergedIds })
+      clearSelection()
+    } catch (e: any) {
+      setRows(snapshot) // rollback
+      alert(`Erro ao mesclar: ${e.message}`)
+    } finally {
+      setMerging(false)
+    }
+  }
+
   /* ---------- excluir foto única ---------- */
   const deleteSinglePhoto = async (stlId: string, url: string) => {
     const row = rows.find((r) => r.id === stlId)
@@ -445,6 +499,67 @@ export function PhotoCurator() {
         </div>
       </div>
 
+      {/* Barra de merge (quando há seleção) */}
+      {selected.size > 0 && (
+        <div className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Combine className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">{selected.size} selecionado(s)</span>
+            {selected.size < 2 ? (
+              <span className="text-xs text-muted-foreground">Selecione +1 arquivo para mesclar.</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">Escolha o arquivo principal abaixo:</span>
+            )}
+            <button
+              onClick={clearSelection}
+              className="ml-auto flex items-center gap-1 px-2 py-1 rounded text-xs border border-border hover:bg-muted"
+            >
+              <X className="w-3 h-3" /> Limpar
+            </button>
+          </div>
+
+          {selected.size >= 2 && (
+            <div className="mt-3 space-y-1.5">
+              {[...selected].map((id) => {
+                const r = rows.find((x) => x.id === id)
+                if (!r) return null
+                return (
+                  <label
+                    key={id}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm ${
+                      mergePrimary === id ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="merge-primary"
+                      checked={mergePrimary === id}
+                      onChange={() => setMergePrimary(id)}
+                      className="accent-primary"
+                    />
+                    <span className="font-medium truncate flex-1" title={r.file_name}>
+                      {r.title || r.file_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {(r.photos || []).length} foto(s) · {r.telegram_group_name || "—"} · {formatDateTime(r.created_at)}
+                    </span>
+                    {mergePrimary === id && <span className="text-xs text-primary font-medium shrink-0">principal</span>}
+                  </label>
+                )
+              })}
+              <button
+                onClick={doMerge}
+                disabled={!mergePrimary || merging}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 disabled:opacity-50"
+              >
+                {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Combine className="w-4 h-4" />}
+                Mesclar no principal
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Lista */}
       {loading ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -477,6 +592,15 @@ export function PhotoCurator() {
                 {/* Coluna: índice + nome + ações */}
                 <div className="w-64 shrink-0">
                   <div className="flex items-center gap-2 mb-1">
+                    <button
+                      onClick={() => toggleSelected(row.id)}
+                      className="text-muted-foreground hover:text-primary transition"
+                      title="Selecionar para mesclar"
+                    >
+                      {selected.has(row.id)
+                        ? <CheckSquare className="w-4 h-4 text-primary" />
+                        : <Square className="w-4 h-4" />}
+                    </button>
                     <span className="text-xs text-muted-foreground tabular-nums">#{globalIdx}</span>
                     {isSuspicious && (
                       <AlertTriangle className="w-4 h-4 text-warning" />
