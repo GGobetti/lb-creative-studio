@@ -215,7 +215,7 @@ export function PhotoCurator() {
           .eq("is_deleted", false)
           .neq("id", PHOTO_BUCKET_ID)
           .not("reviewed_at", "is", null)
-        const reviewedIds = (data || []).map(r => r.id)
+        const reviewedIds = (data || []).map((r: any) => r.id)
         persistReviewed(new Set(reviewedIds))
       } catch (err) {
         console.error("Erro ao carregar validações do BD:", err)
