@@ -420,12 +420,22 @@ export function PhotoCurator() {
     }
   }
 
+  /* ---------- deduplica bucket (remove cópias duplicadas, mantém apenas 1 de cada URL) ---------- */
+  const deduplicateBucket = (photos: string[]): string[] => {
+    const seen = new Set<string>()
+    return photos.filter((url) => {
+      if (seen.has(url)) return false
+      seen.add(url)
+      return true
+    })
+  }
+
   /* ---------- jogar foto na caixinha ---------- */
   const parkPhoto = useCallback(async (stlId: string, url: string) => {
     const row = rows.find((r) => r.id === stlId)
     if (!row) return
     patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
-    setBucketPhotos((prev) => [...prev, url])
+    setBucketPhotos((prev) => deduplicateBucket([...prev, url]))
     setBucketOpen(true)
     try {
       await callApi({ action: "move_photo", from_stl_id: stlId, to_stl_id: PHOTO_BUCKET_ID, photo_url: url })
