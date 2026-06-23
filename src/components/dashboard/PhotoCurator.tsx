@@ -7,7 +7,7 @@ import { useShallow } from "zustand/react/shallow"
 import {
   RefreshCw, Loader2, Trash2, Check, ScanSearch, X,
   ImageOff, AlertTriangle, Search as SearchIcon,
-  Hand, ArrowDownToLine, Combine, CheckSquare, Square,
+  Hand, ArrowDownToLine, Combine, CheckSquare, Square, Archive,
 } from "lucide-react"
 
 interface StlRow {
@@ -19,12 +19,14 @@ interface StlRow {
   created_at: string | null
 }
 
-type FilterMode = "all" | "suspicious" | "no_photo" | "unreviewed" | "reviewed"
+type FilterChip = "suspicious" | "no_photo" | "reviewed"
 
 const PAGE_SIZE = 40
 const SUSPICIOUS_THRESHOLD = 4 // 4+ fotos = provável contaminação
 const DHASH_DUPE_DISTANCE = 6  // distância de Hamming <= 6 => visualmente iguais
 const REVIEWED_KEY = "photoCuratorReviewed"
+// Linha-sentinel no banco que serve como caixinha de fotos órfãs
+const PHOTO_BUCKET_ID = "00000000-0000-0000-0000-000000000000"
 
 /* ---------- dHash client-side (canvas, sem dependências) ---------- */
 async function loadImage(url: string): Promise<HTMLImageElement> {
@@ -99,7 +101,7 @@ export function PhotoCurator() {
   const [rows, setRows] = useState<StlRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
-  const [filter, setFilter] = useState<FilterMode>("all")
+  const [activeFilters, setActiveFilters] = useState<Set<FilterChip>>(new Set())
   const [page, setPage] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [reviewed, setReviewed] = useState<Set<string>>(new Set())
@@ -120,6 +122,10 @@ export function PhotoCurator() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [mergePrimary, setMergePrimary] = useState<string | null>(null)
   const [merging, setMerging] = useState(false)
+
+  // Caixinha de fotos órfãs (persistida no banco, linha PHOTO_BUCKET_ID)
+  const [bucketPhotos, setBucketPhotos] = useState<string[]>([])
+  const [bucketOpen, setBucketOpen] = useState(false)
 
   /* ---------- carregar reviewed do localStorage ---------- */
   useEffect(() => {
@@ -146,6 +152,7 @@ export function PhotoCurator() {
         .from("telegram_indexed_stls")
         .select("id, title, file_name, photos, telegram_group_name, created_at")
         .eq("is_deleted", false)
+        .neq("id", PHOTO_BUCKET_ID)
         .order("created_at", { ascending: true })
         .limit(2000)
       if (error) throw error
@@ -157,7 +164,19 @@ export function PhotoCurator() {
     }
   }, [])
 
-  useEffect(() => { fetchRows() }, [fetchRows])
+  const fetchBucket = useCallback(async () => {
+    try {
+      const supabase = getSupabaseBrowser()
+      const { data } = await supabase
+        .from("telegram_indexed_stls")
+        .select("photos")
+        .eq("id", PHOTO_BUCKET_ID)
+        .single()
+      setBucketPhotos(data?.photos || [])
+    } catch {}
+  }, [])
+
+  useEffect(() => { fetchRows(); fetchBucket() }, [fetchRows, fetchBucket])
 
   /* ---------- token helper p/ chamadas admin ---------- */
   const getToken = useCallback(async () => {
@@ -180,22 +199,50 @@ export function PhotoCurator() {
     return res.json()
   }, [getToken])
 
+  /* ---------- toggle de filtros ---------- */
+  const toggleFilter = (chip: FilterChip) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev)
+      if (chip === "reviewed") {
+        // "Revisados" é exclusivo: ativa sozinho ou desativa
+        return next.has("reviewed") ? new Set() : new Set<FilterChip>(["reviewed"])
+      }
+      // Outros chips: toggle, mas nunca coexistem com "reviewed"
+      next.delete("reviewed")
+      if (next.has(chip)) next.delete(chip)
+      else next.add(chip)
+      return next
+    })
+  }
+  const clearFilters = () => setActiveFilters(new Set())
+
   /* ---------- filtros + busca ---------- */
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const isReviewedMode = activeFilters.has("reviewed")
+    const isTodosMode = activeFilters.size === 0
+    const contentChips = [...activeFilters].filter((c) => c !== "reviewed") as FilterChip[]
+
     return rows.filter((r) => {
       const n = (r.photos || []).length
-      if (filter === "suspicious" && n < SUSPICIOUS_THRESHOLD) return false
-      if (filter === "no_photo" && n > 0) return false
-      if (filter === "unreviewed" && reviewed.has(r.id)) return false
-      if (filter === "reviewed" && !reviewed.has(r.id)) return false
-      if (q) {
-        const hay = `${r.file_name} ${r.title || ""}`.toLowerCase()
-        if (!hay.includes(q)) return false
-      }
-      return true
+      const isReviewed = reviewed.has(r.id)
+
+      if (q && !`${r.file_name} ${r.title || ""}`.toLowerCase().includes(q)) return false
+
+      if (isTodosMode) return true
+      if (isReviewedMode) return isReviewed
+
+      // Qualquer chip de conteúdo ativo → exclui revisados automaticamente
+      if (isReviewed) return false
+
+      // OR entre chips ativos: basta um corresponder
+      return contentChips.some((chip) => {
+        if (chip === "suspicious") return n >= SUSPICIOUS_THRESHOLD
+        if (chip === "no_photo") return n === 0
+        return false
+      })
     })
-  }, [rows, search, filter, reviewed])
+  }, [rows, search, activeFilters, reviewed])
 
   const paged = useMemo(
     () => filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
@@ -203,7 +250,7 @@ export function PhotoCurator() {
   )
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
 
-  useEffect(() => { setPage(0) }, [search, filter])
+  useEffect(() => { setPage(0) }, [search, activeFilters])
 
   /* ---------- contadores ---------- */
   const counts = useMemo(() => {
@@ -296,12 +343,42 @@ export function PhotoCurator() {
     await movePhoto(drag.stlId, targetStlId, drag.url)
   }
 
+  /* ---------- jogar foto na caixinha ---------- */
+  const parkPhoto = useCallback(async (stlId: string, url: string) => {
+    const row = rows.find((r) => r.id === stlId)
+    if (!row) return
+    patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
+    setBucketPhotos((prev) => [...prev, url])
+    setBucketOpen(true)
+    try {
+      await callApi({ action: "move_photo", from_stl_id: stlId, to_stl_id: PHOTO_BUCKET_ID, photo_url: url })
+    } catch (e: any) {
+      patchRowPhotos(stlId, row.photos || [])
+      setBucketPhotos((prev) => removeOneEach(prev, [url]))
+      alert(`Erro ao jogar na caixinha: ${e.message}`)
+    }
+  }, [rows, patchRowPhotos, callApi])
+
   /* ---------- "soltar aqui" (foto segurada) ---------- */
   const dropHeldOn = async (targetStlId: string) => {
     if (!held) return
     const h = held
     setHeld(null)
-    await movePhoto(h.stlId, targetStlId, h.url)
+    if (h.stlId === PHOTO_BUCKET_ID) {
+      // Mover da caixinha para um STL
+      setBucketPhotos((prev) => removeOneEach(prev, [h.url]))
+      const toRow = rows.find((r) => r.id === targetStlId)
+      if (toRow) patchRowPhotos(targetStlId, [...(toRow.photos || []), h.url])
+      try {
+        await callApi({ action: "move_photo", from_stl_id: PHOTO_BUCKET_ID, to_stl_id: targetStlId, photo_url: h.url })
+      } catch (e: any) {
+        setBucketPhotos((prev) => [...prev, h.url])
+        if (toRow) patchRowPhotos(targetStlId, toRow.photos || [])
+        alert(`Erro ao mover da caixinha: ${e.message}`)
+      }
+    } else {
+      await movePhoto(h.stlId, targetStlId, h.url)
+    }
   }
 
   /* ---------- seleção p/ merge ---------- */
@@ -490,18 +567,28 @@ export function PhotoCurator() {
 
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
+        {/* "Todos" limpa tudo */}
+        <button
+          onClick={clearFilters}
+          className={`px-3 py-1.5 rounded-full text-sm border transition ${
+            activeFilters.size === 0
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border hover:bg-muted"
+          }`}
+        >
+          Todos ({counts.total})
+        </button>
+
+        {/* Chips combináveis (multi-select, OR entre eles, exclui revisados) */}
         {([
-          ["all", `Todos (${counts.total})`],
           ["suspicious", `⚠️ Suspeitos 4+ (${counts.suspicious})`],
           ["no_photo", `Sem foto (${counts.noPhoto})`],
-          ["unreviewed", `Não revisados (${counts.unreviewed})`],
-          ["reviewed", `✅ Revisados (${counts.total - counts.unreviewed})`],
-        ] as [FilterMode, string][]).map(([mode, label]) => (
+        ] as [FilterChip, string][]).map(([chip, label]) => (
           <button
-            key={mode}
-            onClick={() => setFilter(mode)}
+            key={chip}
+            onClick={() => toggleFilter(chip)}
             className={`px-3 py-1.5 rounded-full text-sm border transition ${
-              filter === mode
+              activeFilters.has(chip)
                 ? "bg-primary text-primary-foreground border-primary"
                 : "border-border hover:bg-muted"
             }`}
@@ -509,6 +596,29 @@ export function PhotoCurator() {
             {label}
           </button>
         ))}
+
+        {/* Divisor visual antes do chip de Revisados */}
+        <span className="text-border select-none">|</span>
+
+        {/* "Revisados" — exclusivo, não combina com outros chips */}
+        <button
+          onClick={() => toggleFilter("reviewed")}
+          className={`px-3 py-1.5 rounded-full text-sm border transition ${
+            activeFilters.has("reviewed")
+              ? "bg-success/20 text-success border-success/50"
+              : "border-border hover:bg-muted"
+          }`}
+        >
+          ✅ Revisados ({counts.total - counts.unreviewed})
+        </button>
+
+        {/* Indicador quando chips de conteúdo estão ativos: lembra que revisados estão ocultos */}
+        {activeFilters.size > 0 && !activeFilters.has("reviewed") && (
+          <span className="text-xs text-muted-foreground italic">
+            (revisados ocultos)
+          </span>
+        )}
+
         <div className="relative ml-auto">
           <SearchIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -600,6 +710,77 @@ export function PhotoCurator() {
                 {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Combine className="w-4 h-4" />}
                 Mesclar no principal
               </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Caixinha de fotos órfãs */}
+      {(bucketPhotos.length > 0 || bucketOpen) && (
+        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5">
+          <button
+            onClick={() => setBucketOpen((o) => !o)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-amber-600 dark:text-amber-400"
+          >
+            <Archive className="w-4 h-4" />
+            Caixinha de fotos órfãs
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-xs tabular-nums">
+              {bucketPhotos.length}
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {bucketOpen ? "▲ Fechar" : "▼ Abrir"}
+            </span>
+          </button>
+
+          {bucketOpen && (
+            <div className="px-4 pb-4">
+              {bucketPhotos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma foto na caixinha.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Segure uma foto (✋) e procure o arquivo destino na lista abaixo — o botão <span className="text-primary font-medium">"Soltar aqui"</span> vai aparecer em cada arquivo.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {bucketPhotos.map((url, idx) => {
+                      const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === url
+                      return (
+                        <div
+                          key={`bucket-${url}-${idx}`}
+                          className={`relative w-32 h-32 rounded-lg overflow-hidden border-2 group ${
+                            isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
+                          }`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
+                          <button
+                            onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url })}
+                            className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-primary"
+                            title="Segurar para associar a um arquivo"
+                          >
+                            <Hand className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!confirm("Excluir esta foto da caixinha permanentemente?")) return
+                              setBucketPhotos((prev) => removeOneEach(prev, [url]))
+                              callApi({ action: "delete_photos", stl_id: PHOTO_BUCKET_ID, photo_urls: [url] })
+                                .catch((e: any) => {
+                                  setBucketPhotos((prev) => [...prev, url])
+                                  alert(`Erro ao excluir: ${e.message}`)
+                                })
+                            }}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-destructive"
+                            title="Excluir foto"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -760,6 +941,14 @@ export function PhotoCurator() {
                             title="Segurar foto p/ mover (busque o destino e clique 'Soltar aqui')"
                           >
                             <Hand className="w-3.5 h-3.5" />
+                          </button>
+                          {/* Jogar na Caixinha */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); parkPhoto(row.id, url) }}
+                            className="absolute bottom-1 left-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-amber-500"
+                            title="Jogar na Caixinha (foto sai deste arquivo e fica guardada pra associar depois)"
+                          >
+                            <Archive className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteSinglePhoto(row.id, url) }}
