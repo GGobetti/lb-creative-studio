@@ -229,7 +229,7 @@ export function PhotoCurator() {
         .select("photos")
         .eq("id", PHOTO_BUCKET_ID)
         .single()
-      setBucketPhotos(data?.photos || [])
+      setBucketPhotos(deduplicateBucket(data?.photos || []))
     } catch {}
   }, [])
 
