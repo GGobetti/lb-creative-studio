@@ -19,7 +19,7 @@ interface StlRow {
   created_at: string | null
 }
 
-type FilterMode = "all" | "suspicious" | "no_photo" | "unreviewed"
+type FilterMode = "all" | "suspicious" | "no_photo" | "unreviewed" | "reviewed"
 
 const PAGE_SIZE = 40
 const SUSPICIOUS_THRESHOLD = 4 // 4+ fotos = provável contaminação
@@ -183,6 +183,7 @@ export function PhotoCurator() {
       if (filter === "suspicious" && n < SUSPICIOUS_THRESHOLD) return false
       if (filter === "no_photo" && n > 0) return false
       if (filter === "unreviewed" && reviewed.has(r.id)) return false
+      if (filter === "reviewed" && !reviewed.has(r.id)) return false
       if (q) {
         const hay = `${r.file_name} ${r.title || ""}`.toLowerCase()
         if (!hay.includes(q)) return false
@@ -419,6 +420,7 @@ export function PhotoCurator() {
           ["suspicious", `⚠️ Suspeitos 4+ (${counts.suspicious})`],
           ["no_photo", `Sem foto (${counts.noPhoto})`],
           ["unreviewed", `Não revisados (${counts.unreviewed})`],
+          ["reviewed", `✅ Revisados (${counts.total - counts.unreviewed})`],
         ] as [FilterMode, string][]).map(([mode, label]) => (
           <button
             key={mode}
@@ -465,8 +467,12 @@ export function PhotoCurator() {
                 onDragLeave={() => setDropTarget((t) => (t === row.id ? null : t))}
                 onDrop={() => onDrop(row.id)}
                 className={`rounded-xl border p-3 flex gap-3 items-start transition ${
-                  dropTarget === row.id ? "border-primary ring-2 ring-primary/40 bg-primary/5" : "border-border"
-                } ${isReviewed ? "opacity-70" : ""}`}
+                  dropTarget === row.id
+                    ? "border-primary ring-2 ring-primary/40 bg-primary/5"
+                    : isReviewed
+                      ? "border-success/40 bg-success/5"
+                      : "border-border"
+                } ${isReviewed && filter !== "reviewed" ? "opacity-70" : ""}`}
               >
                 {/* Coluna: índice + nome + ações */}
                 <div className="w-64 shrink-0">
