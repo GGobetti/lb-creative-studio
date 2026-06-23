@@ -17,6 +17,7 @@ interface StlRow {
   photos: string[] | null
   telegram_group_name: string | null
   created_at: string | null
+  reviewed_at: string | null
 }
 
 type FilterChip = "suspicious" | "no_photo" | "with_photos" | "unreviewed" | "reviewed"
