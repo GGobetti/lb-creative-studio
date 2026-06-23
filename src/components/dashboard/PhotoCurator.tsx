@@ -749,21 +749,21 @@ export function PhotoCurator() {
           </button>
 
           {bucketOpen && (
-            <div className="px-4 pb-4">
+            <div className="px-4 py-2">
               {bucketPhotos.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma foto na caixinha.</p>
+                <p className="text-xs text-muted-foreground">Nenhuma foto na caixinha.</p>
               ) : (
                 <>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Segure uma foto (✋) e procure o arquivo destino na lista abaixo — o botão <span className="text-primary font-medium">"Soltar aqui"</span> vai aparecer em cada arquivo.
+                  <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
+                    Segure uma foto (✋) → procure arquivo → "Soltar aqui"
                   </p>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
                     {bucketPhotos.map((url, idx) => {
                       const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === url
                       return (
                         <div
                           key={`bucket-${url}-${idx}`}
-                          className={`relative w-32 h-32 rounded-lg overflow-hidden border-2 group ${
+                          className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group ${
                             isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
                           }`}
                         >
@@ -771,25 +771,26 @@ export function PhotoCurator() {
                           <img src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
                           <button
                             onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url })}
-                            className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-primary"
-                            title="Segurar para associar a um arquivo"
+                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition hover:bg-primary/60"
+                            title="Segurar para associar"
                           >
-                            <Hand className="w-3.5 h-3.5" />
+                            <Hand className="w-3 h-3 text-white" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (!confirm("Excluir esta foto da caixinha permanentemente?")) return
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (!confirm("Excluir?")) return
                               setBucketPhotos((prev) => removeOneEach(prev, [url]))
                               callApi({ action: "delete_photos", stl_id: PHOTO_BUCKET_ID, photo_urls: [url] })
                                 .catch((e: any) => {
                                   setBucketPhotos((prev) => [...prev, url])
-                                  alert(`Erro ao excluir: ${e.message}`)
+                                  alert(`Erro: ${e.message}`)
                                 })
                             }}
-                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-destructive"
-                            title="Excluir foto"
+                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-xs"
+                            title="Excluir"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            ✕
                           </button>
                         </div>
                       )
@@ -986,7 +987,7 @@ export function PhotoCurator() {
 
       {/* Paginação — sticky na base */}
       {totalPages > 1 && (
-        <div className="sticky bottom-0 z-20 bg-background/95 backdrop-blur -mx-4 md:-mx-6 px-4 md:px-6 py-3 mt-6 flex items-center justify-center gap-2">
+        <div className="sticky bottom-0 z-20 bg-background/95 backdrop-blur -mx-4 md:-mx-6 px-4 md:px-6 py-2 flex items-center justify-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
