@@ -579,8 +579,8 @@ export function PhotoCurator() {
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      {/* Filtros — sticky no topo */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur -mx-4 md:-mx-6 px-4 md:px-6 py-2 mb-4 flex flex-wrap items-center gap-2">
         {/* "Todos" limpa tudo */}
         <button
           onClick={clearFilters}
@@ -731,9 +731,9 @@ export function PhotoCurator() {
         </div>
       )}
 
-      {/* Caixinha de fotos órfãs */}
+      {/* Caixinha de fotos órfãs — sticky abaixo dos filtros */}
       {(bucketPhotos.length > 0 || bucketOpen) && (
-        <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5">
+        <div className="sticky top-[56px] z-20 mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
           <button
             onClick={() => setBucketOpen((o) => !o)}
             className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-amber-600 dark:text-amber-400"
@@ -984,9 +984,9 @@ export function PhotoCurator() {
         </div>
       )}
 
-      {/* Paginação */}
+      {/* Paginação — sticky na base */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6">
+        <div className="sticky bottom-0 z-20 bg-background/95 backdrop-blur -mx-4 md:-mx-6 px-4 md:px-6 py-3 mt-6 flex items-center justify-center gap-2">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
