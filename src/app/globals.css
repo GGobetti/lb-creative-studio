@@ -338,9 +338,18 @@ details > summary::-webkit-details-marker { display: none; }
 
 /* ── Auto-glass on card backgrounds in dark mode ───────────────── */
 /* bg-card is rgba(255,255,255,0.04) in dark — needs blur to look like glass */
-.dark [class*="bg-card"] {
+.dark [class*="bg-card"]:not([role="dialog"]):not(.modal-card) {
   backdrop-filter: blur(12px) saturate(140%);
   -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+/* Modais com overlay escuro precisam de fundo opaco — glass fica ilegível */
+.dark [role="dialog"][class*="bg-card"],
+.dark .modal-card[class*="bg-card"],
+.dark .modal-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: #0f1020;
 }
 
 /* ── Scrollbar None ────────────────────────────────────────────── */

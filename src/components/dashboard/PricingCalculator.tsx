@@ -463,7 +463,7 @@ export function PricingCalculator({
       {/* Quote Creation Modal */}
       {isQuoteModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+          <div className="modal-card bg-card border border-border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
             <div className="flex justify-between items-center border-b border-border pb-3">
               <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <FileText size={18} className="text-primary" />
@@ -582,7 +582,7 @@ export function PricingCalculator({
       {/* Quick Customer Creation Modal */}
       {isNewCustomerModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+          <div className="modal-card bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
             <div className="flex justify-between items-center border-b border-border pb-2">
               <h4 className="text-md font-bold text-foreground flex items-center gap-1.5">
                 <UserPlus size={16} className="text-primary" />
