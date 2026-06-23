@@ -12,6 +12,13 @@
 - ✅ **Fase 1D** — Moderação por tamanho: oversized → `pending_approval`; `core.processApprovedJobs()` processa aprovados; rota `jobs` do studio opera via banco (sem proxy). **Mergeada** (tsc 0, build OK). ⚠️ Teste end-to-end pendente (requer Telegram + arquivo grande; e R2 ou Vault).
 - ⏳ **Fase 2** — Consolidar monitoramento no dashboard do scraper / remover front do studio. **Adiada pelo dono ("depois").**
 - ⏳ **Fase 3** — Imagens no R2. **Adiada** (decisão #8 — só após estabilizar; conta Cloudflare ainda não criada).
+- 📋 **Fase 4 — Data Cleanup** (pós-estabilização, ~1-2 sprints):
+  - 🔍 **Dedup**: encontrar STLs com mesmo hash (duplicatas exatas) → manter só um
+  - 📊 **Variações**: detectar modelos similares (mesmo nome/descrição, tamanho parecido) → manter "principal"
+  - 📉 **Baixo engagement**: revisar STLs com 0-2 downloads em 3+ meses → soft delete (`is_deleted=true`)
+  - 🏷️ **Inconsistências**: fotos erradas, tags faltando, metadados incompletos
+  - 🛠️ **Tooling**: script de análise (reporta problemas pra revisão manual + opção de auto-limpa com confirmação)
+  - **Triggers**: depois que base estabilizar em produção, avaliar custo Supabase Storage
 
 > **Bloqueio externo p/ ativar R2/1D/teste Stripe:** credenciais Cloudflare R2 e `stripe listen`. Ver seção final.
 
