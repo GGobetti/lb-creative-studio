@@ -238,6 +238,7 @@ export function ScraperMonitor() {
     setIsBanningPhotos(true)
 
     let successCount = 0
+    let skippedExpired = 0
     let failCount = 0
 
     try {
@@ -263,22 +264,26 @@ export function ScraperMonitor() {
             throw new Error((err as any).error || `HTTP ${res.status}`)
           }
           successCount++
-        } catch (err) {
-          console.error("Erro ao banir imagem:", err)
-          failCount++
+        } catch (err: any) {
+          // URL expirada ou inacessível (Telegram links expiram) — descarta silenciosamente
+          if (err?.message?.includes("Falha ao carregar") || err?.message?.includes("Failed to load")) {
+            skippedExpired++
+          } else {
+            console.error("Erro ao banir imagem:", err)
+            failCount++
+          }
         }
       }
 
+      // Sempre descarta da fila (expiradas saem automaticamente, banidas ficam no BD)
       persistDismissed([...dismissedPhotos, ...selectedBans])
       setSelectedBans([])
 
-      if (failCount === 0) {
-        alert(`${successCount} foto(s) banida(s) com sucesso!`)
-      } else if (successCount === 0) {
-        alert(`Falha ao banir todas as fotos. Verifique o console.`)
-      } else {
-        alert(`${successCount} foto(s) banida(s). ${failCount} falharam (veja o console).`)
-      }
+      const parts: string[] = []
+      if (successCount > 0) parts.push(`${successCount} foto(s) banida(s)`)
+      if (skippedExpired > 0) parts.push(`${skippedExpired} URL(s) expirada(s) removidas da fila`)
+      if (failCount > 0) parts.push(`${failCount} falha(s) — veja o console`)
+      alert(parts.join(". ") || "Nenhuma ação realizada.")
     } catch (err: any) {
       alert(`Erro ao banir: ${err.message}`)
     } finally {
@@ -497,13 +502,15 @@ export function ScraperMonitor() {
                 </div>
 
                 {(() => {
-                  const seen = new Set<string>()
+                  const seenUrls = new Set<string>()
                   let allPhotos: { jobId: string; url: string; jobTitle: string }[] = []
                   scraperJobs.forEach(job => {
-                    (job.photos || []).forEach((url: string) => {
-                      const key = `${job.id}|${url}`
-                      if (!seen.has(key)) {
-                        seen.add(key)
+                    // Fotos de jobs concluídos já foram processadas — não precisam de moderação
+                    if (job.status === 'completed') return
+                    ;(job.photos || []).forEach((url: string) => {
+                      // Deduplicar por URL (mesmo link pode aparecer em vários jobs)
+                      if (!seenUrls.has(url)) {
+                        seenUrls.add(url)
                         allPhotos.push({ jobId: job.id, url, jobTitle: job.file_name })
                       }
                     })
