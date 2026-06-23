@@ -47,17 +47,23 @@ export default function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [detailsModalOpen, setDetailsModalOpen] = useState(false)
 
+  const isAdmin = profile?.role === 'sysadmin'
+
   const fetchTickets = async () => {
     if (!profile) return
     setLoading(true)
     try {
       const supabase = getSupabaseBrowser()
-      const { data, error } = await supabase
+      let query = supabase
         .from("support_tickets")
         .select("*")
-        .eq("user_id", profile.id)
         .order("updated_at", { ascending: false })
 
+      if (!isAdmin) {
+        query = query.eq("user_id", profile.id)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       setTickets(data as SupportTicket[])
     } catch (err: any) {
@@ -82,8 +88,8 @@ export default function TicketsPage() {
           event: '*',
           schema: 'public',
           table: 'support_tickets',
-          filter: `user_id=eq.${profile.id}`,
-        },
+          filter: isAdmin ? undefined : `user_id=eq.${profile.id}`,
+        } as any,
         () => {
           fetchTickets()
         }

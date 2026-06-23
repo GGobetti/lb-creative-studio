@@ -88,7 +88,7 @@ const SUBSCRIPTION_PLANS = [
 ]
 
 export default function BillingPage() {
-  const { profile } = useAppStore()
+  const { profile, refreshCredits } = useAppStore()
   const { t, language } = useTranslation()
   const { toast } = useToast()
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -99,6 +99,35 @@ export default function BillingPage() {
   const [cancelConfirmed, setCancelConfirmed] = useState(false)
   const [subscription, setSubscription] = useState<any>(null)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+
+  // Detecta retorno do Stripe com sucesso e recarrega créditos
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('success') === 'true') {
+      // Busca saldo atualizado do BD e atualiza o store
+      const reloadCredits = async () => {
+        const supabase = getSupabaseBrowser()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) return
+        const { data } = await supabase.from('profiles').select('credits').eq('id', session.user.id).single()
+        if (data?.credits !== undefined) refreshCredits(data.credits)
+      }
+      reloadCredits()
+      toast('Pagamento confirmado! Seus créditos foram adicionados.', 'success')
+      // Limpa os query params da URL sem recarregar a página
+      const url = new URL(window.location.href)
+      url.searchParams.delete('success')
+      url.searchParams.delete('session_id')
+      url.searchParams.delete('canceled')
+      window.history.replaceState({}, '', url.toString())
+    } else if (params.get('canceled') === 'true') {
+      toast('Compra cancelada.', 'error')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('canceled')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [])
 
   // Load pricing plans from Supabase on mount
   useEffect(() => {

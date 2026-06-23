@@ -141,7 +141,16 @@ export default function QuotationDetailPage({ params }: Props) {
     const appUrl = window.location.origin
     const text = `Seguem os detalhes do orçamento *${quotation.title}* no valor de ${formatBRL(quotation.total_value)}: ${appUrl}/dashboard/quotations/${quotation.id}`
     const encoded = encodeURIComponent(text)
-    window.open(`https://t.me/share/url?url=${appUrl}/dashboard/quotations/${quotation.id}&text=${encoded}`, "_blank")
+    const phone = quotation.customers?.phone?.replace(/\D/g, "") || ""
+    const telegram = (quotation.customers as any)?.telegram || ""
+    if (telegram) {
+      const tgUser = telegram.replace(/^@/, "")
+      window.open(`https://t.me/${tgUser}?text=${encoded}`, "_blank")
+    } else if (phone) {
+      window.open(`https://t.me/+55${phone}?text=${encoded}`, "_blank")
+    } else {
+      window.open(`https://t.me/share/url?url=${appUrl}/dashboard/quotations/${quotation.id}&text=${encoded}`, "_blank")
+    }
   }
 
   // Envio E-mail
