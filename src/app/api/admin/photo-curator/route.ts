@@ -138,11 +138,10 @@ export async function POST(request: NextRequest) {
       }
 
       case 'merge_stls': {
-        // Mescla N STLs em um principal: une as fotos no principal e marca os
-        // demais como is_deleted=true (soft). NÃO toca no R2 — o arquivo físico
-        // dos mesclados permanece (recuperável); hard-delete fica para a tela de
-        // moderação (Fase 4). As fotos NÃO são apagadas do Storage: passam a
-        // pertencer ao principal.
+        // Agrupa N STLs como "partes" do principal usando parent_id.
+        // Os mesclados somem do listing principal (filtro parent_id IS NULL)
+        // mas aparecem no modal do principal como partes com botão de download próprio.
+        // Nenhum arquivo é deletado — nem R2, nem Storage.
         const { primary_id, merged_ids } = body
         if (!primary_id || !Array.isArray(merged_ids) || merged_ids.length === 0) {
           return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
@@ -151,42 +150,30 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Principal não pode estar na lista de mesclados' }, { status: 400 })
         }
 
-        const allIds = [primary_id, ...merged_ids]
-        const { data: rows, error: fetchErr } = await admin
+        const { data: primary, error: fetchErr } = await admin
           .from('telegram_indexed_stls')
-          .select('id, photos')
-          .in('id', allIds)
+          .select('id, parts_count')
+          .eq('id', primary_id)
+          .single()
         if (fetchErr) throw fetchErr
-
-        const primary = rows?.find(r => r.id === primary_id)
         if (!primary) return NextResponse.json({ error: 'Principal não encontrado' }, { status: 404 })
 
-        // União das fotos (dedupe por URL), começando pelas do principal
-        const merged = new Set<string>(primary.photos || [])
-        for (const id of merged_ids) {
-          const r = rows?.find(x => x.id === id)
-          for (const p of (r?.photos || [])) merged.add(p)
-        }
-        const mergedPhotos = [...merged]
-
-        const { error: upErr } = await admin
+        // Define parent_id nos mesclados → eles somem do listing, aparecem no modal
+        const { error: parentErr } = await admin
           .from('telegram_indexed_stls')
-          .update({ photos: mergedPhotos, thumbnail_url: mergedPhotos[0] || null })
-          .eq('id', primary_id)
-        if (upErr) throw upErr
-
-        // Soft-delete dos mesclados (mantém r2_object_key e photos para auditoria/recuperação)
-        const { error: delErr } = await admin
-          .from('telegram_indexed_stls')
-          .update({
-            is_deleted: true,
-            removal_reason: `merged_into:${primary_id}`,
-            removal_marked_at: new Date().toISOString(),
-          })
+          .update({ parent_id: primary_id })
           .in('id', merged_ids)
-        if (delErr) throw delErr
+        if (parentErr) throw parentErr
 
-        return NextResponse.json({ success: true, action, primary_photos: mergedPhotos, merged_count: merged_ids.length })
+        // Atualiza parts_count no principal
+        const newPartsCount = (primary.parts_count || 0) + merged_ids.length
+        const { error: countErr } = await admin
+          .from('telegram_indexed_stls')
+          .update({ parts_count: newPartsCount })
+          .eq('id', primary_id)
+        if (countErr) throw countErr
+
+        return NextResponse.json({ success: true, action, merged_count: merged_ids.length, parts_count: newPartsCount })
       }
 
       default:

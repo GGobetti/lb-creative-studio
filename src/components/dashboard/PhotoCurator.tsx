@@ -311,23 +311,14 @@ export function PhotoCurator() {
     const primaryRow = rows.find((r) => r.id === mergePrimary)
     if (!primaryRow) return
     if (!confirm(
-      `Mesclar ${mergedIds.length} arquivo(s) em "${primaryRow.title || primaryRow.file_name}"?\n` +
-      `As fotos vão todas para o principal. Os outros viram ocultos (soft-delete) — o R2 não é afetado.`
+      `Mesclar ${mergedIds.length} arquivo(s) em "${primaryRow.title || primaryRow.file_name}"?\n\n` +
+      `Os arquivos mesclados aparecem como partes no modal de download (cada um com seu próprio botão de download). Nenhum arquivo é excluído.`
     )) return
 
     setMerging(true)
-    // otimista: une fotos no principal e remove os mesclados da lista
-    const union = new Set<string>(primaryRow.photos || [])
-    for (const id of mergedIds) {
-      const r = rows.find((x) => x.id === id)
-      for (const p of (r?.photos || [])) union.add(p)
-    }
     const snapshot = rows
-    setRows((prev) =>
-      prev
-        .filter((r) => !mergedIds.includes(r.id))
-        .map((r) => (r.id === mergePrimary ? { ...r, photos: [...union] } : r))
-    )
+    // Otimista: remove mesclados da lista (eles vão aparecer como partes no modal do principal)
+    setRows((prev) => prev.filter((r) => !mergedIds.includes(r.id)))
     try {
       await callApi({ action: "merge_stls", primary_id: mergePrimary, merged_ids: mergedIds })
       clearSelection()
@@ -728,12 +719,12 @@ export function PhotoCurator() {
                       <ImageOff className="w-4 h-4" /> Sem fotos — arraste ou solte uma aqui
                     </div>
                   ) : (
-                    photos.map((url) => {
+                    photos.map((url, photoIdx) => {
                       const marked = marks?.has(url)
                       const isHeld = held?.stlId === row.id && held?.url === url
                       return (
                         <div
-                          key={url}
+                          key={`${url}-${photoIdx}`}
                           draggable
                           onDragStart={() => onDragStart(row.id, url)}
                           onClick={() => marks && toggleMark(row.id, url)}
