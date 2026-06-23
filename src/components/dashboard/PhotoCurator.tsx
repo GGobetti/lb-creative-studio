@@ -233,7 +233,26 @@ export function PhotoCurator() {
         .select("photos")
         .eq("id", PHOTO_BUCKET_ID)
         .single()
-      setBucketPhotos(deduplicateBucket(data?.photos || []))
+      const photos = deduplicateBucket(data?.photos || [])
+
+      // Deduplicação visual via dHash (captura fotos iguais com URLs diferentes)
+      const hashes: string[] = []
+      const deduped: string[] = []
+      for (const url of photos) {
+        const hash = await computeDHash(url)
+        if (!hash) { deduped.push(url); continue }
+        const isDupe = hashes.some(h => hamming(h, hash) <= DHASH_DUPE_DISTANCE)
+        if (!isDupe) { hashes.push(hash); deduped.push(url) }
+      }
+
+      setBucketPhotos(deduped)
+
+      // Persiste limpeza no BD se removeu algo
+      if (deduped.length < photos.length) {
+        await supabase.from("telegram_indexed_stls")
+          .update({ photos: deduped, thumbnail_url: deduped[0] || null })
+          .eq("id", PHOTO_BUCKET_ID)
+      }
     } catch {}
   }, [])
 
@@ -428,7 +447,8 @@ export function PhotoCurator() {
   const parkPhoto = useCallback(async (stlId: string, url: string) => {
     const row = rows.find((r) => r.id === stlId)
     if (!row) return
-    // Se já está no bucket, apenas remove da fonte (sem duplicar)
+
+    // Checa duplicata por URL
     if (bucketPhotos.includes(url)) {
       patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
       try {
@@ -439,6 +459,23 @@ export function PhotoCurator() {
       }
       return
     }
+
+    // Checa duplicata visual via dHash
+    const newHash = await computeDHash(url)
+    if (newHash) {
+      for (const existing of bucketPhotos) {
+        const existingHash = await computeDHash(existing)
+        if (existingHash && hamming(newHash, existingHash) <= DHASH_DUPE_DISTANCE) {
+          // Foto visualmente igual já está no bucket — descarta sem adicionar
+          patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
+          try {
+            await callApi({ action: "delete_photos", stl_id: stlId, photo_urls: [url] })
+          } catch {}
+          return
+        }
+      }
+    }
+
     patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
     setBucketPhotos((prev) => deduplicateBucket([...prev, url]))
     setBucketOpen(true)
