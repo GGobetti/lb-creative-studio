@@ -17,6 +17,21 @@ import path from 'path'
 import { createClient } from '@supabase/supabase-js'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
+// Load .env.local manually
+function loadEnv() {
+  const envPath = path.join(process.cwd(), '.env.local')
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf-8')
+    envContent.split('\n').forEach((line) => {
+      const [key, ...valueParts] = line.split('=')
+      if (key && !key.startsWith('#')) {
+        process.env[key.trim()] = valueParts.join('=').trim()
+      }
+    })
+  }
+}
+loadEnv()
+
 const PACK_PATH = path.join(process.env.HOME || '/Users/ggobetti', 'Desktop/N3D - PACK PREMIUN')
 const DRY_RUN = process.argv.includes('--dry-run')
 
