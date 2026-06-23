@@ -656,12 +656,7 @@ export function PhotoCurator() {
         </button>
       </div>
 
-      {/* Grid responsivo: coluna esquerda (conteúdo) + coluna direita (bucket em lg+) */}
-      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-4 max-w-[1400px] mx-auto">
-        {/* Coluna esquerda */}
-        <div>
-
-      {/* Filtros — sticky no topo */}
+      {/* Filtros — sticky no topo, FULL WIDTH (fora do grid) */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur -mx-4 md:-mx-6 px-4 md:px-6 py-2 mb-4 flex flex-wrap items-center gap-2">
         {/* "Todos" limpa tudo */}
         <button
@@ -727,6 +722,11 @@ export function PhotoCurator() {
           />
         </div>
       </div>
+
+      {/* Grid responsivo: lista (esq) + bucket (dir em lg+) */}
+      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-4 max-w-[1400px] mx-auto lg:items-start">
+        {/* Coluna esquerda */}
+        <div>
 
       {/* Barra de ações em massa (sticky — acompanha o scroll) */}
       {selected.size > 0 && (
@@ -813,9 +813,9 @@ export function PhotoCurator() {
         </div>
       )}
 
-      {/* Caixinha de fotos órfãs */}
+      {/* Caixinha de fotos órfãs — apenas em telas menores (lg+ vai na coluna direita) */}
       {(bucketPhotos.length > 0 || bucketOpen) && (
-        <div className="sticky top-[56px] z-20 mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
+        <div className="lg:hidden sticky top-[56px] z-20 mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
           <button
             onClick={() => setBucketOpen((o) => !o)}
             className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-amber-600 dark:text-amber-400"
@@ -1107,6 +1107,79 @@ export function PhotoCurator() {
         </div>
       )}
 
+        </div>{/* fecha coluna esquerda */}
+
+        {/* Coluna direita: bucket em lg+ */}
+        {(bucketPhotos.length > 0 || bucketOpen) && (
+          <div className="hidden lg:block">
+            <div className="sticky top-[56px] rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm max-h-[calc(100vh-80px)] overflow-y-auto">
+              <button
+                onClick={() => setBucketOpen((o) => !o)}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-amber-600 dark:text-amber-400"
+              >
+                <Archive className="w-4 h-4" />
+                Caixinha de fotos órfãs
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 text-xs tabular-nums">
+                  {bucketPhotos.length}
+                </span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {bucketOpen ? "▲ Fechar" : "▼ Abrir"}
+                </span>
+              </button>
+              {bucketOpen && (
+                <div className="px-4 py-2">
+                  {bucketPhotos.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhuma foto na caixinha.</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground mb-2">Segure (✋) → busque o arquivo → "Soltar aqui"</p>
+                      <div className="flex flex-col gap-3 pb-2">
+                        {bucketGrouped.map(({ masterUrl, count }, groupIdx) => {
+                          const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === masterUrl
+                          return (
+                            <div key={`bucket-lg-${groupIdx}`} className="relative">
+                              {count > 1 && (
+                                <>
+                                  <div className="absolute -bottom-1 -right-1 w-20 h-20 rounded-lg border-2 border-amber-400/40 bg-amber-500/5" />
+                                  <div className="absolute -bottom-2 -right-2 w-20 h-20 rounded-lg border-2 border-amber-400/20" />
+                                </>
+                              )}
+                              <div
+                                draggable
+                                onDragStart={() => onDragStart(PHOTO_BUCKET_ID, masterUrl)}
+                                className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
+                                  isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
+                                }`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={masterUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
+                                <button
+                                  onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url: masterUrl })}
+                                  className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition"
+                                  title="Segurar para associar"
+                                >
+                                  <Hand className="w-3 h-3 text-white" />
+                                </button>
+                                {count > 1 && (
+                                  <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                                    {count}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      </div>{/* fecha grid */}
+
       {/* Bandeja flutuante: foto segurada aguardando destino */}
       {held && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-[92vw] flex flex-col gap-2 px-4 py-3 rounded-2xl border border-primary bg-background/95 backdrop-blur shadow-2xl">
@@ -1155,8 +1228,6 @@ export function PhotoCurator() {
           )}
         </div>
       )}
-        </div>
-      </div>
     </div>
   )
 }
