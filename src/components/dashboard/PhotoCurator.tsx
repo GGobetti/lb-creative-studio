@@ -19,7 +19,7 @@ interface StlRow {
   created_at: string | null
 }
 
-type FilterChip = "suspicious" | "no_photo" | "reviewed"
+type FilterChip = "suspicious" | "no_photo" | "with_photos" | "unreviewed" | "reviewed"
 
 const PAGE_SIZE = 40
 const SUSPICIOUS_THRESHOLD = 4 // 4+ fotos = provável contaminação
@@ -221,7 +221,8 @@ export function PhotoCurator() {
     const q = search.trim().toLowerCase()
     const isReviewedMode = activeFilters.has("reviewed")
     const isTodosMode = activeFilters.size === 0
-    const contentChips = [...activeFilters].filter((c) => c !== "reviewed") as FilterChip[]
+    const hasUnreviewed = activeFilters.has("unreviewed")
+    const contentChips = [...activeFilters].filter((c) => c !== "reviewed" && c !== "unreviewed") as FilterChip[]
 
     return rows.filter((r) => {
       const n = (r.photos || []).length
@@ -232,15 +233,23 @@ export function PhotoCurator() {
       if (isTodosMode) return true
       if (isReviewedMode) return isReviewed
 
-      // Qualquer chip de conteúdo ativo → exclui revisados automaticamente
-      if (isReviewed) return false
+      // Se "Não revisados" está ativo, filtra por unreviewed (exclui revisados)
+      if (hasUnreviewed && isReviewed) return false
 
-      // OR entre chips ativos: basta um corresponder
-      return contentChips.some((chip) => {
-        if (chip === "suspicious") return n >= SUSPICIOUS_THRESHOLD
-        if (chip === "no_photo") return n === 0
-        return false
-      })
+      // Se tem chips de conteúdo, aplica OR entre eles
+      if (contentChips.length > 0) {
+        return contentChips.some((chip) => {
+          if (chip === "suspicious") return n >= SUSPICIOUS_THRESHOLD
+          if (chip === "no_photo") return n === 0
+          if (chip === "with_photos") return n > 0
+          return false
+        })
+      }
+
+      // Se só "Não revisados" está ativo (sem outros chips de conteúdo)
+      if (hasUnreviewed) return true
+
+      return false
     })
   }, [rows, search, activeFilters, reviewed])
 
@@ -254,14 +263,19 @@ export function PhotoCurator() {
 
   /* ---------- contadores ---------- */
   const counts = useMemo(() => {
-    let suspicious = 0, noPhoto = 0, unreviewed = 0
+    let suspicious = 0, noPhoto = 0, withPhotos = 0, unreviewed = 0, unreviewedWithPhotos = 0
     for (const r of rows) {
       const n = (r.photos || []).length
+      const isRev = reviewed.has(r.id)
       if (n >= SUSPICIOUS_THRESHOLD) suspicious++
       if (n === 0) noPhoto++
-      if (!reviewed.has(r.id)) unreviewed++
+      if (n > 0) withPhotos++
+      if (!isRev) {
+        unreviewed++
+        if (n > 0) unreviewedWithPhotos++
+      }
     }
-    return { total: rows.length, suspicious, noPhoto, unreviewed }
+    return { total: rows.length, suspicious, noPhoto, withPhotos, unreviewed, unreviewedWithPhotos }
   }, [rows, reviewed])
 
   /* ---------- mutação local otimista ---------- */
@@ -583,6 +597,8 @@ export function PhotoCurator() {
         {([
           ["suspicious", `⚠️ Suspeitos 4+ (${counts.suspicious})`],
           ["no_photo", `Sem foto (${counts.noPhoto})`],
+          ["with_photos", `📷 Com fotos (${counts.withPhotos})`],
+          ["unreviewed", `🔍 Não revisados (${counts.unreviewed})`],
         ] as [FilterChip, string][]).map(([chip, label]) => (
           <button
             key={chip}
