@@ -141,6 +141,32 @@ export function PhotoCurator() {
     if (typeof window !== "undefined") {
       localStorage.setItem(REVIEWED_KEY, JSON.stringify([...next]))
     }
+    // Sincronizar com Supabase: marcar quais foram validadas
+    syncReviewedToSupabase([...next]).catch(e => console.error("Erro ao sincronizar validações:", e))
+  }, [])
+
+  const syncReviewedToSupabase = useCallback(async (reviewedIds: string[]) => {
+    try {
+      const supabase = getSupabaseBrowser()
+      const now = new Date().toISOString()
+      // Para cada ID validado, marca reviewed_at se ainda não estiver marcado
+      for (const id of reviewedIds) {
+        const { data: existing } = await supabase
+          .from("telegram_indexed_stls")
+          .select("reviewed_at")
+          .eq("id", id)
+          .single()
+        // Só marca se ainda não foi marcado
+        if (!existing?.reviewed_at) {
+          await supabase
+            .from("telegram_indexed_stls")
+            .update({ reviewed_at: now })
+            .eq("id", id)
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao sincronizar reviewed com Supabase:", err)
+    }
   }, [])
 
   /* ---------- carregar STLs ---------- */
@@ -150,7 +176,7 @@ export function PhotoCurator() {
       const supabase = getSupabaseBrowser()
       const { data, error } = await supabase
         .from("telegram_indexed_stls")
-        .select("id, title, file_name, photos, telegram_group_name, created_at")
+        .select("id, title, file_name, photos, telegram_group_name, created_at, reviewed_at")
         .eq("is_deleted", false)
         .neq("id", PHOTO_BUCKET_ID)
         .order("created_at", { ascending: true })
@@ -177,6 +203,26 @@ export function PhotoCurator() {
   }, [])
 
   useEffect(() => { fetchRows(); fetchBucket() }, [fetchRows, fetchBucket])
+
+  // Carregar validações do BD ao montar
+  useEffect(() => {
+    const loadReviewedFromDb = async () => {
+      try {
+        const supabase = getSupabaseBrowser()
+        const { data } = await supabase
+          .from("telegram_indexed_stls")
+          .select("id")
+          .eq("is_deleted", false)
+          .neq("id", PHOTO_BUCKET_ID)
+          .not("reviewed_at", "is", null)
+        const reviewedIds = (data || []).map(r => r.id)
+        persistReviewed(new Set(reviewedIds))
+      } catch (err) {
+        console.error("Erro ao carregar validações do BD:", err)
+      }
+    }
+    loadReviewedFromDb()
+  }, [persistReviewed])
 
   /* ---------- token helper p/ chamadas admin ---------- */
   const getToken = useCallback(async () => {
