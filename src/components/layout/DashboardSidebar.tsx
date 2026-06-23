@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   Swords,
   ShoppingCart,
+  ScanSearch,
 } from "lucide-react"
 import { useAppStore } from "@/store/store"
 import { getSupabaseBrowser } from "@/lib/supabase"
@@ -126,6 +127,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
       title: t("sidebar.admin", "Admin"),
       items: [
         { name: t("sidebar.adminPanel", "Painel Admin"), href: "/dashboard/admin", icon: ShieldAlert },
+        { name: t("sidebar.photoCurator", "Curadoria de Fotos"), href: "/dashboard/photo-curator", icon: ScanSearch },
       ],
     })
   }
