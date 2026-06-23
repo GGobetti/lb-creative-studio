@@ -18,6 +18,12 @@
   - 📉 **Baixo engagement**: revisar STLs com 0-2 downloads em 3+ meses → soft delete (`is_deleted=true`)
   - 🏷️ **Inconsistências**: fotos erradas, tags faltando, metadados incompletos
   - 🛠️ **Tooling**: script de análise (reporta problemas pra revisão manual + opção de auto-limpa com confirmação)
+  - 🗑️ **Hard delete workflow** (tela de moderação):
+    - Soft delete (`is_deleted=true`) = reversível, rápido, esconde do app
+    - Hard delete = deletar do R2 (definitivo, economia de espaço)
+    - **Tela de mod**: lista STLs soft-deleted + opção "deletar do R2"
+    - **Segurança**: manter ID no banco (com `r2_object_key=NULL`, `is_deleted=true`) pra evitar que arquivo volte se re-indexado (anti-redup)
+    - **Economia**: libera espaço R2 gradualmente (sem susto de delete em massa)
   - **Triggers**: depois que base estabilizar em produção, avaliar custo Supabase Storage
 
 > **Bloqueio externo p/ ativar R2/1D/teste Stripe:** credenciais Cloudflare R2 e `stripe listen`. Ver seção final.
