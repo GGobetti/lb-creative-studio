@@ -33,6 +33,7 @@ export default function StlSearchPage() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [printerFilter, setPrinterFilter] = useState<"all" | "resin" | "fdm">("all");
+  const [photoFilter, setPhotoFilter] = useState<"all" | "with_photo" | "without_photo">("all");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StlItem | null>(null);
@@ -124,7 +125,7 @@ export default function StlSearchPage() {
   useEffect(() => {
     setPage(0);
     setItems([]);
-  }, [debouncedQuery, printerFilter]);
+  }, [debouncedQuery, printerFilter, photoFilter]);
 
   // Fetch real STL files from Supabase telegram_indexed_stls (paginated)
   useEffect(() => {
@@ -139,20 +140,27 @@ export default function StlSearchPage() {
         let query = supabase
           .from("telegram_indexed_stls")
           .select("*")
-          .is("parent_id", null); // filtro no DB, não no cliente
+          .is("parent_id", null) // filtro no DB, não no cliente
+          .neq("id", "00000000-0000-0000-0000-000000000000"); // ignora a caixinha de fotos
 
         if (trimmed) {
           if (isTagSearch) {
             // Busca por tag exata
             query = query.contains("tags", [rawTerm]);
           } else {
-            // Full-text search via coluna tsv (índice GIN — rápido)
-            query = query.textSearch("tsv", trimmed, { type: "plain", config: "portuguese" });
+            // Partial text search (contains)
+            query = query.or(`title.ilike.%${trimmed}%,file_name.ilike.%${trimmed}%`);
           }
         }
 
         if (printerFilter !== "all") {
           query = query.eq("printer_type", printerFilter);
+        }
+
+        if (photoFilter === "with_photo") {
+          query = query.or('has_appended_photos.eq.true,thumbnail_url.not.is.null');
+        } else if (photoFilter === "without_photo") {
+          query = query.or('has_appended_photos.is.null,has_appended_photos.eq.false').is("thumbnail_url", null);
         }
 
         query = query
@@ -207,7 +215,7 @@ export default function StlSearchPage() {
     };
 
     fetchItems();
-  }, [debouncedQuery, printerFilter, page]);
+  }, [debouncedQuery, printerFilter, photoFilter, page]);
 
   const fetchRankings = async () => {
     setIsLoadingRankings(true);
@@ -226,6 +234,7 @@ export default function StlSearchPage() {
       const { data: dlData, error: dlErr } = await supabase
         .from("telegram_indexed_stls")
         .select("*")
+        .neq("id", "00000000-0000-0000-0000-000000000000")
         .order("download_count", { ascending: false })
         .limit(10);
 
@@ -234,6 +243,7 @@ export default function StlSearchPage() {
       const { data: favData, error: favErr } = await supabase
         .from("telegram_indexed_stls")
         .select("*")
+        .neq("id", "00000000-0000-0000-0000-000000000000")
         .order("favorites_count", { ascending: false })
         .limit(10);
 
@@ -517,6 +527,7 @@ export default function StlSearchPage() {
           .from("telegram_indexed_stls")
           .select("*")
           .is("parent_id", null)
+          .neq("id", "00000000-0000-0000-0000-000000000000")
           .order("created_at", { ascending: false })
           .then(({ data }: { data: any[] | null }) => {
             if (data) {
@@ -860,6 +871,39 @@ export default function StlSearchPage() {
                   </button>
                 </>
               )}
+            </div>
+            
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setPhotoFilter("all")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                  photoFilter === "all" 
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                }`}
+              >
+                Todas
+              </button>
+              <button
+                onClick={() => setPhotoFilter("with_photo")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                  photoFilter === "with_photo" 
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                }`}
+              >
+                Com Foto
+              </button>
+              <button
+                onClick={() => setPhotoFilter("without_photo")}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                  photoFilter === "without_photo" 
+                    ? "bg-primary text-primary-foreground border-primary" 
+                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
+                }`}
+              >
+                Sem Foto
+              </button>
             </div>
           </div>
 
