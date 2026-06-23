@@ -813,7 +813,7 @@ export function PhotoCurator() {
                     : isReviewed
                       ? "border-success/40 bg-success/5"
                       : "border-border"
-                } ${isReviewed && filter !== "reviewed" ? "opacity-70" : ""}`}
+                } ${isReviewed && !activeFilters.has("reviewed") ? "opacity-70" : ""}`}
               >
                 {/* Coluna: índice + nome + ações */}
                 <div className="w-64 shrink-0">
