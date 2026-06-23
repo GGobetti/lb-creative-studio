@@ -97,6 +97,10 @@ function relTime(fromIso: string | null, toIso: string | null): string {
   return `${sign}${Math.round(abs / 86400)}d`
 }
 
+function deduplicateBucket(photos: string[]): string[] {
+  return [...new Set(photos)]
+}
+
 export function PhotoCurator() {
   const { profile } = useAppStore(useShallow((s) => ({ profile: s.profile })))
   const [rows, setRows] = useState<StlRow[]>([])
@@ -420,20 +424,21 @@ export function PhotoCurator() {
     }
   }
 
-  /* ---------- deduplica bucket (remove cópias duplicadas, mantém apenas 1 de cada URL) ---------- */
-  const deduplicateBucket = (photos: string[]): string[] => {
-    const seen = new Set<string>()
-    return photos.filter((url) => {
-      if (seen.has(url)) return false
-      seen.add(url)
-      return true
-    })
-  }
-
   /* ---------- jogar foto na caixinha ---------- */
   const parkPhoto = useCallback(async (stlId: string, url: string) => {
     const row = rows.find((r) => r.id === stlId)
     if (!row) return
+    // Se já está no bucket, apenas remove da fonte (sem duplicar)
+    if (bucketPhotos.includes(url)) {
+      patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
+      try {
+        await callApi({ action: "move_photo", from_stl_id: stlId, to_stl_id: PHOTO_BUCKET_ID, photo_url: url })
+      } catch (e: any) {
+        patchRowPhotos(stlId, row.photos || [])
+        alert(`Erro ao jogar na caixinha: ${e.message}`)
+      }
+      return
+    }
     patchRowPhotos(stlId, removeOneEach(row.photos || [], [url]))
     setBucketPhotos((prev) => deduplicateBucket([...prev, url]))
     setBucketOpen(true)
@@ -444,7 +449,7 @@ export function PhotoCurator() {
       setBucketPhotos((prev) => removeOneEach(prev, [url]))
       alert(`Erro ao jogar na caixinha: ${e.message}`)
     }
-  }, [rows, patchRowPhotos, callApi])
+  }, [rows, bucketPhotos, patchRowPhotos, callApi])
 
   /* ---------- "soltar aqui" (foto segurada) ---------- */
   const dropHeldOn = async (targetStlId: string) => {
