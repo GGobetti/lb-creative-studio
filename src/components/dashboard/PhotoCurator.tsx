@@ -558,9 +558,9 @@ export function PhotoCurator() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <div className="p-4 md:p-6 max-w-full">
+      {/* Header — fora do grid */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 max-w-[1400px] mx-auto">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <ScanSearch className="w-6 h-6 text-primary" />
@@ -578,6 +578,11 @@ export function PhotoCurator() {
           Recarregar
         </button>
       </div>
+
+      {/* Grid responsivo: coluna esquerda (conteúdo) + coluna direita (bucket em lg+) */}
+      <div className="lg:grid lg:grid-cols-[1fr_320px] lg:gap-4 max-w-[1400px] mx-auto">
+        {/* Coluna esquerda */}
+        <div>
 
       {/* Filtros — sticky no topo */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur -mx-4 md:-mx-6 px-4 md:px-6 py-2 mb-4 flex flex-wrap items-center gap-2">
@@ -731,9 +736,13 @@ export function PhotoCurator() {
         </div>
       )}
 
-      {/* Caixinha de fotos órfãs — sticky abaixo dos filtros */}
-      {(bucketPhotos.length > 0 || bucketOpen) && (
-        <div className="sticky top-[56px] z-20 mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
+        </div>
+
+        {/* Coluna direita: bucket (hidden em md-, flex em lg+) */}
+        {(bucketPhotos.length > 0 || bucketOpen) && (
+          <div className="hidden lg:block">
+            {/* Caixinha de fotos órfãs — sticky no topo da coluna direita */}
+            <div className="sticky top-0 z-20 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
           <button
             onClick={() => setBucketOpen((o) => !o)}
             className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-amber-600 dark:text-amber-400"
@@ -763,7 +772,9 @@ export function PhotoCurator() {
                       return (
                         <div
                           key={`bucket-${url}-${idx}`}
-                          className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group ${
+                          draggable
+                          onDragStart={() => onDragStart(PHOTO_BUCKET_ID, url)}
+                          className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group cursor-grab active:cursor-grabbing ${
                             isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
                           }`}
                         >
@@ -800,8 +811,10 @@ export function PhotoCurator() {
               )}
             </div>
           )}
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Lista */}
       {loading ? (
