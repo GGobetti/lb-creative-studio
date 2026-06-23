@@ -4,7 +4,7 @@
 // Dynamic pricing modal — loads plans from Supabase
 
 import { useState, useEffect } from 'react'
-import { Zap, X, Check, Loader2, Sparkles } from 'lucide-react'
+import { Zap, X, Check, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import type { CatalogItem } from '@/lib/supabase'
@@ -100,6 +100,13 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Falha na compra')
 
+      // Redireciona para o Stripe Checkout
+      if (json.url) {
+        window.location.href = json.url
+        return
+      }
+
+      // Fallback (mock mode em dev)
       refreshCredits((profile?.credits ?? 0) + selectedPackage.credits)
       setSuccess(true)
       triggerConfetti()
@@ -164,13 +171,6 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                   <X size={18} />
                 </button>
               </div>
-            </div>
-
-            {/* Mock badge */}
-            <div className="mx-6 mt-4 flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/20
-                            rounded-lg text-xs text-amber-300">
-              <Sparkles size={12} />
-              Simulação — sem cobrança real. Créditos adicionados instantaneamente.
             </div>
 
             {/* Packages - Only credit packages, not subscriptions */}
