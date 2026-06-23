@@ -553,6 +553,22 @@ export function PhotoCurator() {
     setSelected(new Set(filtered.map((r) => r.id)))
   }
 
+  // Agrupa fotos duplicatas do bucket (mesma URL = stack visual)
+  const bucketGrouped = useMemo(() => {
+    const groups: { masterUrl: string; count: number }[] = []
+    const seen = new Map<string, number>()
+    for (const url of bucketPhotos) {
+      const idx = seen.get(url)
+      if (idx !== undefined) {
+        groups[idx].count++
+      } else {
+        seen.set(url, groups.length)
+        groups.push({ masterUrl: url, count: 1 })
+      }
+    }
+    return groups
+  }, [bucketPhotos])
+
   if (profile && profile.role !== "sysadmin") {
     return <div className="p-8 text-center text-muted-foreground">Acesso restrito a administradores.</div>
   }
@@ -766,43 +782,62 @@ export function PhotoCurator() {
                   <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
                     Segure uma foto (✋) → procure arquivo → "Soltar aqui"
                   </p>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {bucketPhotos.map((url, idx) => {
-                      const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === url
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {bucketGrouped.map(({ masterUrl, count }, groupIdx) => {
+                      const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === masterUrl
                       return (
                         <div
-                          key={`bucket-${url}-${idx}`}
-                          draggable
-                          onDragStart={() => onDragStart(PHOTO_BUCKET_ID, url)}
-                          className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group cursor-grab active:cursor-grabbing ${
-                            isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
-                          }`}
+                          key={`bucket-group-${masterUrl}-${groupIdx}`}
+                          className="relative shrink-0"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
-                          <button
-                            onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url })}
-                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition hover:bg-primary/60"
-                            title="Segurar para associar"
+                          {/* Stack visual: múltiplas camadas */}
+                          {count > 1 && (
+                            <>
+                              <div className="absolute -bottom-1 -right-1 w-20 h-20 rounded-lg border-2 border-amber-400/40 bg-amber-500/5" />
+                              <div className="absolute -bottom-2 -right-2 w-20 h-20 rounded-lg border-2 border-amber-400/30 bg-amber-500/3" />
+                            </>
+                          )}
+                          {/* Foto principal (topo do stack) */}
+                          <div
+                            draggable
+                            onDragStart={() => onDragStart(PHOTO_BUCKET_ID, masterUrl)}
+                            className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
+                              isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
+                            }`}
                           >
-                            <Hand className="w-3 h-3 text-white" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (!confirm("Excluir?")) return
-                              setBucketPhotos((prev) => removeOneEach(prev, [url]))
-                              callApi({ action: "delete_photos", stl_id: PHOTO_BUCKET_ID, photo_urls: [url] })
-                                .catch((e: any) => {
-                                  setBucketPhotos((prev) => [...prev, url])
-                                  alert(`Erro: ${e.message}`)
-                                })
-                            }}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-xs"
-                            title="Excluir"
-                          >
-                            ✕
-                          </button>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={masterUrl} alt="" className="w-full h-full object-cover pointer-events-none" />
+                            <button
+                              onClick={() => setHeld({ stlId: PHOTO_BUCKET_ID, url: masterUrl })}
+                              className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition hover:bg-primary/60"
+                              title="Segurar para associar"
+                            >
+                              <Hand className="w-3 h-3 text-white" />
+                            </button>
+                            {/* Badge de contagem se houver duplicatas */}
+                            {count > 1 && (
+                              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                                {count}
+                              </span>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (!confirm(`Excluir ${count > 1 ? `todas as ${count} cópias` : 'esta foto'}?`)) return
+                                // Remove todas as cópias dessa URL
+                                setBucketPhotos((prev) => prev.filter(u => u !== masterUrl))
+                                callApi({ action: "delete_photos", stl_id: PHOTO_BUCKET_ID, photo_urls: bucketPhotos.filter(u => u === masterUrl) })
+                                  .catch((e: any) => {
+                                    setBucketPhotos((prev) => [...prev, ...bucketPhotos.filter(u => u === masterUrl)])
+                                    alert(`Erro: ${e.message}`)
+                                  })
+                              }}
+                              className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition text-xs"
+                              title="Excluir todas as cópias"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
                       )
                     })}
