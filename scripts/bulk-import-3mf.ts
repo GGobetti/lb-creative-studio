@@ -15,19 +15,42 @@
 import fs from 'fs'
 import path from 'path'
 import { createClient } from '@supabase/supabase-js'
-import { uploadFileToR2 } from '../src/lib/r2'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 
 const PACK_PATH = path.join(process.env.HOME || '/Users/ggobetti', 'Desktop/N3D - PACK PREMIUN')
 const DRY_RUN = process.argv.includes('--dry-run')
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const r2AccountId = process.env.R2_ACCOUNT_ID
+const r2AccessKeyId = process.env.R2_ACCESS_KEY_ID
+const r2SecretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+const r2Bucket = process.env.R2_BUCKET
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing SUPABASE env vars')
 }
 
+if (!r2AccountId || !r2AccessKeyId || !r2SecretAccessKey || !r2Bucket) {
+  throw new Error('Missing R2 env vars')
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey)
+
+// R2 client setup
+let r2Client: S3Client | undefined
+function getR2Client(): S3Client {
+  if (r2Client) return r2Client
+  r2Client = new S3Client({
+    region: 'auto',
+    endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: r2AccessKeyId!,
+      secretAccessKey: r2SecretAccessKey!,
+    },
+  })
+  return r2Client
+}
 
 interface ModelInfo {
   folderName: string
@@ -186,7 +209,13 @@ async function upload3mfToR2(
   }
 
   try {
-    await uploadFileToR2(filePath, objectKey)
+    const fileBuffer = fs.readFileSync(filePath)
+    const command = new PutObjectCommand({
+      Bucket: r2Bucket,
+      Key: objectKey,
+      Body: fileBuffer,
+    })
+    await getR2Client().send(command)
     console.log(`  ✓ .3mf uploaded: ${fileName}`)
     return objectKey
   } catch (error) {
