@@ -458,10 +458,12 @@ export function StlDetailsModal({
             <div className="flex-1 flex flex-col min-h-0">
               {/* Header */}
               <div className="shrink-0 mb-4">
-                <div className="inline-flex items-center gap-1.5 bg-muted border border-border text-muted-foreground text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full mb-2">
-                  <MessageSquare className="w-3 h-3 text-primary" />
-                  <span>{item.telegramGroupName}</span>
-                </div>
+                {isAdmin && item.telegramGroupName && (
+                  <div className="inline-flex items-center gap-1.5 bg-muted border border-border text-muted-foreground text-[10px] uppercase tracking-wider font-bold px-3 py-1 rounded-full mb-2">
+                    <MessageSquare className="w-3 h-3 text-primary" />
+                    <span>{item.telegramGroupName}</span>
+                  </div>
+                )}
                 <h2 className="text-xl md:text-2xl font-black text-foreground tracking-tight mb-4">
                   {item.title}
                 </h2>

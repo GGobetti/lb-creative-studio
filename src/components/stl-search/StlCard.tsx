@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
+import { useAppStore } from "@/store/store";
 
 interface StlCardProps {
   item: StlItem;
@@ -23,6 +24,8 @@ export function StlCard({
 }: StlCardProps) {
   const photos = item.photos && item.photos.length > 0 ? item.photos : [item.imageUrl].filter(Boolean);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const { profile } = useAppStore();
+  const isAdmin = profile?.role === "sysadmin";
 
   const handleNextPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -134,11 +137,13 @@ export function StlCard({
           {item.title}
         </h3>
         
-        {/* Source info */}
-        <div className="flex items-center gap-2 text-muted-foreground text-xs mt-auto mb-3">
-          <MessageSquare className="w-4 h-4 text-primary/70" />
-          <span className="truncate">{item.telegramGroupName}</span>
-        </div>
+        {/* Source info — visível apenas para admins */}
+        {isAdmin && item.telegramGroupName && (
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mt-auto mb-3">
+            <MessageSquare className="w-4 h-4 text-primary/70" />
+            <span className="truncate">{item.telegramGroupName}</span>
+          </div>
+        )}
 
         {/* Multi-part indicator */}
         {item.parts_count && item.parts_count > 0 ? (
