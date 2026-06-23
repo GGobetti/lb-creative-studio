@@ -15,6 +15,8 @@ interface StlRow {
   title: string | null
   file_name: string
   photos: string[] | null
+  telegram_group_name: string | null
+  created_at: string | null
 }
 
 type FilterMode = "all" | "suspicious" | "no_photo" | "unreviewed"
@@ -70,6 +72,28 @@ function hamming(a: string, b: string): number {
   return d
 }
 
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—"
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return "—"
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  })
+}
+
+// Diferença de tempo legível entre dois ISOs (ex.: "+30s", "-2min", "+1h")
+function relTime(fromIso: string | null, toIso: string | null): string {
+  if (!fromIso || !toIso) return ""
+  const diff = (new Date(toIso).getTime() - new Date(fromIso).getTime()) / 1000
+  const sign = diff >= 0 ? "+" : "−"
+  const abs = Math.abs(diff)
+  if (abs < 60) return `${sign}${Math.round(abs)}s`
+  if (abs < 3600) return `${sign}${Math.round(abs / 60)}min`
+  if (abs < 86400) return `${sign}${Math.round(abs / 3600)}h`
+  return `${sign}${Math.round(abs / 86400)}d`
+}
+
 export function PhotoCurator() {
   const { profile } = useAppStore(useShallow((s) => ({ profile: s.profile })))
   const [rows, setRows] = useState<StlRow[]>([])
@@ -115,7 +139,7 @@ export function PhotoCurator() {
       const supabase = getSupabaseBrowser()
       const { data, error } = await supabase
         .from("telegram_indexed_stls")
-        .select("id, title, file_name, photos")
+        .select("id, title, file_name, photos, telegram_group_name, created_at")
         .eq("is_deleted", false)
         .order("created_at", { ascending: true })
         .limit(2000)
@@ -191,6 +215,28 @@ export function PhotoCurator() {
   const patchRowPhotos = useCallback((id: string, photos: string[]) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, photos } : r)))
   }, [])
+
+  /* ---------- sugestões de destino (vizinhos temporais da foto segurada) ----------
+   * Uma foto mal-associada quase sempre pertence a um arquivo indexado no mesmo
+   * "burst" do scraping. Então, dado o arquivo de origem da foto segurada,
+   * sugerimos os arquivos com created_at mais próximo (excluindo a própria origem). */
+  const suggestions = useMemo(() => {
+    if (!held) return []
+    const source = rows.find((r) => r.id === held.stlId)
+    if (!source?.created_at) return []
+    const t0 = new Date(source.created_at).getTime()
+    return rows
+      .filter((r) => r.id !== held.stlId && r.created_at)
+      .map((r) => ({ row: r, diff: Math.abs(new Date(r.created_at!).getTime() - t0) }))
+      .sort((a, b) => a.diff - b.diff)
+      .slice(0, 4)
+      .map((x) => x.row)
+  }, [held, rows])
+
+  const heldSource = useMemo(
+    () => (held ? rows.find((r) => r.id === held.stlId) || null : null),
+    [held, rows]
+  )
 
   /* ---------- mover foto (compartilhado por drag&drop e "soltar aqui") ---------- */
   const movePhoto = useCallback(async (fromStlId: string, toStlId: string, url: string) => {
@@ -433,7 +479,21 @@ export function PhotoCurator() {
                   <p className="text-sm font-medium break-words leading-tight" title={row.file_name}>
                     {row.title || row.file_name}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{photos.length} foto(s)</p>
+                  <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                    <p>{photos.length} foto(s)</p>
+                    {row.telegram_group_name && (
+                      <p className="truncate" title={row.telegram_group_name}>
+                        📡 {row.telegram_group_name}
+                      </p>
+                    )}
+                    <p title={row.created_at || ""}>🕒 {formatDateTime(row.created_at)}</p>
+                    {/* proximidade em relação à foto segurada */}
+                    {held && heldSource && held.stlId !== row.id && (
+                      <p className="text-primary/80">
+                        ⏱ {relTime(heldSource.created_at, row.created_at)} da origem
+                      </p>
+                    )}
+                  </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
                     <button
@@ -569,23 +629,50 @@ export function PhotoCurator() {
 
       {/* Bandeja flutuante: foto segurada aguardando destino */}
       {held && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary bg-background/95 backdrop-blur shadow-2xl">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={held.url} alt="" className="w-12 h-12 rounded-lg object-cover border border-border" />
-          <div className="text-sm">
-            <p className="font-medium flex items-center gap-1.5">
-              <Hand className="w-4 h-4 text-primary" /> Foto segurada
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Busque o arquivo de destino e clique <span className="text-primary font-medium">“Soltar aqui”</span>
-            </p>
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 max-w-[92vw] flex flex-col gap-2 px-4 py-3 rounded-2xl border border-primary bg-background/95 backdrop-blur shadow-2xl">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={held.url} alt="" className="w-12 h-12 rounded-lg object-cover border border-border shrink-0" />
+            <div className="text-sm min-w-0">
+              <p className="font-medium flex items-center gap-1.5">
+                <Hand className="w-4 h-4 text-primary" /> Foto segurada
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Clique numa sugestão abaixo, ou busque o destino e clique <span className="text-primary font-medium">“Soltar aqui”</span>
+              </p>
+            </div>
+            <button
+              onClick={() => setHeld(null)}
+              className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm shrink-0"
+            >
+              <X className="w-4 h-4" /> Cancelar
+            </button>
           </div>
-          <button
-            onClick={() => setHeld(null)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm"
-          >
-            <X className="w-4 h-4" /> Cancelar
-          </button>
+
+          {/* Sugestões por proximidade temporal */}
+          {suggestions.length > 0 && (
+            <div className="border-t border-border pt-2">
+              <p className="text-[11px] text-muted-foreground mb-1.5">
+                Sugestões (indexados em horário próximo):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => dropHeldOn(s.id)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/15 text-xs max-w-[260px]"
+                    title={s.file_name}
+                  >
+                    <ArrowDownToLine className="w-3 h-3 text-primary shrink-0" />
+                    <span className="truncate">{s.title || s.file_name}</span>
+                    <span className="text-primary/70 tabular-nums shrink-0">
+                      {relTime(heldSource?.created_at || null, s.created_at)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
