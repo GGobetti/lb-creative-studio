@@ -2,8 +2,9 @@
 // Cliente Cloudflare R2 (S3-compatível) — usado server-side para gerar presigned URLs de download.
 // Ver ARCHITECTURE.md §6 e docs/superpowers/specs/2026-06-21-download-proxy-design.md
 
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import fs from 'fs'
 
 const accountId = process.env.R2_ACCOUNT_ID
 const accessKeyId = process.env.R2_ACCESS_KEY_ID
@@ -47,4 +48,21 @@ export async function getR2DownloadUrl(
       : {}),
   })
   return getSignedUrl(getR2Client(), command, { expiresIn: expiresInSeconds })
+}
+
+/**
+ * Faz upload de um arquivo para o R2 (server-side).
+ * `filePath` é o caminho local do arquivo.
+ * `objectKey` é onde salvar no bucket (ex: `stl/pokemon/0064-kadabra.3mf`).
+ * Retorna a chave do objeto se sucesso, lança erro caso contrário.
+ */
+export async function uploadFileToR2(filePath: string, objectKey: string): Promise<string> {
+  const fileBuffer = fs.readFileSync(filePath)
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: objectKey,
+    Body: fileBuffer,
+  })
+  await getR2Client().send(command)
+  return objectKey
 }
