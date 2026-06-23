@@ -752,13 +752,9 @@ export function PhotoCurator() {
         </div>
       )}
 
-        </div>
-
-        {/* Coluna direita: bucket (hidden em md-, flex em lg+) */}
-        {(bucketPhotos.length > 0 || bucketOpen) && (
-          <div className="hidden lg:block">
-            {/* Caixinha de fotos órfãs — sticky no topo da coluna direita */}
-            <div className="sticky top-0 z-20 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
+      {/* Caixinha de fotos órfãs */}
+      {(bucketPhotos.length > 0 || bucketOpen) && (
+        <div className="sticky top-[56px] z-20 mb-4 rounded-xl border border-amber-500/40 bg-amber-500/5 backdrop-blur-sm">
           <button
             onClick={() => setBucketOpen((o) => !o)}
             className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-amber-600 dark:text-amber-400"
@@ -782,7 +778,7 @@ export function PhotoCurator() {
                   <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
                     Segure uma foto (✋) → procure arquivo → "Soltar aqui"
                   </p>
-                  <div className="flex gap-3 overflow-x-auto pb-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
                     {bucketGrouped.map(({ masterUrl, count }, groupIdx) => {
                       const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === masterUrl
                       return (
@@ -790,18 +786,16 @@ export function PhotoCurator() {
                           key={`bucket-group-${masterUrl}-${groupIdx}`}
                           className="relative shrink-0"
                         >
-                          {/* Stack visual: múltiplas camadas */}
                           {count > 1 && (
                             <>
                               <div className="absolute -bottom-1 -right-1 w-20 h-20 rounded-lg border-2 border-amber-400/40 bg-amber-500/5" />
                               <div className="absolute -bottom-2 -right-2 w-20 h-20 rounded-lg border-2 border-amber-400/30 bg-amber-500/3" />
                             </>
                           )}
-                          {/* Foto principal (topo do stack) */}
                           <div
                             draggable
                             onDragStart={() => onDragStart(PHOTO_BUCKET_ID, masterUrl)}
-                            className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
+                            className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 group cursor-grab active:cursor-grabbing z-10 ${
                               isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
                             }`}
                           >
@@ -814,7 +808,6 @@ export function PhotoCurator() {
                             >
                               <Hand className="w-3 h-3 text-white" />
                             </button>
-                            {/* Badge de contagem se houver duplicatas */}
                             {count > 1 && (
                               <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
                                 {count}
@@ -824,7 +817,6 @@ export function PhotoCurator() {
                               onClick={(e) => {
                                 e.stopPropagation()
                                 if (!confirm(`Excluir ${count > 1 ? `todas as ${count} cópias` : 'esta foto'}?`)) return
-                                // Remove todas as cópias dessa URL
                                 setBucketPhotos((prev) => prev.filter(u => u !== masterUrl))
                                 callApi({ action: "delete_photos", stl_id: PHOTO_BUCKET_ID, photo_urls: bucketPhotos.filter(u => u === masterUrl) })
                                   .catch((e: any) => {
@@ -846,10 +838,8 @@ export function PhotoCurator() {
               )}
             </div>
           )}
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Lista */}
       {loading ? (
