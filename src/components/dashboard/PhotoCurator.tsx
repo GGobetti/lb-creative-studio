@@ -128,45 +128,74 @@ export function PhotoCurator() {
   const [bucketPhotos, setBucketPhotos] = useState<string[]>([])
   const [bucketOpen, setBucketOpen] = useState(false)
 
-  /* ---------- carregar reviewed do localStorage ---------- */
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const saved = localStorage.getItem(REVIEWED_KEY)
-    if (saved) {
-      try { setReviewed(new Set(JSON.parse(saved))) } catch {}
-    }
-  }, [])
-
   const persistReviewed = useCallback((next: Set<string>) => {
     setReviewed(next)
     if (typeof window !== "undefined") {
       localStorage.setItem(REVIEWED_KEY, JSON.stringify([...next]))
     }
-    // Sincronizar com Supabase: marcar quais foram validadas
-    syncReviewedToSupabase([...next]).catch(e => console.error("Erro ao sincronizar validações:", e))
   }, [])
 
-  const syncReviewedToSupabase = useCallback(async (reviewedIds: string[]) => {
-    try {
+  // Ao montar: merge localStorage + BD, com localStorage tendo prioridade na migração
+  useEffect(() => {
+    const syncReviewed = async () => {
       const supabase = getSupabaseBrowser()
-      const now = new Date().toISOString()
-      // Para cada ID validado, marca reviewed_at se ainda não estiver marcado
-      for (const id of reviewedIds) {
-        const { data: existing } = await supabase
-          .from("telegram_indexed_stls")
-          .select("reviewed_at")
-          .eq("id", id)
-          .single()
-        // Só marca se ainda não foi marcado
-        if (!existing?.reviewed_at) {
+
+      // 1. Lê o que está no localStorage (validações feitas antes do BD existir)
+      let localIds: string[] = []
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem(REVIEWED_KEY)
+        if (saved) {
+          try { localIds = JSON.parse(saved) } catch {}
+        }
+      }
+
+      // 2. Lê o que está no BD
+      const { data: dbRows } = await supabase
+        .from("telegram_indexed_stls")
+        .select("id")
+        .eq("is_deleted", false)
+        .neq("id", PHOTO_BUCKET_ID)
+        .not("reviewed_at", "is", null)
+      const dbIds = (dbRows || []).map((r: any) => r.id as string)
+
+      // 3. Une os dois (sem duplicatas)
+      const merged = new Set([...dbIds, ...localIds])
+
+      // 4. Migra para o BD os que só estavam no localStorage
+      const onlyInLocal = localIds.filter(id => !dbIds.includes(id))
+      if (onlyInLocal.length > 0) {
+        const now = new Date().toISOString()
+        // Atualiza em chunks para não estourar limite de query
+        const CHUNK = 50
+        for (let i = 0; i < onlyInLocal.length; i += CHUNK) {
+          const chunk = onlyInLocal.slice(i, i + CHUNK)
           await supabase
             .from("telegram_indexed_stls")
             .update({ reviewed_at: now })
-            .eq("id", id)
+            .in("id", chunk)
         }
       }
-    } catch (err) {
-      console.error("Erro ao sincronizar reviewed com Supabase:", err)
+
+      // 5. Aplica o merged no estado (sem chamar persistReviewed para evitar loop)
+      setReviewed(merged)
+      if (typeof window !== "undefined") {
+        localStorage.setItem(REVIEWED_KEY, JSON.stringify([...merged]))
+      }
+    }
+
+    syncReviewed().catch(e => console.error("Erro ao sincronizar validações:", e))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const markReviewedInDb = useCallback(async (ids: string[], reviewed: boolean) => {
+    const supabase = getSupabaseBrowser()
+    const now = reviewed ? new Date().toISOString() : null
+    const CHUNK = 50
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const chunk = ids.slice(i, i + CHUNK)
+      await supabase
+        .from("telegram_indexed_stls")
+        .update({ reviewed_at: now })
+        .in("id", chunk)
     }
   }, [])
 
@@ -205,25 +234,6 @@ export function PhotoCurator() {
 
   useEffect(() => { fetchRows(); fetchBucket() }, [fetchRows, fetchBucket])
 
-  // Carregar validações do BD ao montar
-  useEffect(() => {
-    const loadReviewedFromDb = async () => {
-      try {
-        const supabase = getSupabaseBrowser()
-        const { data } = await supabase
-          .from("telegram_indexed_stls")
-          .select("id")
-          .eq("is_deleted", false)
-          .neq("id", PHOTO_BUCKET_ID)
-          .not("reviewed_at", "is", null)
-        const reviewedIds = (data || []).map((r: any) => r.id)
-        persistReviewed(new Set(reviewedIds))
-      } catch (err) {
-        console.error("Erro ao carregar validações do BD:", err)
-      }
-    }
-    loadReviewedFromDb()
-  }, [persistReviewed])
 
   /* ---------- token helper p/ chamadas admin ---------- */
   const getToken = useCallback(async () => {
@@ -579,19 +589,23 @@ export function PhotoCurator() {
   /* ---------- validar (marcar revisado) ---------- */
   const toggleReviewed = (stlId: string) => {
     const next = new Set(reviewed)
-    if (next.has(stlId)) next.delete(stlId)
-    else next.add(stlId)
+    const isReviewing = !next.has(stlId)
+    if (isReviewing) next.add(stlId)
+    else next.delete(stlId)
     persistReviewed(next)
+    markReviewedInDb([stlId], isReviewing).catch(e => console.error("Erro ao marcar reviewed:", e))
   }
 
   // valida/invalida em massa os selecionados
   const bulkSetReviewed = (value: boolean) => {
     const next = new Set(reviewed)
-    for (const id of selected) {
+    const ids = [...selected]
+    for (const id of ids) {
       if (value) next.add(id)
       else next.delete(id)
     }
     persistReviewed(next)
+    markReviewedInDb(ids, value).catch(e => console.error("Erro ao marcar reviewed em massa:", e))
     clearSelection()
   }
 
