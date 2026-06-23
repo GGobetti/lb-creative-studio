@@ -1133,21 +1133,21 @@ export function PhotoCurator() {
                   ) : (
                     <>
                       <p className="text-xs text-muted-foreground mb-2">Segure (✋) → busque o arquivo → "Soltar aqui"</p>
-                      <div className="flex flex-col gap-3 pb-2">
+                      <div className="grid grid-cols-3 gap-2 pb-2">
                         {bucketGrouped.map(({ masterUrl, count }, groupIdx) => {
                           const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === masterUrl
                           return (
                             <div key={`bucket-lg-${groupIdx}`} className="relative">
                               {count > 1 && (
                                 <>
-                                  <div className="absolute -bottom-1 -right-1 w-20 h-20 rounded-lg border-2 border-amber-400/40 bg-amber-500/5" />
-                                  <div className="absolute -bottom-2 -right-2 w-20 h-20 rounded-lg border-2 border-amber-400/20" />
+                                  <div className="absolute -bottom-1 -right-1 inset-0 rounded-lg border-2 border-amber-400/40 bg-amber-500/5" />
+                                  <div className="absolute -bottom-2 -right-2 inset-0 rounded-lg border-2 border-amber-400/20" />
                                 </>
                               )}
                               <div
                                 draggable
                                 onDragStart={() => onDragStart(PHOTO_BUCKET_ID, masterUrl)}
-                                className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
+                                className={`relative w-full aspect-square rounded-lg overflow-hidden border-2 group cursor-grab active:cursor-grabbing z-10 ${
                                   isHeld ? "border-primary ring-2 ring-primary/60 opacity-60" : "border-amber-400/60"
                                 }`}
                               >
@@ -1158,7 +1158,7 @@ export function PhotoCurator() {
                                   className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition"
                                   title="Segurar para associar"
                                 >
-                                  <Hand className="w-3 h-3 text-white" />
+                                  <Hand className="w-4 h-4 text-white" />
                                 </button>
                                 {count > 1 && (
                                   <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
