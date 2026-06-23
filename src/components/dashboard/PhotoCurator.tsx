@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow"
 import {
   RefreshCw, Loader2, Trash2, Check, ScanSearch, X,
   ImageOff, AlertTriangle, Search as SearchIcon,
+  Hand, ArrowDownToLine,
 } from "lucide-react"
 
 interface StlRow {
@@ -86,6 +87,10 @@ export function PhotoCurator() {
   // Drag state
   const dragData = useRef<{ stlId: string; url: string } | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+
+  // "Segurar foto": pega uma foto, busca o destino, solta — funciona entre
+  // buscas/páginas (origem e destino não precisam estar visíveis juntos).
+  const [held, setHeld] = useState<{ stlId: string; url: string } | null>(null)
 
   /* ---------- carregar reviewed do localStorage ---------- */
   useEffect(() => {
@@ -187,6 +192,32 @@ export function PhotoCurator() {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, photos } : r)))
   }, [])
 
+  /* ---------- mover foto (compartilhado por drag&drop e "soltar aqui") ---------- */
+  const movePhoto = useCallback(async (fromStlId: string, toStlId: string, url: string) => {
+    if (fromStlId === toStlId) return
+    const fromRow = rows.find((r) => r.id === fromStlId)
+    const toRow = rows.find((r) => r.id === toStlId)
+    if (!fromRow || !toRow) return
+
+    // otimista
+    const fromPhotos = (fromRow.photos || []).filter((p) => p !== url)
+    const toPhotos = toRow.photos?.includes(url)
+      ? [...(toRow.photos || [])]
+      : [...(toRow.photos || []), url]
+    patchRowPhotos(fromStlId, fromPhotos)
+    patchRowPhotos(toStlId, toPhotos)
+
+    try {
+      await callApi({ action: "move_photo", from_stl_id: fromStlId, to_stl_id: toStlId, photo_url: url })
+    } catch (e: any) {
+      console.error("Falha ao mover foto:", e)
+      // rollback
+      patchRowPhotos(fromStlId, fromRow.photos || [])
+      patchRowPhotos(toStlId, toRow.photos || [])
+      alert(`Erro ao mover foto: ${e.message}`)
+    }
+  }, [rows, patchRowPhotos, callApi])
+
   /* ---------- drag & drop ---------- */
   const onDragStart = (stlId: string, url: string) => {
     dragData.current = { stlId, url }
@@ -195,29 +226,16 @@ export function PhotoCurator() {
     const drag = dragData.current
     dragData.current = null
     setDropTarget(null)
-    if (!drag || drag.stlId === targetStlId) return
+    if (!drag) return
+    await movePhoto(drag.stlId, targetStlId, drag.url)
+  }
 
-    const fromRow = rows.find((r) => r.id === drag.stlId)
-    const toRow = rows.find((r) => r.id === targetStlId)
-    if (!fromRow || !toRow) return
-
-    // otimista
-    const fromPhotos = (fromRow.photos || []).filter((p) => p !== drag.url)
-    const toPhotos = toRow.photos?.includes(drag.url)
-      ? [...(toRow.photos || [])]
-      : [...(toRow.photos || []), drag.url]
-    patchRowPhotos(drag.stlId, fromPhotos)
-    patchRowPhotos(targetStlId, toPhotos)
-
-    try {
-      await callApi({ action: "move_photo", from_stl_id: drag.stlId, to_stl_id: targetStlId, photo_url: drag.url })
-    } catch (e: any) {
-      console.error("Falha ao mover foto:", e)
-      // rollback
-      patchRowPhotos(drag.stlId, fromRow.photos || [])
-      patchRowPhotos(targetStlId, toRow.photos || [])
-      alert(`Erro ao mover foto: ${e.message}`)
-    }
+  /* ---------- "soltar aqui" (foto segurada) ---------- */
+  const dropHeldOn = async (targetStlId: string) => {
+    if (!held) return
+    const h = held
+    setHeld(null)
+    await movePhoto(h.stlId, targetStlId, h.url)
   }
 
   /* ---------- excluir foto única ---------- */
@@ -437,6 +455,14 @@ export function PhotoCurator() {
                         ? <Loader2 className="w-3 h-3 animate-spin" />
                         : <ScanSearch className="w-3 h-3" />} Duplicatas
                     </button>
+                    {held && held.stlId !== row.id && (
+                      <button
+                        onClick={() => dropHeldOn(row.id)}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-primary bg-primary/10 text-primary hover:bg-primary/20 animate-pulse"
+                      >
+                        <ArrowDownToLine className="w-3 h-3" /> Soltar aqui
+                      </button>
+                    )}
                   </div>
 
                   {/* Barra de confirmação de duplicatas */}
@@ -466,33 +492,46 @@ export function PhotoCurator() {
                 </div>
 
                 {/* Coluna: fotos */}
-                <div className="flex-1 flex flex-wrap gap-2 min-h-[80px]">
+                <div className="flex-1 flex flex-wrap gap-3 min-h-[128px]">
                   {photos.length === 0 ? (
                     <div className="flex items-center gap-2 text-muted-foreground text-sm self-center">
-                      <ImageOff className="w-4 h-4" /> Sem fotos — arraste uma para cá
+                      <ImageOff className="w-4 h-4" /> Sem fotos — arraste ou solte uma aqui
                     </div>
                   ) : (
                     photos.map((url) => {
                       const marked = marks?.has(url)
+                      const isHeld = held?.stlId === row.id && held?.url === url
                       return (
                         <div
                           key={url}
                           draggable
                           onDragStart={() => onDragStart(row.id, url)}
                           onClick={() => marks && toggleMark(row.id, url)}
-                          className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 cursor-grab active:cursor-grabbing group ${
-                            marked ? "border-destructive ring-2 ring-destructive/50" : "border-transparent"
+                          className={`relative w-32 h-32 rounded-lg overflow-hidden border-2 cursor-grab active:cursor-grabbing group ${
+                            marked
+                              ? "border-destructive ring-2 ring-destructive/50"
+                              : isHeld
+                                ? "border-primary ring-2 ring-primary/60 opacity-60"
+                                : "border-transparent"
                           }`}
-                          title={marks ? "Clique para des/marcar" : "Arraste para outro arquivo"}
+                          title={marks ? "Clique para des/marcar" : "Arraste para outro arquivo, ou use ✋ para segurar"}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
+                          {/* Segurar foto (move entre buscas/páginas) */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setHeld({ stlId: row.id, url }) }}
+                            className="absolute top-1 left-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-primary"
+                            title="Segurar foto p/ mover (busque o destino e clique 'Soltar aqui')"
+                          >
+                            <Hand className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteSinglePhoto(row.id, url) }}
-                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-destructive"
                             title="Excluir foto"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       )
@@ -524,6 +563,28 @@ export function PhotoCurator() {
             className="px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm disabled:opacity-40"
           >
             Próxima
+          </button>
+        </div>
+      )}
+
+      {/* Bandeja flutuante: foto segurada aguardando destino */}
+      {held && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border border-primary bg-background/95 backdrop-blur shadow-2xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={held.url} alt="" className="w-12 h-12 rounded-lg object-cover border border-border" />
+          <div className="text-sm">
+            <p className="font-medium flex items-center gap-1.5">
+              <Hand className="w-4 h-4 text-primary" /> Foto segurada
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Busque o arquivo de destino e clique <span className="text-primary font-medium">“Soltar aqui”</span>
+            </p>
+          </div>
+          <button
+            onClick={() => setHeld(null)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-sm"
+          >
+            <X className="w-4 h-4" /> Cancelar
           </button>
         </div>
       )}
