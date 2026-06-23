@@ -441,6 +441,22 @@ export function PhotoCurator() {
     persistReviewed(next)
   }
 
+  // valida/invalida em massa os selecionados
+  const bulkSetReviewed = (value: boolean) => {
+    const next = new Set(reviewed)
+    for (const id of selected) {
+      if (value) next.add(id)
+      else next.delete(id)
+    }
+    persistReviewed(next)
+    clearSelection()
+  }
+
+  // seleciona/limpa todos os filtrados (não só a página atual)
+  const selectAllFiltered = () => {
+    setSelected(new Set(filtered.map((r) => r.id)))
+  }
+
   if (profile && profile.role !== "sysadmin") {
     return <div className="p-8 text-center text-muted-foreground">Acesso restrito a administradores.</div>
   }
@@ -499,16 +515,34 @@ export function PhotoCurator() {
         </div>
       </div>
 
-      {/* Barra de merge (quando há seleção) */}
+      {/* Barra de ações em massa (sticky — acompanha o scroll) */}
       {selected.size > 0 && (
-        <div className="mb-4 rounded-xl border border-primary/40 bg-primary/5 p-3">
+        <div className="sticky top-0 z-30 mb-4 rounded-xl border border-primary/40 bg-background/95 backdrop-blur shadow-lg p-3">
           <div className="flex flex-wrap items-center gap-2">
             <Combine className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">{selected.size} selecionado(s)</span>
-            {selected.size < 2 ? (
-              <span className="text-xs text-muted-foreground">Selecione +1 arquivo para mesclar.</span>
-            ) : (
-              <span className="text-xs text-muted-foreground">Escolha o arquivo principal abaixo:</span>
+
+            <button
+              onClick={() => bulkSetReviewed(true)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs border border-success/40 bg-success/10 text-success hover:bg-success/20"
+            >
+              <Check className="w-3 h-3" /> Validar selecionados
+            </button>
+            <button
+              onClick={() => bulkSetReviewed(false)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs border border-border hover:bg-muted"
+            >
+              <X className="w-3 h-3" /> Remover validação
+            </button>
+            <button
+              onClick={selectAllFiltered}
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs border border-border hover:bg-muted"
+            >
+              <CheckSquare className="w-3 h-3" /> Selecionar todos ({filtered.length})
+            </button>
+
+            {selected.size >= 2 && (
+              <span className="text-xs text-muted-foreground">· escolha o principal p/ mesclar:</span>
             )}
             <button
               onClick={clearSelection}
@@ -518,8 +552,14 @@ export function PhotoCurator() {
             </button>
           </div>
 
-          {selected.size >= 2 && (
-            <div className="mt-3 space-y-1.5">
+          {selected.size > 8 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Merge fica disponível com até 8 selecionados. Para validar em massa, use o botão acima.
+            </p>
+          )}
+
+          {selected.size >= 2 && selected.size <= 8 && (
+            <div className="mt-3 space-y-1.5 max-h-[40vh] overflow-y-auto">
               {[...selected].map((id) => {
                 const r = rows.find((x) => x.id === id)
                 if (!r) return null
