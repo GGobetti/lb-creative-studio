@@ -1133,7 +1133,7 @@ export function PhotoCurator() {
                   ) : (
                     <>
                       <p className="text-xs text-muted-foreground mb-2">Segure (✋) → busque o arquivo → "Soltar aqui"</p>
-                      <div className="grid grid-cols-3 gap-2 pb-2">
+                      <div className="grid grid-cols-2 gap-3 pb-2">
                         {bucketGrouped.map(({ masterUrl, count }, groupIdx) => {
                           const isHeld = held?.stlId === PHOTO_BUCKET_ID && held?.url === masterUrl
                           return (
