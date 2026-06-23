@@ -438,7 +438,7 @@ export function PortfolioClient() {
       {/* Standalone Calculator Modal */}
       <Dialog.Root open={isStandaloneCalcOpen} onOpenChange={setIsStandaloneCalcOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />
+          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-5xl translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl">
             <Dialog.Title className="sr-only">Calculadora de Preço</Dialog.Title>
             <PricingCalculator isStandalone={true} />
@@ -454,7 +454,7 @@ export function PortfolioClient() {
       {/* Selected Item Calculator Modal */}
       <Dialog.Root open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />
+          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-5xl translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl">
             <Dialog.Title className="sr-only">Precificar Modelo</Dialog.Title>
             {selectedItem && (
@@ -482,7 +482,7 @@ export function PortfolioClient() {
         }
       }}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />
+          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-hidden rounded-2xl bg-card border border-border shadow-2xl flex flex-col">
             {viewingItem && (() => {
               const pictures = getItemPictures(viewingItem)
@@ -729,7 +729,7 @@ export function PortfolioClient() {
       {/* CREATE MANUAL ITEM MODAL */}
       <Dialog.Root open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />
+          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <Dialog.Title className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -893,7 +893,7 @@ export function PortfolioClient() {
       {/* EDIT ITEM MODAL */}
       <Dialog.Root open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 animate-in fade-in" />
+          <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <Dialog.Title className="text-lg font-bold text-foreground flex items-center gap-2">

@@ -260,7 +260,7 @@ export function PhotoMatch() {
           whileTap={{ scale: 0.97 }}
           className="w-full py-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent hover:bg-muted/40 font-medium text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Pular (sem pontos)
+          Pular
         </motion.button>
       </div>
 
