@@ -9,32 +9,24 @@
 - [ ] Reviews & ratings de STLs
 
 ### Curação Gamificada (Community Moderation)
-- [ ] **Photo Match**: validar foto vs STL
-  - Payout: +10 créditos/acerto
-  - Rejeita automaticamente se N discordam
-  
-- [ ] **Category Classifier**: agrupar STLs por tipo
-  - Payout: +25 créditos/completa (maior valor = maior engajamento)
-  - Categorias: Sports, Décor, Tools, Jewelry, Figurines, Functional, Other
-  
-- [ ] **Tag Detective**: validar/sugerir hashtags
-  - Payout: +5 créditos/acerto
-  - Remove spam, adiciona tags faltantes
-  
-- [ ] **Quality Audit**: checklist de STL (descrição, imagem, sem erros)
-  - Payout: +15 créditos/aprovação
-  - Requer análise detalhada
+- ✅ **Photo Match**: validar foto vs STL — votação real, +10 créditos/acerto
+- ✅ **Category Classifier**: agrupar STLs por tipo — votação real, +25 créditos
+- ✅ **Tag Detective**: validar/sugerir hashtags — votação real, +5 créditos
+- ✅ **Quality Audit**: checklist STL com sugestões cooperativas — +15 créditos
 
 ### Gamificação & Engagement
-- [ ] Badge system (Bronze/Silver/Gold/Diamond)
-- [ ] Daily streak bonus (2x multiplier)
-- [ ] Leaderboard semanal (top curators)
-- [ ] User dashboard: creditos ganhos, badges, progresso
+- ✅ Badge system (Bronze/Silver/Gold/Diamond) — configurável via admin
+- ✅ XP system com leaderboard (XpConfigPanel, GamesLimitsPanel)
+- ✅ User dashboard: créditos ganhos, badges, XP, gráfico ECharts
+- [ ] Daily streak bonus (2x multiplier) — pendente
+- [ ] Leaderboard semanal público — pendente
 
 ### Monetização P0
-- [ ] Afiliados de filamentos (comissão padrão marketplace)
-- [ ] Crédito = moeda interna (1 crédito = R$ [TBD])
-- [ ] Resgatar créditos em filamentos/produtos afiliados
+- ✅ Créditos avulsos (Pacote 50/200/500) via Stripe
+- ✅ Assinaturas Pro (R$29,90/mês = 100cr) e Max (R$79,90/mês = 250cr) via Stripe
+- ✅ Stripe Webhook em produção (checkout.session.completed + invoice.paid)
+- ✅ Afiliados de filamentos — módulo implementado
+- [ ] Resgatar créditos em filamentos/produtos afiliados — pendente
 
 ### Métricas P0
 - DAU (Daily Active Users)
