@@ -105,6 +105,45 @@ export function AcervoTab() {
     }
   }
 
+  const handleBanPhoto = async (modelId: string, photoIndex: number) => {
+    try {
+      const model = indexedModels.find(m => m.id === modelId)
+      if (!model?.photos?.[photoIndex]) return
+      const photoUrl = model.photos[photoIndex]
+
+      const supabase = getSupabaseBrowser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error("Sessão não encontrada")
+
+      const hash = await getPerceptualHash(photoUrl)
+      const res = await fetch("/api/telegram/banned-images", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ image_hash: hash, image_url: photoUrl })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as any).error || `HTTP ${res.status}`)
+      }
+
+      // Remove a foto do STL também
+      const newPhotos = [...model.photos]
+      newPhotos.splice(photoIndex, 1)
+      const { error: updateError } = await supabase.from("telegram_indexed_stls").update({ photos: newPhotos }).eq("id", modelId)
+      if (updateError) throw updateError
+
+      setIndexedModels(prev => prev.map(m => m.id === modelId ? { ...m, photos: newPhotos } : m))
+      if (selectedIndexedModel?.id === modelId) {
+        setSelectedIndexedModel({ ...selectedIndexedModel, photos: newPhotos })
+        if (activePhotoIndex >= newPhotos.length) setActivePhotoIndex(Math.max(0, newPhotos.length - 1))
+      }
+      alert("✅ Foto banida globalmente e removida do STL.")
+    } catch (err: any) {
+      alert(`Erro ao banir foto: ${err.message}`)
+    }
+  }
+
   const handleMarkAsReviewed = async (modelId: string) => {
     try {
       const supabase = getSupabaseBrowser()
@@ -263,12 +302,20 @@ export function AcervoTab() {
                           </div>
                         </>
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm("Excluir apenas esta foto do modelo?")) handleRemovePhoto(selectedIndexedModel.id, activePhotoIndex) }}
-                        className="absolute top-4 left-4 bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md"
-                      >
-                        Excluir Foto Atual
-                      </button>
+                      <div className="absolute top-4 left-4 flex flex-col gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); if (confirm("Banir esta foto globalmente (não aparecerá em STLs futuros)?")) handleBanPhoto(selectedIndexedModel.id, activePhotoIndex) }}
+                          className="bg-red-700/90 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md"
+                        >
+                          🚫 Banir Foto
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); if (confirm("Excluir apenas esta foto do modelo?")) handleRemovePhoto(selectedIndexedModel.id, activePhotoIndex) }}
+                          className="bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md"
+                        >
+                          🗑️ Excluir Foto
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center text-muted-foreground gap-3">
