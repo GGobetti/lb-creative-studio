@@ -276,6 +276,21 @@ function SuggestionCards({ suggestions, onApply, onReject, loading }: {
   )
 }
 
+// ─── Types ─── (Pre-approved title queue) ────────────────────────────────────
+
+interface PreApprovedSuggestion {
+  id: string
+  stl_id: string
+  suggested_title: string
+  upvote_count: number
+  created_at: string
+  stl: {
+    id: string
+    title: string
+    photos: string[]
+  } | null
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AuditTab() {
@@ -287,11 +302,14 @@ export function AuditTab() {
   const [signals, setSignals]         = useState<Signals | null>(null)
   const [signalsLoading, setSignalsLoading] = useState(false)
   const [actionLoading, setActionLoading]   = useState<string | null>(null)
+  const [preTitleQueue, setPreTitleQueue]   = useState<PreApprovedSuggestion[]>([])
+  const [titleActionLoading, setTitleActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
     getSupabaseBrowser().auth.getSession().then((res: any) => {
       accessTokenRef.current = res.data.session?.access_token ?? null
       loadQueue()
+      loadPreTitleQueue()
     })
   }, [])
 
@@ -299,6 +317,52 @@ export function AuditTab() {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${accessTokenRef.current}`,
   })
+
+  const loadPreTitleQueue = useCallback(async () => {
+    const supabase = getSupabaseBrowser()
+    const { data } = await supabase
+      .from('stl_audit_suggestions')
+      .select(`
+        id,
+        stl_id,
+        suggested_title,
+        upvote_count,
+        created_at,
+        stl:telegram_indexed_stls!inner(id, title, photos)
+      `)
+      .eq('status', 'pre_approved')
+      .order('upvote_count', { ascending: false })
+      .limit(50)
+    setPreTitleQueue((data as unknown as PreApprovedSuggestion[]) || [])
+  }, [])
+
+  const handleTitleAction = useCallback(async (suggestionId: string, action: 'apply' | 'reject') => {
+    setTitleActionLoading(suggestionId)
+    try {
+      // Optimistic removal
+      setPreTitleQueue((prev) => prev.filter((i) => i.id !== suggestionId))
+
+      const res = await fetch('/api/admin/apply-title-suggestion', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ suggestion_id: suggestionId, action }),
+      })
+
+      if (!res.ok) {
+        // Rollback on failure — re-fetch
+        loadPreTitleQueue()
+        console.error('[TITLE-ACTION] Failed:', await res.json())
+      } else {
+        // Background refresh to sync any other changes
+        loadPreTitleQueue()
+      }
+    } catch (e) {
+      console.error('[TITLE-ACTION]', e)
+      loadPreTitleQueue()
+    } finally {
+      setTitleActionLoading(null)
+    }
+  }, [loadPreTitleQueue])
 
   const loadQueue = useCallback(async () => {
     setQueueLoading(true)
@@ -364,6 +428,58 @@ export function AuditTab() {
   ]
 
   return (
+    <div className="flex flex-col gap-6">
+
+      {/* ── Pre-approved Title Queue ── */}
+      {preTitleQueue.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
+            <ThumbsUp size={14} className="text-primary" />
+            Títulos Pré-Aprovados pela Comunidade ({preTitleQueue.length})
+          </h3>
+          <div className="space-y-2">
+            {preTitleQueue.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card">
+                <div className="w-12 h-12 rounded-lg bg-muted border border-border overflow-hidden shrink-0">
+                  {item.stl?.photos?.[0]
+                    ? <img src={item.stl.photos[0]} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={14} className="text-muted-foreground/40" /></div>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground truncate">
+                    Atual: <span className="text-foreground">{item.stl?.title}</span>
+                  </p>
+                  <p className="text-sm font-medium truncate">
+                    Novo: <span className="text-primary">{item.suggested_title}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <ThumbsUp size={10} />{item.upvote_count} apoios
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => handleTitleAction(item.id, 'apply')}
+                    disabled={titleActionLoading === item.id}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/30 text-xs font-semibold hover:bg-success/20 transition-colors disabled:opacity-40"
+                  >
+                    {titleActionLoading === item.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                    Aplicar
+                  </button>
+                  <button
+                    onClick={() => handleTitleAction(item.id, 'reject')}
+                    disabled={titleActionLoading === item.id}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors disabled:opacity-40"
+                  >
+                    <XCircle size={12} />
+                    Rejeitar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     <div className="flex gap-4 h-[calc(100vh-220px)] min-h-[500px]">
 
       {/* ── Left: Queue ── */}
@@ -492,6 +608,7 @@ export function AuditTab() {
           </>
         ) : null}
       </div>
+    </div>
     </div>
   )
 }
