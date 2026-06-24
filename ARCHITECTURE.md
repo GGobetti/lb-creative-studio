@@ -6,14 +6,23 @@
 
 ---
 
-## 0. Status de Execução (22/06/2026)
+## 0. Status de Execução (atualizado 24/06/2026)
 
 Plano: [`docs/superpowers/plans/2026-06-21-ecosystem-cleanup-and-fixes.md`](docs/superpowers/plans/2026-06-21-ecosystem-cleanup-and-fixes.md).
 
-- ✅ **Fase 0** (limpeza), **1A** (entrega R2 + migration `r2_object_key` aplicada), **1B** (Stripe — bug de créditos corrigido, tsc 16→0, build deploy-ready), **1C** (custo dinâmico), **1D** (moderação por tamanho → `pending_approval` + `processApprovedJobs` + rota `jobs` via banco) — **mergeadas na main** nos dois repos. R2 com degradação graciosa (dormente até credenciais).
-- ✅ **Stripe validado via API** (22/06): conta `acct_…CqX27` = **sandbox/test** (`livemode:false`); 5 preços de `pricing_plans` existem e estão **ativos** com valores corretos (Pacote 50=R$10, 200=R$35, 500=R$80, Pro=R$29,90, Max=R$79,90); Pro/Max são **recorrentes mensais**. Falta só o teste de compra real (browser + `stripe listen`).
-- ⏳ **Pendente**: Fase 2 (consolidar monitor — adiada "depois"), Fase 3 (imagens no R2 — adiada). **Backfill** dos STLs já indexados (do Vault p/ R2 via `npm run backfill:r2`) quando as credenciais existirem. **Testes end-to-end** pendentes: download via R2, compra Stripe real, e moderação de arquivo grande (Telegram).
-- 🔑 **Bloqueio externo**: credenciais Cloudflare R2 (4 vars nos `.env`) + `stripe listen` p/ teste end-to-end.
+- ✅ **Fase 0** (limpeza), **1A** (entrega R2), **1B** (Stripe), **1C** (custo dinâmico), **1D** (moderação por tamanho) — mergeadas.
+- ✅ **Studio em produção no Vercel** (23/06/2026) — URL: `lb-creative-studio-iota.vercel.app`. Auto-deploy em push na `main`.
+- ✅ **R2 credenciais no Vercel**: `R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` corretos. ⚠️ `R2_ACCESS_KEY_ID` ainda aguarda correção manual pelo dono (valor correto: `2949b59797c86fd4f6bc71b5f19ea767`).
+- ✅ **Stripe Webhook criado** (23/06/2026): endpoint `we_1TlbEsCPLNDCqX27nXnaVhmN` → prod. ⚠️ `STRIPE_WEBHOOK_SECRET=whsec_QN9wlRM7lfLEqz6oXKCtpSdZ9Y13ebLp` precisa ser setado no Vercel.
+- ✅ **Bugs pós-produção corrigidos** (23/06): créditos Stripe, admin tickets, liquid glass nos modais, select dropdown, email no modal cliente, Telegram direto, PhotoMatch label, RLS avatars bucket, nome do grupo oculto para não-admin, refetch após ban.
+- ✅ **Dedup de fotos completado** (24/06/2026):
+  - 135 grupos de fotos iguais detectados (por perceptual hash)
+  - 170 URLs redundantes consolidadas
+  - 306 STLs atualizados (compartilham agora foto única)
+  - Backup automático + log detalhado em JSON
+  - Script restore (`npm run dedup:restore`) para reverter se necessário
+- ⏳ **Pendente**: Fase 2 (consolidar monitor), Fase 3 (imagens no R2). Backfill em andamento.
+- ⚠️ **Bloqueios restantes**: usuário corrigir `R2_ACCESS_KEY_ID` e `STRIPE_WEBHOOK_SECRET` no Vercel + redeploy.
 
 ---
 
@@ -79,8 +88,8 @@ São **dois processos** que compartilham **um único banco Supabase**, com os bi
 |------|------------------|
 | `api/checkout` | Cria Stripe Checkout Session (lê `pricing_plans` do banco). Suporta `STRIPE_MOCK`. |
 | `api/webhooks/stripe` | `checkout.session.completed` + `invoice.paid`. Idempotência via UNIQUE em `transactions.payment_intent_id`. |
-| `api/telegram/download` | Verifica créditos → faz stream do **proxy** (`TELEGRAM_PROXY_URL`) → debita 1 crédito → loga. |
-| `api/telegram/jobs` | Ações de moderação (`approve`/`cancel`/`retry`/`reject`) — encaminha pro proxy. Só `sysadmin`. |
+| `api/telegram/download` | Verifica créditos → debita (custo dinâmico via `feature_costs`) → gera **presigned URL do R2** → retorna ao cliente. Download direto do R2, sem proxy. |
+| `api/telegram/jobs` | Ações de moderação (`approve`/`cancel`/`retry`/`reject`) — opera sobre `telegram_scraper_jobs` no Supabase (scraper consome a fila). Só `sysadmin`. |
 | `api/telegram/progress`, `banned-images`, `backfill`, `favorite` | Suporte ao módulo STL search. |
 | `api/games/*` | Lógica dos 4 minigames + XP (`award-xp`, `redeem-xp`, `xp-summary`) — validação server-side. |
 | `api/import/makerworld` | Importa metadados de modelos via API JSON da Bambu Lab (fetch nativo + retry; **não usa cheerio**). |
@@ -255,8 +264,9 @@ O studio (`api/telegram/download`) e a moderação (`api/telegram/jobs`) foram e
 ### 7.4 🔐 Segurança (alta prioridade)
 - **Segredos reais em arquivos locais** (não versionados — `.gitignore` cobre `.env*`, bom): `SUPABASE_SERVICE_ROLE_KEY`, chaves Stripe de teste, `TELEGRAM_BOT_TOKEN`, e principalmente o **`TELEGRAM_SESSION`** (login completo da conta pessoal do dono — se vazar, é sequestro de conta). `.mcp.json` tem `sb_secret_…` e está no `.gitignore`.
 - **Recomendação:** rotacionar a `SUPABASE_SERVICE_ROLE_KEY` e a `TELEGRAM_SESSION` por precaução, já que foram copiadas entre repositórios e expostas em vários `.env`. Nunca commitar; considerar um gerenciador de segredos.
-- O `webhooks/stripe` tem um bloco de fallback confuso em `addCreditsAtomic` (faz um `update({credits: amount})` sem `.eq()` antes de chamar a RPC) — **revisar** (potencial no-op/risco). Na prática o caminho usado é a RPC `increment_credits_for_user`, mas o código morto deve sair.
-- `checkout` lê `type`/`itemId` do metadata no webhook, mas o `checkout` envia `{userId, planId, credits}` — **conferir consistência** dos metadados entre criação da sessão e o handler (o webhook espera `type === 'credits'|'subscription'` e `itemId`, que o checkout atual não seta). **Open Question #2.**
+- ✅ **Metadados Stripe reconciliados** (23/06): `checkout/route.ts` envia `{userId, planId, credits, kind, planTier}`; `webhooks/stripe/route.ts` consome `{userId, credits, kind, planTier}`. Bug original resolvido.
+- ✅ **Webhook endpoint criado** (23/06): `we_1TlbEsCPLNDCqX27nXnaVhmN` → produção Vercel. Secret: `STRIPE_WEBHOOK_SECRET=whsec_QN9wlRM7lfLEqz6oXKCtpSdZ9Y13ebLp` (adicionar no Vercel).
+- ⚠️ O bloco de fallback em `addCreditsAtomic` ainda tem `update` sem `.eq()` — código morto, remover num refactor.
 
 ---
 
