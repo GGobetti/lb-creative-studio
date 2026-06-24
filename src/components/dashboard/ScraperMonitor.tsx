@@ -505,8 +505,6 @@ export function ScraperMonitor() {
                   const seenUrls = new Set<string>()
                   let allPhotos: { jobId: string; url: string; jobTitle: string }[] = []
                   scraperJobs.forEach(job => {
-                    // Fotos de jobs concluídos já foram processadas — não precisam de moderação
-                    if (job.status === 'completed') return
                     ;(job.photos || []).forEach((url: string) => {
                       // Deduplicar por URL (mesmo link pode aparecer em vários jobs)
                       if (!seenUrls.has(url)) {
