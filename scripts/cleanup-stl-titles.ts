@@ -50,7 +50,7 @@ loadEnv()
 const DRY_RUN = !process.argv.includes('--apply')
 const BATCH_SIZE = 10
 const DELAY_BETWEEN_BATCHES_MS = 1000
-const MODEL = 'claude-haiku-4-5'
+const MODEL = 'claude-haiku-4-5-20251001'
 const FETCH_LIMIT = 2000
 
 // ---------------------------------------------------------------------------
@@ -89,6 +89,18 @@ function isDirtyTitle(title: string, fileName: string | null): boolean {
 
   // Contém underscores ou hifens sem espaços (padrão de nome de arquivo)
   if ((title.includes('_') || title.includes('-')) && !title.includes(' ')) return true
+
+  // Padrão 3: contém 3+ consoantes maiúsculas consecutivas sem vogal (siglas como STL, TRX, FDM)
+  const hasUnclearedAcronym = /[B-DF-HJ-NP-TV-Z]{3,}/i.test(title)
+  if (hasUnclearedAcronym) return true
+
+  // Padrão 4: começa com número ou símbolo especial
+  const startsWithNumberOrSymbol = /^[\d!@#$%^&*_\-.]/.test(title)
+  if (startsWithNumberOrSymbol) return true
+
+  // Padrão 5: menos de 3 palavras reais (muito curto para ser display name)
+  const tooFewWords = title.trim().split(/\s+/).filter(w => w.length > 1).length < 2
+  if (tooFewWords) return true
 
   return false
 }
