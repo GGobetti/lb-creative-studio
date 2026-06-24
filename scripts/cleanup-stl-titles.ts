@@ -90,16 +90,16 @@ function isDirtyTitle(title: string, fileName: string | null): boolean {
   // Contém underscores ou hifens sem espaços (padrão de nome de arquivo)
   if ((title.includes('_') || title.includes('-')) && !title.includes(' ')) return true
 
-  // Padrão 3: contém 3+ consoantes maiúsculas consecutivas sem vogal (siglas como STL, TRX, FDM)
-  const hasUnclearedAcronym = /[B-DF-HJ-NP-TV-Z]{3,}/i.test(title)
+  // Padrão 3: contém 3+ consoantes MAIÚSCULAS consecutivas sem vogal (siglas como STL, TRX, FDM)
+  const hasUnclearedAcronym = /\b[B-DF-HJ-NP-TV-Z]{3,}\b/.test(title)
   if (hasUnclearedAcronym) return true
 
   // Padrão 4: começa com número ou símbolo especial
   const startsWithNumberOrSymbol = /^[\d!@#$%^&*_\-.]/.test(title)
   if (startsWithNumberOrSymbol) return true
 
-  // Padrão 5: menos de 3 palavras reais (muito curto para ser display name)
-  const tooFewWords = title.trim().split(/\s+/).filter(w => w.length > 1).length < 2
+  // Padrão 5: string completamente vazia (sem nenhuma palavra real)
+  const tooFewWords = title.trim().split(/\s+/).filter(w => w.length > 0).length < 1
   if (tooFewWords) return true
 
   return false
@@ -121,16 +121,19 @@ Retorne APENAS o título limpo, sem explicação. Regras:
 - Mantenha nomes próprios e marcas
 - Se o título já estiver limpo, retorne-o sem alteração`
 
-  const message = await anthropic.messages.create({
-    model: MODEL,
-    max_tokens: 150,
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  })
+  const message = await anthropic.messages.create(
+    {
+      model: MODEL,
+      max_tokens: 150,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    },
+    { signal: AbortSignal.timeout(15_000) }
+  )
 
   const block = message.content[0]
   if (block.type !== 'text') return currentTitle
