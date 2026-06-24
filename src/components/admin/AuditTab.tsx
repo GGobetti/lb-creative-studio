@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   AlertTriangle, CheckCircle2, XCircle, ThumbsUp, Tag,
   Image as ImageIcon, FolderOpen, Pencil, Trash2, RotateCcw,
-  ChevronRight, Camera, Loader2,
+  ChevronRight, Camera, Loader2, Clock,
 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -304,12 +304,14 @@ export function AuditTab() {
   const [actionLoading, setActionLoading]   = useState<string | null>(null)
   const [preTitleQueue, setPreTitleQueue]   = useState<PreApprovedSuggestion[]>([])
   const [titleActionLoading, setTitleActionLoading] = useState<string | null>(null)
+  const [pendingValidation, setPendingValidation] = useState<{ id: string; title: string; photos: string[] | null; thumbnail_url: string | null }[]>([])
 
   useEffect(() => {
     getSupabaseBrowser().auth.getSession().then((res: any) => {
       accessTokenRef.current = res.data.session?.access_token ?? null
       loadQueue()
       loadPreTitleQueue()
+      loadPendingValidation()
     })
   }, [])
 
@@ -364,6 +366,17 @@ export function AuditTab() {
     }
   }, [loadPreTitleQueue])
 
+  const loadPendingValidation = useCallback(async () => {
+    const supabase = getSupabaseBrowser()
+    const { data } = await supabase
+      .from('telegram_indexed_stls')
+      .select('id, title, photos, thumbnail_url')
+      .eq('needs_validation', true)
+      .order('updated_at', { ascending: false })
+      .limit(50)
+    setPendingValidation(data || [])
+  }, [])
+
   const loadQueue = useCallback(async () => {
     setQueueLoading(true)
     try {
@@ -402,14 +415,21 @@ export function AuditTab() {
         body: JSON.stringify({ stl_id: selectedId, ...body }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
-      // Refresh both queue and signals
-      await Promise.all([loadQueue(), selectedId ? loadSignals(selectedId) : Promise.resolve()])
+      // Refresh queue, signals, and pending validation list
+      const refreshes: Promise<any>[] = [
+        loadQueue(),
+        selectedId ? loadSignals(selectedId) : Promise.resolve(),
+      ]
+      if (body.action === 'needs_validation' || body.action === 'clear_validation') {
+        refreshes.push(loadPendingValidation())
+      }
+      await Promise.all(refreshes)
     } catch (e) {
       console.error('[ADMIN-ACTION]', e)
     } finally {
       setActionLoading(null)
     }
-  }, [selectedId, loadQueue, loadSignals])
+  }, [selectedId, loadQueue, loadSignals, loadPendingValidation])
 
   const filteredQueue = queue.filter((item) => {
     if (filter === 'removal') return item.marked_for_removal
@@ -474,6 +494,35 @@ export function AuditTab() {
                     Rejeitar
                   </button>
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Pending Validation Queue ── */}
+      {pendingValidation.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-yellow-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+            <Clock size={14} />
+            Aguardando Validação ({pendingValidation.length})
+          </h3>
+          <div className="space-y-2">
+            {pendingValidation.map((stl) => (
+              <div key={stl.id} className="flex items-center gap-3 p-3 rounded-xl border border-yellow-500/30 bg-card">
+                <div className="w-12 h-12 rounded-lg bg-muted border border-border overflow-hidden shrink-0">
+                  {(stl.thumbnail_url || stl.photos?.[0])
+                    ? <img src={stl.thumbnail_url || stl.photos![0]} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={14} className="text-muted-foreground/40" /></div>}
+                </div>
+                <p className="flex-1 text-sm truncate text-foreground">{stl.title}</p>
+                <button
+                  onClick={() => doAction({ action: 'clear_validation', stl_id: stl.id })}
+                  disabled={!!actionLoading}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/30 text-xs font-semibold hover:bg-success/20 transition-colors disabled:opacity-40 shrink-0"
+                >
+                  <CheckCircle2 size={12} /> Validado — Publicar
+                </button>
               </div>
             ))}
           </div>
@@ -589,6 +638,14 @@ export function AuditTab() {
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-success/10 text-success border border-success/30 text-sm font-semibold hover:bg-success/20 transition-colors disabled:opacity-40"
               >
                 <CheckCircle2 size={15} /> Manter STL
+              </button>
+              <button
+                onClick={() => doAction({ action: 'needs_validation' })}
+                disabled={!!actionLoading}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-yellow-600/10 text-yellow-500 border border-yellow-600/30 text-sm font-semibold hover:bg-yellow-600/20 transition-colors disabled:opacity-40"
+                title="Ocultar da busca até revisão"
+              >
+                <Clock size={15} /> Validar Mais Tarde
               </button>
               <button
                 onClick={() => doAction({ action: 'remove_stl' })}

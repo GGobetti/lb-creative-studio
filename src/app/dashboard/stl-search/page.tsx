@@ -141,7 +141,9 @@ export default function StlSearchPage() {
           .from("telegram_indexed_stls")
           .select("*")
           .is("parent_id", null) // filtro no DB, não no cliente
-          .neq("id", "00000000-0000-0000-0000-000000000000"); // ignora a caixinha de fotos
+          .neq("id", "00000000-0000-0000-0000-000000000000") // ignora a caixinha de fotos
+          .eq("needs_validation", false)
+          .eq("marked_for_removal", false);
 
         if (trimmed) {
           if (isTagSearch) {
@@ -235,6 +237,8 @@ export default function StlSearchPage() {
         .from("telegram_indexed_stls")
         .select("*")
         .neq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("needs_validation", false)
+        .eq("marked_for_removal", false)
         .order("download_count", { ascending: false })
         .limit(10);
 
@@ -244,6 +248,8 @@ export default function StlSearchPage() {
         .from("telegram_indexed_stls")
         .select("*")
         .neq("id", "00000000-0000-0000-0000-000000000000")
+        .eq("needs_validation", false)
+        .eq("marked_for_removal", false)
         .order("favorites_count", { ascending: false })
         .limit(10);
 
@@ -528,6 +534,8 @@ export default function StlSearchPage() {
           .select("*")
           .is("parent_id", null)
           .neq("id", "00000000-0000-0000-0000-000000000000")
+          .eq("needs_validation", false)
+          .eq("marked_for_removal", false)
           .order("created_at", { ascending: false })
           .then(({ data }: { data: any[] | null }) => {
             if (data) {

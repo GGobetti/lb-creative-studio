@@ -128,6 +128,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, action })
       }
 
+      case 'needs_validation': {
+        if (!stl_id) return NextResponse.json({ error: 'Missing stl_id' }, { status: 400 })
+        const { error } = await admin
+          .from('telegram_indexed_stls')
+          .update({ needs_validation: true })
+          .eq('id', stl_id)
+        if (error) throw error
+        return NextResponse.json({ success: true, action })
+      }
+
+      case 'clear_validation': {
+        if (!stl_id) return NextResponse.json({ error: 'Missing stl_id' }, { status: 400 })
+        const { error } = await admin
+          .from('telegram_indexed_stls')
+          .update({ needs_validation: false })
+          .eq('id', stl_id)
+        if (error) throw error
+        return NextResponse.json({ success: true, action })
+      }
+
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
