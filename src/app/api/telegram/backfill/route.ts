@@ -29,6 +29,18 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { hours_back = 24, group_ids } = body
 
+    // Exclude local imports (is_local_import = true) from backfill processing
+    const { data: localImportIds, error: localErr } = await supabase
+      .from('telegram_indexed_stls')
+      .select('id')
+      .eq('is_local_import', true)
+
+    if (localErr) {
+      console.warn('[API Backfill] Erro ao buscar imports locais:', localErr)
+    }
+
+    const excludeIds = localImportIds?.map((r: any) => r.id) || []
+
     const proxyUrl = process.env.TELEGRAM_PROXY_URL
     if (!proxyUrl) {
       return NextResponse.json({ error: 'Scraper Proxy não está configurado.' }, { status: 500 })
@@ -40,7 +52,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
         'X-API-Key': process.env.TELEGRAM_PROXY_API_KEY || '',
       },
-      body: JSON.stringify({ hours_back, group_ids }),
+      body: JSON.stringify({ hours_back, group_ids, exclude_ids: excludeIds }),
     })
 
     if (!res.ok) {
