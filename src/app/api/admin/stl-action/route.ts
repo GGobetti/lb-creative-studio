@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
           .single()
         if (fetchError || !suggestion) return NextResponse.json({ error: 'Suggestion not found' }, { status: 404 })
 
+        if (suggestion.status === 'pre_approved') {
+          return NextResponse.json(
+            { error: 'Use /api/admin/apply-title-suggestion for pre-approved suggestions' },
+            { status: 400 }
+          )
+        }
+
         const stlUpdate: Record<string, any> = {}
         if (suggestion.suggested_title) stlUpdate.title = suggestion.suggested_title
         if (suggestion.suggested_description) stlUpdate.description = suggestion.suggested_description
@@ -47,10 +54,11 @@ export async function POST(request: NextRequest) {
           if (stlError) throw stlError
         }
 
-        await admin
+        const { error: suggestionError } = await admin
           .from('stl_audit_suggestions')
-          .update({ status: 'approved', approved_by: user.id, approved_at: new Date().toISOString() })
+          .update({ status: 'applied', approved_by: user.id, approved_at: new Date().toISOString() })
           .eq('id', suggestion_id)
+        if (suggestionError) throw suggestionError
 
         return NextResponse.json({ success: true, action, applied: stlUpdate })
       }

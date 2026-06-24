@@ -54,10 +54,11 @@ export async function POST(request: NextRequest) {
       if (updateError) throw updateError
 
       // Marca a sugestão como aplicada
-      await admin
+      const { error: statusError } = await admin
         .from('stl_audit_suggestions')
         .update({ status: 'applied' })
         .eq('id', suggestion_id)
+      if (statusError) throw statusError
 
       return NextResponse.json({
         success: true,
@@ -67,10 +68,11 @@ export async function POST(request: NextRequest) {
     }
 
     // action === 'reject'
-    await admin
+    const { error: statusError } = await admin
       .from('stl_audit_suggestions')
       .update({ status: 'rejected' })
       .eq('id', suggestion_id)
+    if (statusError) throw statusError
 
     return NextResponse.json({ success: true, action: 'rejected' })
   } catch (error) {
