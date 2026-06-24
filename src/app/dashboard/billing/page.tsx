@@ -98,7 +98,6 @@ export default function BillingPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [cancelConfirmed, setCancelConfirmed] = useState(false)
   const [subscription, setSubscription] = useState<any>(null)
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
 
   // Detecta retorno do Stripe com sucesso e recarrega créditos
   useEffect(() => {
@@ -286,28 +285,6 @@ export default function BillingPage() {
     loadSubscription()
   }, [])
 
-  const handleCreateTestSubscription = async () => {
-    setSubscriptionLoading(true)
-    try {
-      const response = await fetch('/api/test/create-real-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      const data = await response.json()
-      console.log('Create subscription response:', { status: response.status, data })
-      if (!response.ok) throw new Error(data.error || 'Erro ao criar assinatura')
-      toast('Assinatura criada no Stripe! Recarregando página em 2 segundos...', 'success')
-      // Reload page after a delay to let webhook sync
-      setTimeout(() => {
-        window.location.reload()
-      }, 2000)
-    } catch (err: any) {
-      console.error('Create subscription error:', err)
-      toast(err.message, 'error')
-    } finally {
-      setSubscriptionLoading(false)
-    }
-  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -368,22 +345,6 @@ export default function BillingPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-heading text-lg text-foreground">{t("billing.subscriptionPlans")}</h2>
-          {currentPlan === "free" && process.env.NODE_ENV === "development" && (
-            <button
-              onClick={handleCreateTestSubscription}
-              disabled={subscriptionLoading}
-              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {subscriptionLoading ? (
-                <>
-                  <Loader2 className="w-3 h-3 animate-spin inline mr-1" />
-                  Criando...
-                </>
-              ) : (
-                <>🧪 {t("billing.createTestSubscription", "Criar Assinatura Teste")}</>
-              )}
-            </button>
-          )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {SUBSCRIPTION_PLANS.map((plan, idx) => {
