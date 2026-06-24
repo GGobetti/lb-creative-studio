@@ -319,7 +319,9 @@ git commit -m "security: add HTTP security headers (X-Frame-Options, HSTS, etc)"
 - Consumes: body `{ stl_id, user_answer: boolean, correct_answer: boolean }` (campo `is_correct` é **removido** do contrato)
 - Produces: mesma resposta atual; `is_correct` computado no server como `user_answer === correct_answer`
 
-**Nota de segurança:** Esta é uma correção **parcial**. O `correct_answer` ainda vem do client (porque o "ground truth" é gerado no browser pelo gameDataLoader). Um atacante pode enviar `user_answer: true, correct_answer: true` e ser creditado. A correção completa (session token) está no Sprint 2. Esta task elimina o exploit mais óbvio: `is_correct: true` com `user_answer: false`.
+**Nota de design (atualizada):** Os jogos são puro crowdsourcing — não existe "resposta correta" por usuário. O usuário vota se a foto corresponde ao STL; o sistema agrega votos e pré-aprova quando ≥80% concordam. O admin tem a palavra final. `is_correct` e `correct_answer` são sinais gerados pelo client usados apenas para decidir se o voter recebe créditos de engajamento — não validam nenhuma verdade factual.
+
+A proteção real contra abuso de créditos é o `UNIQUE(user_id, stl_id)` em `photo_match_answers` (Task 2 + review final do branch), que impede votar mais de uma vez por STL. A computação server-side de `is_correct = user_answer === correct_answer` é mantida para evitar que o client envie `is_correct: true` diretamente sem ao menos enviar um `user_answer` e `correct_answer` coerentes.
 
 - [ ] **Step 1: Modificar a route para computar `is_correct` server-side**
 

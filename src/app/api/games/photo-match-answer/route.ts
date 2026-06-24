@@ -21,6 +21,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // DESIGN NOTE — photo-match is pure crowdsourcing, not a quiz with a "correct" answer.
+    // The user votes whether the photo matches the STL; the system aggregates votes and
+    // pre-approves when ≥80% consensus is reached. There is no authoritative ground truth
+    // stored server-side, so `correct_answer` and `is_correct` are client-generated signals
+    // used only to award engagement credits to the voter — not to validate factual correctness.
+    // A future improvement would be storing game sessions server-side so the server can
+    // verify which photo was shown, but the real protection today is the UNIQUE(user_id, stl_id)
+    // constraint on photo_match_answers that prevents repeated voting for credits.
+
     // 1. Record game action and get rewards (only if correct)
     let creditsEarned = 0
     let xpResult: any = null
