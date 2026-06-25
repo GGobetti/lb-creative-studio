@@ -82,11 +82,26 @@ export async function GET(req: NextRequest) {
       user_id: ml_user_id,
     } = tokenData;
 
-    // Get user_id from stored cookie
-    const userId = req.cookies.get('ml_oauth_user_id')?.value;
+    // Try to get user from session cookie
+    let userId: string | null = null;
+
+    const sessionCookie = req.cookies.get('sb-access-token')?.value;
+    if (sessionCookie) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser(sessionCookie);
+        userId = user?.id || null;
+      } catch (err) {
+        console.error('[Session Error]', err);
+      }
+    }
+
+    // Fallback: try from stored cookie
+    if (!userId) {
+      userId = req.cookies.get('ml_oauth_user_id')?.value || null;
+    }
 
     if (!userId) {
-      console.error('[Auth Error]', 'No user_id in cookie');
+      console.error('[Auth Error]', 'Could not determine user_id');
       return NextResponse.redirect(
         new URL('/login', req.nextUrl.origin)
       );

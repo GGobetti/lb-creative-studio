@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,23 +9,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { error: 'Mercado Livre credentials not configured' },
         { status: 500 }
-      );
-    }
-
-    // Get current user
-    const token = req.cookies.get('sb-access-token')?.value;
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
-
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user?.id) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 401 }
       );
     }
 
@@ -47,15 +24,9 @@ export async function GET(req: NextRequest) {
 
     const authUrl = `https://auth.mercadolibre.com/authorization?${params.toString()}`;
 
-    // Store state and user_id in cookies for validation on callback
+    // Store state in cookie for validation on callback
     const response = NextResponse.json({ authUrl });
     response.cookies.set('ml_oauth_state', state, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 600, // 10 minutes
-    });
-    response.cookies.set('ml_oauth_user_id', user.id, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
