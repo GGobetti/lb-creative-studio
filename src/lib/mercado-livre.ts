@@ -56,24 +56,38 @@ export async function resolveMLShortUrl(
   shortUrl: string
 ): Promise<string | null> {
   try {
-    // Try to extract ID directly from any format
+    // Try to extract internal ML ID directly (MLA/MLB/MLM/MLV format)
     const directMatch = shortUrl.match(/MLA\d+|MLB\d+|MLM\d+|MLV\d+/);
     if (directMatch) {
+      console.log('[ML Resolve] Found direct product ID:', directMatch[0]);
       return directMatch[0];
     }
 
-    // Try to resolve short URL with fetch
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    // Try to extract affiliate ID (KTXFEU-ACQ3 format)
+    const affiliateMatch = shortUrl.match(/[A-Z0-9]+-[A-Z0-9]+/);
+    if (affiliateMatch) {
+      const affiliateId = affiliateMatch[0];
+      console.log('[ML Resolve] Found affiliate ID:', affiliateId);
+      // Return affiliate ID - will be handled by special resolution endpoint
+      return affiliateId;
+    }
 
+    // Try to resolve short URL with multiple strategies
+    console.log('[ML Resolve] Attempting to resolve short URL:', shortUrl);
+
+    // Strategy 1: Direct fetch with redirect follow
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const response = await fetch(shortUrl, {
         redirect: 'follow',
         signal: controller.signal,
         headers: {
           'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'pt-BR,pt;q=0.9',
         },
       });
 
@@ -81,23 +95,30 @@ export async function resolveMLShortUrl(
 
       if (response.ok) {
         const urlString = response.url;
-        // Extract item ID from URL: https://www.mercadolivre.com.br/...MLA123456789...
+        console.log('[ML Resolve] Got final URL:', urlString);
+
+        // Extract internal ID from final URL
         const match = urlString.match(/MLA\d+|MLB\d+|MLM\d+|MLV\d+/);
         if (match) {
+          console.log('[ML Resolve] Extracted product ID:', match[0]);
           return match[0];
         }
-      }
 
-      return null;
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.warn('[ML URL Resolve] Timeout reaching URL');
-      } else {
-        console.warn('[ML URL Resolve] Fetch failed, trying alternative method');
+        // Extract affiliate ID from final URL
+        const affMatch = urlString.match(/[A-Z0-9]+-[A-Z0-9]+/);
+        if (affMatch) {
+          console.log('[ML Resolve] Extracted affiliate ID from resolved URL:', affMatch[0]);
+          return affMatch[0];
+        }
       }
-      return null;
+    } catch (fetchError) {
+      const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      console.warn('[ML Resolve] Fetch strategy failed:', errorMsg);
     }
+
+    // If we get here, couldn't resolve
+    console.error('[ML Resolve] Could not resolve URL or extract product ID');
+    return null;
   } catch (error) {
     console.error('[Resolve Short URL Error]', error);
     return null;
