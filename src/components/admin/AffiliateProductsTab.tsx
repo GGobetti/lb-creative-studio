@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { fetchAffiliateProducts, AffiliateProduct } from '@/lib/api/affiliate';
 import { AffiliateProductForm } from './AffiliateProductForm';
 import { AffiliateProductsList } from './AffiliateProductsList';
+import { MercadoLivreConnect } from './MercadoLivreConnect';
+import { MercadoLivreImportForm } from './MercadoLivreImportForm';
 
 export function AffiliateProductsTab() {
   const [products, setProducts] = useState<AffiliateProduct[]>([]);
@@ -12,6 +14,7 @@ export function AffiliateProductsTab() {
     null
   );
   const [showForm, setShowForm] = useState(false);
+  const [mlConnected, setMlConnected] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -41,6 +44,13 @@ export function AffiliateProductsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Mercado Livre Integration */}
+      <MercadoLivreConnect />
+      <MercadoLivreImportForm
+        isConnected={mlConnected}
+        onSuccess={loadProducts}
+      />
+
       {/* Create Form */}
       {showForm && (
         <div className="glass-panel p-6 rounded-lg">
