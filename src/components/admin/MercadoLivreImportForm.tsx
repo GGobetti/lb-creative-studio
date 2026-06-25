@@ -5,12 +5,10 @@ import { getSupabaseBrowser } from '@/lib/supabase';
 
 interface ImportFormProps {
   onSuccess: () => void;
-  isConnected: boolean;
 }
 
 export function MercadoLivreImportForm({
   onSuccess,
-  isConnected,
 }: ImportFormProps) {
   const [affiliateLink, setAffiliateLink] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -69,16 +67,6 @@ export function MercadoLivreImportForm({
       setIsLoading(false);
     }
   };
-
-  if (!isConnected) {
-    return (
-      <div className="glass-panel p-6 rounded-lg mb-6 bg-slate-800/50">
-        <p className="text-slate-400 text-center py-4">
-          Conecte ao Mercado Livre primeiro para importar produtos
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="glass-panel p-6 rounded-lg mb-6">
