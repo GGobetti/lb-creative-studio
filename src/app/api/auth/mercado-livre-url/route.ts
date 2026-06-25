@@ -12,6 +12,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Get user_id from query (passed by client component)
+    const userId = req.nextUrl.searchParams.get('user_id');
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID not provided' },
+        { status: 400 }
+      );
+    }
+
     // Generate state for CSRF protection
     const state = Math.random().toString(36).substring(2, 15);
 
@@ -24,9 +33,15 @@ export async function GET(req: NextRequest) {
 
     const authUrl = `https://auth.mercadolibre.com/authorization?${params.toString()}`;
 
-    // Store state in cookie for validation on callback
+    // Store state and user_id in cookies for callback
     const response = NextResponse.json({ authUrl });
     response.cookies.set('ml_oauth_state', state, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 600, // 10 minutes
+    });
+    response.cookies.set('ml_oauth_user_id', userId, {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',

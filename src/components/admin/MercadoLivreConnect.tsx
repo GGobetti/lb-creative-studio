@@ -59,7 +59,17 @@ export function MercadoLivreConnect() {
 
   const handleConnect = async () => {
     try {
-      const response = await fetch('/api/auth/mercado-livre-url');
+      const supabase = getSupabaseBrowser();
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user?.id) {
+        setError('Usuário não autenticado');
+        return;
+      }
+
+      const response = await fetch(
+        `/api/auth/mercado-livre-url?user_id=${encodeURIComponent(session.user.id)}`
+      );
       const data = await response.json();
 
       if (!response.ok || !data.authUrl) {
@@ -70,6 +80,7 @@ export function MercadoLivreConnect() {
       window.location.href = data.authUrl;
     } catch (err) {
       setError('Erro ao conectar com Mercado Livre');
+      console.error(err);
     }
   };
 
