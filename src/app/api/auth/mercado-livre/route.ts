@@ -86,9 +86,15 @@ export async function GET(req: NextRequest) {
     let userId: string | null = null;
 
     const sessionCookie = req.cookies.get('sb-access-token')?.value;
+    console.log('[Callback Debug]', {
+      hasSessionCookie: !!sessionCookie,
+      allCookies: req.cookies.getSetCookie()
+    });
+
     if (sessionCookie) {
       try {
-        const { data: { user } } = await supabase.auth.getUser(sessionCookie);
+        const { data: { user }, error: userError } = await supabase.auth.getUser(sessionCookie);
+        console.log('[Session User]', { userId: user?.id, error: userError?.message });
         userId = user?.id || null;
       } catch (err) {
         console.error('[Session Error]', err);
@@ -97,15 +103,19 @@ export async function GET(req: NextRequest) {
 
     // Fallback: try from stored cookie
     if (!userId) {
-      userId = req.cookies.get('ml_oauth_user_id')?.value || null;
+      const storedUserId = req.cookies.get('ml_oauth_user_id')?.value;
+      console.log('[Stored User ID Cookie]', { storedUserId });
+      userId = storedUserId || null;
     }
 
     if (!userId) {
-      console.error('[Auth Error]', 'Could not determine user_id');
+      console.error('[Auth Error]', 'Could not determine user_id - redirecting to login');
       return NextResponse.redirect(
         new URL('/login', req.nextUrl.origin)
       );
     }
+
+    console.log('[Callback Success]', { userId, code: code?.substring(0, 20) });
 
     // Check if user is admin
     const { data: profile } = await supabase
