@@ -88,7 +88,8 @@ export async function GET(req: NextRequest) {
     const sessionCookie = req.cookies.get('sb-access-token')?.value;
     console.log('[Callback Debug]', {
       hasSessionCookie: !!sessionCookie,
-      allCookies: req.cookies.getSetCookie()
+      code: code?.substring(0, 20),
+      state: state?.substring(0, 20)
     });
 
     if (sessionCookie) {
