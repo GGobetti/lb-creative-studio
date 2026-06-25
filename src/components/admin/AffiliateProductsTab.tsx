@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { fetchAffiliateProducts, AffiliateProduct } from '@/lib/api/affiliate';
 import { AffiliateProductForm } from './AffiliateProductForm';
 import { AffiliateProductsList } from './AffiliateProductsList';
-import { MercadoLivreConnect } from './MercadoLivreConnect';
 import { MercadoLivreImportForm } from './MercadoLivreImportForm';
 
 type Marketplace = 'mercado_livre' | 'aliexpress' | 'shopee' | 'amazon';
@@ -18,7 +17,6 @@ export function AffiliateProductsTab() {
   const [showForm, setShowForm] = useState(false);
   const [showMarketplaceSelector, setShowMarketplaceSelector] = useState(false);
   const [selectedMarketplace, setSelectedMarketplace] = useState<Marketplace | null>(null);
-  const [mlConnected, setMlConnected] = useState(false);
 
   const loadProducts = async () => {
     try {
@@ -57,9 +55,6 @@ export function AffiliateProductsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Mercado Livre Integration */}
-      <MercadoLivreConnect />
-
       {/* Marketplace Selector Modal */}
       {showMarketplaceSelector && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
@@ -88,7 +83,6 @@ export function AffiliateProductsTab() {
         <div className="glass-panel p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Importar do Mercado Livre</h3>
           <MercadoLivreImportForm
-            isConnected={mlConnected}
             onSuccess={() => {
               setSelectedMarketplace(null);
               loadProducts();
