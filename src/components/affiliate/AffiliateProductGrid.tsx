@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { AffiliateProduct } from '@/lib/api/affiliate';
 import { AffiliateProductCard } from './AffiliateProductCard';
+import { ProductModal } from './ProductModal';
 
 interface AffiliateProductGridProps {
   products: AffiliateProduct[];
@@ -21,12 +22,13 @@ export function AffiliateProductGrid({
 }: AffiliateProductGridProps) {
   const [search, setSearch] = useState('');
   const [marketplace, setMarketplace] = useState('all');
+  const [selectedProduct, setSelectedProduct] = useState<AffiliateProduct | null>(null);
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
       const matchSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        (p.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
+        (p.details?.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
       const matchMarketplace = marketplace === 'all' || p.marketplace === marketplace;
       return matchSearch && matchMarketplace;
     });
@@ -71,7 +73,11 @@ export function AffiliateProductGrid({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((product) => (
-            <AffiliateProductCard key={product.id} product={product} />
+            <AffiliateProductCard
+              key={product.id}
+              product={product}
+              onSelect={setSelectedProduct}
+            />
           ))}
         </div>
       )}
@@ -80,6 +86,15 @@ export function AffiliateProductGrid({
       <div className="mt-8 text-center text-sm text-slate-400">
         {filtered.length} de {products.length} produtos
       </div>
+
+      {/* Modal */}
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </div>
   );
 }
