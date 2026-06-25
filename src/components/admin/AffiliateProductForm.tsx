@@ -22,9 +22,9 @@ export function AffiliateProductForm({
 
   const [formData, setFormData] = useState({
     name: product?.name || '',
-    description: product?.description || '',
-    price: product?.price?.toString() || '',
-    image_url: product?.image_url || '',
+    description: product?.details?.description || '',
+    price: product?.details?.price?.toString() || '',
+    image_url: product?.photos?.[0]?.image_url || '',
     affiliate_link: product?.affiliate_link || '',
     marketplace: (product?.marketplace || 'aliexpress') as typeof marketplaces[number],
     is_active: product?.is_active ?? true,
