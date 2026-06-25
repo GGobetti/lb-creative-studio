@@ -1,0 +1,7 @@
+ALTER TABLE affiliate_products
+DROP COLUMN IF EXISTS image_url,
+DROP COLUMN IF EXISTS description,
+DROP COLUMN IF EXISTS price;
+
+ALTER TABLE affiliate_products
+ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT TRUE;
