@@ -18,7 +18,7 @@ export async function GET() {
       redirect_uri: redirectUri,
     });
 
-    const authUrl = `https://auth.mercadolibre.com.br/authorization?${params.toString()}`;
+    const authUrl = `https://auth.mercadolibre.com/authorization?${params.toString()}`;
 
     return NextResponse.json({ authUrl });
   } catch (err) {

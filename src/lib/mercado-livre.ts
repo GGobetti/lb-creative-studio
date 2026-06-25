@@ -15,7 +15,7 @@ export function generateMLAuthorizationUrl(): string {
     redirect_uri: ML_REDIRECT_URI,
   });
 
-  return `https://auth.mercadolibre.com.br/authorization?${params.toString()}`;
+  return `https://auth.mercadolibre.com/authorization?${params.toString()}`;
 }
 
 /**
