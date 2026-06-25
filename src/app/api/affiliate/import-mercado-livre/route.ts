@@ -17,7 +17,7 @@ interface ImportRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    // Check admin authentication
+    // Auth check (same as before)
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check admin role
+    // Admin check
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
     }
 
     const { affiliateLink } = (await req.json()) as ImportRequest;
-
     if (!affiliateLink) {
       return NextResponse.json(
         { error: 'affiliateLink is required' },
@@ -50,9 +49,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Resolve short URL to product ID
+    // Resolve short URL
     const productId = await resolveMLShortUrl(affiliateLink);
-
     if (!productId) {
       return NextResponse.json(
         { error: 'Could not resolve Mercado Livre link' },
@@ -60,7 +58,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get stored ML credentials
+    // Get ML credentials
     const { data: credentials, error: credError } = await supabase
       .from('marketplace_credentials')
       .select('access_token, refresh_token, expires_at')
@@ -75,12 +73,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if token is expired and refresh if needed
+    // Token refresh if needed
     let accessToken = credentials.access_token;
     const expiresAt = new Date(credentials.expires_at);
 
     if (expiresAt < new Date()) {
-      // Token expired, try to refresh
       try {
         const { refreshMLAccessToken } = await import('@/lib/mercado-livre');
         const refreshed = await refreshMLAccessToken(
@@ -88,7 +85,6 @@ export async function POST(req: NextRequest) {
           process.env.MERCADO_LIVRE_CLIENT_SECRET!
         );
 
-        // Update token in database
         await supabase
           .from('marketplace_credentials')
           .update({
@@ -111,38 +107,100 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fetch product data from ML API
+    // Fetch ML product data
     const mlProductData = await fetchMLProductData(productId, accessToken);
 
     // Transform to our format
-    const productData = transformMLProductData(mlProductData);
+    const { productBase, details, photos } = transformMLProductData(mlProductData);
 
-    // Insert into affiliate_products with the affiliate link
-    const { data: product, error: insertError } = await supabase
+    // Begin transaction: insert into 3 tables
+    // 1. affiliate_products
+    const { data: product, error: productError } = await supabase
       .from('affiliate_products')
       .insert([
         {
           admin_id: user.user.id,
-          ...productData,
+          name: productBase.name,
+          marketplace: productBase.marketplace,
           affiliate_link: affiliateLink,
+          is_active: true,
+          is_public: true,
         },
       ])
       .select()
       .single();
 
-    if (insertError) {
-      console.error('[Insert Product Error]', insertError);
-      // Check if it's a duplicate link error
-      if (insertError.code === '23505') {
+    if (productError) {
+      console.error('[Insert Product Error]', productError);
+      if (productError.code === '23505') {
         return NextResponse.json(
           { error: 'This product link is already imported' },
           { status: 409 }
         );
       }
-      throw insertError;
+      throw productError;
     }
 
-    return NextResponse.json({ product }, { status: 201 });
+    // 2. affiliate_product_details
+    const { error: detailsError } = await supabase
+      .from('affiliate_product_details')
+      .insert([
+        {
+          product_id: product.id,
+          description: details.description,
+          price: details.price,
+          category: details.category,
+          condition: details.condition,
+          payment_methods: details.payment_methods,
+          stock_quantity: details.stock_quantity,
+          sales_count: details.sales_count,
+          rating: details.rating,
+          rating_count: details.rating_count,
+        },
+      ]);
+
+    if (detailsError) {
+      console.error('[Insert Details Error]', detailsError);
+      // Cleanup: delete product if details insert fails
+      await supabase.from('affiliate_products').delete().eq('id', product.id);
+      throw detailsError;
+    }
+
+    // 3. affiliate_product_photos
+    const photoRecords = photos.map((photo, index) => ({
+      product_id: product.id,
+      image_url: photo.url,
+      is_primary: photo.is_primary,
+      position: index,
+      source_id: photo.source_id,
+    }));
+
+    const { error: photosError } = await supabase
+      .from('affiliate_product_photos')
+      .insert(photoRecords);
+
+    if (photosError) {
+      console.error('[Insert Photos Error]', photosError);
+      // Cleanup: delete product and details
+      await supabase.from('affiliate_products').delete().eq('id', product.id);
+      throw photosError;
+    }
+
+    // Return complete product object
+    const completeProduct = {
+      ...product,
+      details: {
+        ...details,
+      },
+      photos: photos.map((p, i) => ({
+        id: `temp_${i}`, // Will be replaced on next fetch
+        image_url: p.url,
+        is_primary: p.is_primary,
+        position: i,
+      })),
+    };
+
+    return NextResponse.json({ product: completeProduct }, { status: 201 });
   } catch (err) {
     console.error('[Import ML Product Error]', err);
     return NextResponse.json(
