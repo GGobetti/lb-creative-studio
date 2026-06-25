@@ -6,6 +6,7 @@ import { getSupabaseBrowser } from '@/lib/supabase';
 
 interface AffiliateProductFormProps {
   product?: AffiliateProduct;
+  marketplace?: 'mercado_livre' | 'aliexpress' | 'shopee' | 'amazon';
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -14,6 +15,7 @@ const marketplaces = ['aliexpress', 'shopee', 'mercado_livre', 'amazon'] as cons
 
 export function AffiliateProductForm({
   product,
+  marketplace,
   onSuccess,
   onCancel,
 }: AffiliateProductFormProps) {
@@ -26,7 +28,7 @@ export function AffiliateProductForm({
     price: product?.details?.price?.toString() || '',
     image_url: product?.photos?.[0]?.image_url || '',
     affiliate_link: product?.affiliate_link || '',
-    marketplace: (product?.marketplace || 'aliexpress') as typeof marketplaces[number],
+    marketplace: (marketplace || product?.marketplace || 'aliexpress') as typeof marketplaces[number],
     is_active: product?.is_active ?? true,
   });
 
@@ -132,7 +134,8 @@ export function AffiliateProductForm({
             name="marketplace"
             value={formData.marketplace}
             onChange={handleChange}
-            className="w-full px-3 py-2 rounded bg-slate-700 text-white border border-slate-600 focus:border-cyan-500 outline-none"
+            disabled={!!marketplace}
+            className="w-full px-3 py-2 rounded bg-slate-700 text-white border border-slate-600 focus:border-cyan-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {marketplaces.map((m) => (
               <option key={m} value={m}>
