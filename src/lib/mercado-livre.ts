@@ -74,20 +74,110 @@ export async function resolveMLShortUrl(
   }
 }
 
+export interface MLProductResult {
+  productBase: {
+    name: string;
+    marketplace: 'mercado_livre';
+  };
+  details: {
+    description: string | null;
+    price: number;
+    category: string | null;
+    condition: 'new' | 'used' | null;
+    payment_methods: Array<{ name: string; installments?: number }>;
+    stock_quantity: number;
+    sales_count: number;
+    rating: number | null;
+    rating_count: number;
+  };
+  photos: Array<{
+    url: string;
+    source_id: string;
+    is_primary: boolean;
+  }>;
+}
+
 /**
  * Transform ML product data to our affiliate_products format
  */
-export function transformMLProductData(mlData: any) {
-  const images = mlData.pictures || [];
-  const imageUrl = images.length > 0 ? images[0].secure_url : '';
+export function transformMLProductData(mlData: any): MLProductResult {
+  // Extract images
+  const pictures = mlData.pictures || [];
+  const photos = pictures.map((pic: any, index: number) => ({
+    url: pic.secure_url || pic.url,
+    source_id: pic.id || `ml_photo_${index}`,
+    is_primary: index === 0,
+  }));
+
+  // Extract description (handle multiple descriptions)
+  let description = '';
+  if (mlData.descriptions && Array.isArray(mlData.descriptions)) {
+    description = mlData.descriptions
+      .map((d: any) => d.text || '')
+      .filter((t: string) => t.length > 0)
+      .join('\n\n');
+  }
+  if (!description && mlData.description) {
+    description = mlData.description;
+  }
+
+  // Extract payment methods
+  const paymentMethods: Array<{ name: string; installments?: number }> = [];
+  if (mlData.payment_methods && Array.isArray(mlData.payment_methods)) {
+    paymentMethods.push(
+      ...mlData.payment_methods
+        .filter((pm: any) => pm.id && pm.type)
+        .map((pm: any) => ({
+          name: pm.id.toUpperCase().replace(/_/g, ' '),
+          installments: pm.additional_info?.max_allowed_installments,
+        }))
+    );
+  }
+  // Add common payment method names
+  if (paymentMethods.length === 0) {
+    paymentMethods.push(
+      { name: 'Credit Card', installments: 12 },
+      { name: 'Debit Card' },
+      { name: 'Pix' }
+    );
+  }
+
+  // Extract condition
+  const condition: 'new' | 'used' | null = mlData.condition === 'used' ? 'used' : 'new';
+
+  // Extract category (name from category_id if available)
+  let category = mlData.category_name || mlData.category_id || null;
+
+  // Extract ratings
+  const rating = mlData.rating ? parseFloat(mlData.rating) : null;
+  const ratingCount = mlData.rating_count || mlData.ratings_count || 0;
+
+  // Extract stock
+  const stockQuantity = mlData.available_quantity || 0;
+
+  // Extract sales count
+  const salesCount = mlData.sold_quantity || 0;
+
+  // Price handling (use sale_price if available, otherwise price)
+  const price = mlData.sale_price || mlData.price || 0;
 
   return {
-    name: mlData.title,
-    description: mlData.descriptions?.[0]?.text || null,
-    price: mlData.price || 0,
-    image_url: imageUrl,
-    marketplace: 'mercado_livre',
-    // Note: affiliate_link should be set separately with the user's affiliate token
+    productBase: {
+      name: mlData.title,
+      marketplace: 'mercado_livre',
+    },
+    details: {
+      description: description || null,
+      price,
+      category,
+      condition,
+      payment_methods: paymentMethods,
+      stock_quantity: stockQuantity,
+      sales_count: salesCount,
+      rating,
+      rating_count: ratingCount,
+    },
+    photos,
   };
 }
 
