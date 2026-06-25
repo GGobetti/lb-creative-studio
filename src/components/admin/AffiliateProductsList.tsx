@@ -89,11 +89,11 @@ export function AffiliateProductsList({
                 <div>
                   <div className="font-medium">{product.name}</div>
                   <div className="text-xs text-slate-500 truncate max-w-xs">
-                    {product.description || 'Sem descrição'}
+                    {product.details?.description || 'Sem descrição'}
                   </div>
                 </div>
               </td>
-              <td className="py-3 px-4">R$ {product.price.toFixed(2)}</td>
+              <td className="py-3 px-4">R$ {product.details?.price ? product.details.price.toFixed(2) : '0.00'}</td>
               <td className="py-3 px-4 text-xs">
                 {product.marketplace.replace('_', ' ').toUpperCase()}
               </td>
