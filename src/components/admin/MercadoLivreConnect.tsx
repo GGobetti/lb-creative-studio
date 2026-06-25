@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { generateMLAuthorizationUrl } from '@/lib/mercado-livre';
 import { getSupabaseBrowser } from '@/lib/supabase';
 
 export function MercadoLivreConnect() {
@@ -54,9 +53,20 @@ export function MercadoLivreConnect() {
     }
   };
 
-  const handleConnect = () => {
-    const authUrl = generateMLAuthorizationUrl();
-    window.location.href = authUrl;
+  const handleConnect = async () => {
+    try {
+      const response = await fetch('/api/auth/mercado-livre-url');
+      const data = await response.json();
+
+      if (!response.ok || !data.authUrl) {
+        setError('Erro ao gerar URL de autorização');
+        return;
+      }
+
+      window.location.href = data.authUrl;
+    } catch (err) {
+      setError('Erro ao conectar com Mercado Livre');
+    }
   };
 
   if (isLoading) {
