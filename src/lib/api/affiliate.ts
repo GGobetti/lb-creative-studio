@@ -1,26 +1,59 @@
+export interface ProductPhoto {
+  id: string;
+  image_url: string;
+  is_primary: boolean;
+  position: number;
+}
+
+export interface ProductDetails {
+  id: string;
+  description: string | null;
+  price: number;
+  category: string | null;
+  condition: 'new' | 'used' | null;
+  payment_methods: Array<{ name: string; installments?: number }>;
+  stock_quantity: number;
+  sales_count: number;
+  rating: number | null;
+  rating_count: number;
+}
+
 export interface AffiliateProduct {
   id: string;
   admin_id: string;
   name: string;
-  description?: string;
-  price: number;
-  image_url: string;
+  marketplace: 'mercado_livre' | 'shopee' | 'aliexpress' | 'amazon';
   affiliate_link: string;
-  marketplace: 'aliexpress' | 'shopee' | 'mercado_livre' | 'amazon';
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  details: ProductDetails | null;
+  photos: ProductPhoto[];
 }
 
-export async function fetchAffiliateProducts(): Promise<AffiliateProduct[]> {
-  const res = await fetch('/api/affiliate/products');
+export async function fetchAffiliateProducts(
+  marketplace?: string
+): Promise<AffiliateProduct[]> {
+  const url = new URL('/api/affiliate/products', window.location.origin);
+  if (marketplace) {
+    url.searchParams.set('marketplace', marketplace);
+  }
+
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error('Failed to fetch products');
   const { products } = await res.json();
   return products;
 }
 
+export async function fetchAffiliateProduct(id: string): Promise<AffiliateProduct> {
+  const res = await fetch(`/api/affiliate/products/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch product');
+  const { product } = await res.json();
+  return product;
+}
+
 export async function createProduct(
-  data: Omit<AffiliateProduct, 'id' | 'admin_id' | 'created_at' | 'updated_at'>,
+  data: Omit<AffiliateProduct, 'id' | 'admin_id' | 'created_at' | 'updated_at' | 'details' | 'photos'>,
   token: string
 ): Promise<AffiliateProduct> {
   const res = await fetch('/api/affiliate/products', {
