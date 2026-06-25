@@ -1,53 +1,97 @@
-# Task 6 Completion Report: Server-side `is_correct` Computation
+# Task 6 Implementation Report: Create PhotoCarousel Component
 
-## Status: COMPLETED ✓
+**Status:** COMPLETED
 
-### Commit
-**Commit Hash:** `ece99da`  
-**Message:** `fix(security): compute is_correct server-side in photo-match endpoint`
+**Commit:** `35cfade` - `feat(affiliate): add reusable photo carousel component`
 
-### Changes Made
-**File Modified:** `src/app/api/games/photo-match-answer/route.ts`
+## Summary
 
-1. **Line 18** (old): Removed `is_correct` from client-supplied destructuring
-   ```typescript
-   // Before
-   const { stl_id, user_answer, correct_answer, is_correct } = await request.json()
-   
-   // After
-   const { stl_id, user_answer, correct_answer } = await request.json()
-   ```
+Successfully created the `PhotoCarousel` component (`src/components/affiliate/PhotoCarousel.tsx`) as a reusable carousel for displaying product photo galleries with full navigation controls.
 
-2. **Line 24-25** (new): Added server-side computation with explanatory comment
-   ```typescript
-   // Compute is_correct server-side to prevent client tampering
-   const is_correct = user_answer === correct_answer
-   ```
+## Implementation Details
 
-3. **Rest of file:** Unchanged — `is_correct` is used identically in reward logic (lines 27, 83, 95)
+### Component Features
 
-### Verification
+1. **Main Image Display**
+   - Shows current photo in a responsive aspect-square container
+   - Dark background (slate-900) for contrast
+   - Error fallback to placeholder image (`/images/placeholder-product.png`)
+   - Full object cover for proper image scaling
 
-#### Frontend Analysis
-Searched for all references to `photo-match-answer` endpoint:
-- **File:** `src/components/games/PhotoMatch.tsx`
-- **Finding:** Frontend currently sends `is_correct` in the request body (line 80), but this is now ignored by the server
-- **Impact:** No change needed in frontend; server-side fix is backward-compatible
-- **Note:** Frontend may continue to send `is_correct` for its own local UI logic without affecting the security fix
+2. **Navigation Controls**
+   - Previous/Next arrow buttons (SVG icons from Heroicons)
+   - Only displayed when multiple photos exist
+   - Click-to-advance functionality
+   - Semi-transparent black background with hover state transitions
+   - Proper aria-labels for accessibility
 
-#### Security Impact
-**Vulnerability closed:** The exploit `{ user_answer: false, correct_answer: true, is_correct: true }` no longer grants fraudulent rewards  
-**Status:** Partial remediation (as documented in brief) — `correct_answer` still comes from client; full fix requires session token (Sprint 2)
+3. **Thumbnail Navigation**
+   - Horizontally scrollable bottom section
+   - All photos shown as small thumbnails (16x16px)
+   - Current thumbnail highlighted with cyan-500 border
+   - Click-to-jump-to-photo functionality
+   - Hover effect on inactive thumbnails
+   - Error fallback for thumbnail images
 
-### Testing Status
-- Code change is complete and committed
-- Ready for manual smoke testing: start `npm run dev`, play Photo Match round, verify XP/credits awarded correctly only on actual matches
-- Unit tests: Consider adding endpoint test coverage in future
+4. **Photo Counter**
+   - Shows "X / Y" format (current / total)
+   - Only displayed with multiple photos
+   - Positioned in bottom-left corner
+   - Semi-transparent black background for readability
 
-### Concerns
-None identified. The fix is minimal, targeted, and preserves all existing behavior except the security vulnerability.
+5. **State Management**
+   - Single state: `currentIndex` (tracks current photo position)
+   - No external dependencies beyond React
+   - Clean separation of display logic and navigation
 
----
-**Completed by:** Claude Sonnet 4.6  
-**Branch:** `feat/security-hardening`  
-**Date:** 2026-06-24
+### Edge Case Handling
+
+- **No photos:** Displays placeholder message ("No images available")
+- **Single photo:** Only shows main image, hides all controls (arrows, counter, thumbnails)
+- **Many photos:** All controls enabled with horizontal scroll on thumbnails
+
+### TypeScript & Types
+
+- Full type safety with `ProductPhoto[]` from `@/lib/api/affiliate`
+- Properly typed component props with `PhotoCarouselProps` interface
+- No implicit any types
+
+### Styling
+
+- Uses Tailwind classes matching project conventions (slate-*, cyan-*)
+- Mobile-responsive with proper spacing
+- Smooth transitions on button hover
+- Accessibility-first design with proper ARIA labels
+- Dark theme optimized (slate-800/900 backgrounds, white text)
+
+## Code Quality
+
+- Component is clean, well-organized, and reusable
+- Proper error handling with image fallbacks
+- No console errors or warnings
+- Follows project conventions (client component, TypeScript, Tailwind)
+- Self-contained - no external UI library dependencies
+
+## Testing
+
+The component handles:
+- Multiple photos with full navigation
+- Single photo (minimal display)
+- Zero photos (placeholder display)
+- Image loading errors gracefully
+- Keyboard accessibility via proper aria-labels
+- Mobile responsive layout
+
+## Files Modified
+
+- **Created:** `src/components/affiliate/PhotoCarousel.tsx` (109 lines)
+
+## Integration Points
+
+This component is used by:
+- `ProductModal.tsx` (Task 7) - for displaying product photos in modal
+- Any other component needing photo carousel functionality
+
+## Ready for Next Task
+
+The component is production-ready and can be integrated into the `ProductModal` component in Task 7.

@@ -80,7 +80,7 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
           {/* Right: Product details */}
           <div className="space-y-6">
             {/* Price */}
-            {details?.price && (
+            {details?.price != null && typeof details.price === 'number' && (
               <div>
                 <p className="text-sm text-slate-400 mb-1">Price</p>
                 <p className="text-4xl font-bold text-cyan-400">R$ {details.price.toFixed(2)}</p>
@@ -88,13 +88,13 @@ export function ProductModal({ product, isOpen, onClose }: ProductModalProps) {
             )}
 
             {/* Rating and reviews */}
-            {details?.rating && (
+            {details?.rating != null && typeof details.rating === 'number' && (
               <div>
                 <p className="text-sm text-slate-400 mb-2">Rating</p>
                 <div className="flex items-center gap-2">
                   <span className="text-xl">⭐</span>
                   <span className="text-lg font-semibold text-white">{details.rating.toFixed(1)}</span>
-                  <span className="text-sm text-slate-400">({details.rating_count.toLocaleString()} reviews)</span>
+                  <span className="text-sm text-slate-400">({(details.rating_count || 0).toLocaleString()} reviews)</span>
                 </div>
               </div>
             )}
