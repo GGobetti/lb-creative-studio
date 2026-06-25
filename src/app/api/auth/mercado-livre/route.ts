@@ -82,16 +82,11 @@ export async function GET(req: NextRequest) {
       user_id: ml_user_id,
     } = tokenData;
 
-    // Get authenticated user from request (via cookie/session)
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(
-      req.cookies.get('sb-access-token')?.value || ''
-    );
+    // Get user_id from stored cookie
+    const userId = req.cookies.get('ml_oauth_user_id')?.value;
 
-    if (authError || !user?.id) {
-      console.error('[Auth Error]', authError);
+    if (!userId) {
+      console.error('[Auth Error]', 'No user_id in cookie');
       return NextResponse.redirect(
         new URL('/login', req.nextUrl.origin)
       );
@@ -101,7 +96,7 @@ export async function GET(req: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
 
     if (profile?.role !== 'sysadmin') {
@@ -120,7 +115,7 @@ export async function GET(req: NextRequest) {
       .from('marketplace_credentials')
       .upsert([
         {
-          admin_id: user.id,
+          admin_id: userId,
           marketplace: 'mercado_livre',
           access_token,
           refresh_token,
