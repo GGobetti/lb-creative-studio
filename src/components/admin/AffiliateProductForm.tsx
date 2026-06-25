@@ -60,22 +60,15 @@ export function AffiliateProductForm({
         await updateProduct(
           product.id,
           {
-            ...formData,
-            price: parseFloat(formData.price),
+            name: formData.name,
+            is_active: formData.is_active,
           },
           token
         );
+        onSuccess();
       } else {
-        await createProduct(
-          {
-            ...formData,
-            price: parseFloat(formData.price),
-          } as any,
-          token
-        );
+        setError('Criação de produtos deve ser feita via importação de API (Mercado Livre)');
       }
-
-      onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar');
     } finally {
@@ -83,96 +76,32 @@ export function AffiliateProductForm({
     }
   };
 
+  if (!product) {
+    return (
+      <div className="p-4 bg-slate-800/50 rounded text-slate-300">
+        <p>Produtos devem ser criados via importação de API (Mercado Livre).</p>
+        <p className="text-sm text-slate-400 mt-2">Clique "+ Novo Produto" e selecione Mercado Livre para importar.</p>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="p-3 bg-red-900/30 text-red-300 rounded">{error}</div>}
 
       <div>
-        <label className="block text-sm font-medium mb-1">Nome *</label>
+        <label className="block text-sm font-medium mb-1">Nome</label>
         <input
           type="text"
           name="name"
           value={formData.name}
           onChange={handleChange}
-          required
           className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:border-cyan-500 outline-none"
-          placeholder="Ex: Impressora 3D Creality Ender 3"
+          placeholder="Nome do produto"
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Descrição</label>
-        <textarea
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-          rows={3}
-          className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:border-cyan-500 outline-none"
-          placeholder="Ex: Impressora com cama aquecida, suporta PLA/ABS..."
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Preço (R$) *</label>
-          <input
-            type="number"
-            name="price"
-            value={formData.price}
-            onChange={handleChange}
-            required
-            step="0.01"
-            min="0"
-            className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:border-cyan-500 outline-none"
-            placeholder="999.99"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Marketplace *</label>
-          <select
-            name="marketplace"
-            value={formData.marketplace}
-            onChange={handleChange}
-            disabled={!!marketplace}
-            className="w-full px-3 py-2 rounded bg-slate-700 text-white border border-slate-600 focus:border-cyan-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {marketplaces.map((m) => (
-              <option key={m} value={m}>
-                {m.replace('_', ' ').toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">URL da Imagem *</label>
-        <input
-          type="url"
-          name="image_url"
-          value={formData.image_url}
-          onChange={handleChange}
-          required
-          className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:border-cyan-500 outline-none"
-          placeholder="https://..."
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Link de Afiliado *</label>
-        <input
-          type="url"
-          name="affiliate_link"
-          value={formData.affiliate_link}
-          onChange={handleChange}
-          required
-          className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:border-cyan-500 outline-none"
-          placeholder="https://aliexpress.com/..."
-        />
-      </div>
-
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 p-3 bg-slate-800/50 rounded">
         <input
           type="checkbox"
           id="is_active"
@@ -186,13 +115,28 @@ export function AffiliateProductForm({
         </label>
       </div>
 
+      <div className="space-y-2 p-3 bg-slate-800/50 rounded text-sm text-slate-400">
+        <div>
+          <span className="font-medium">Preço:</span> R$ {formData.price}
+        </div>
+        <div>
+          <span className="font-medium">Marketplace:</span> {formData.marketplace.replace('_', ' ').toUpperCase()}
+        </div>
+        <div>
+          <span className="font-medium">Link:</span>{' '}
+          <a href={formData.affiliate_link} target="_blank" rel="noopener" className="text-cyan-400 hover:underline">
+            Abrir
+          </a>
+        </div>
+      </div>
+
       <div className="flex gap-3 pt-4">
         <button
           type="submit"
           disabled={isLoading}
           className="px-4 py-2 bg-cyan-500 text-white rounded font-medium hover:bg-cyan-600 disabled:opacity-50"
         >
-          {isLoading ? 'Salvando...' : product ? 'Atualizar' : 'Criar'}
+          {isLoading ? 'Salvando...' : 'Atualizar'}
         </button>
         <button
           type="button"

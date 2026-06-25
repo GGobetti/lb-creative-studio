@@ -50,13 +50,9 @@ export function AffiliateProductsTab() {
 
   const handleMarketplaceSelect = (marketplace: Marketplace) => {
     setSelectedMarketplace(marketplace);
-    if (marketplace === 'mercado_livre') {
-      setShowMarketplaceSelector(false);
-      // MercadoLivreImportForm will be shown
-    } else {
-      setShowForm(true);
-      setShowMarketplaceSelector(false);
-    }
+    setShowMarketplaceSelector(false);
+    // Only Mercado Livre import is supported via API
+    // Other marketplaces can be created via ML API in the future
   };
 
   return (
@@ -68,37 +64,15 @@ export function AffiliateProductsTab() {
       {showMarketplaceSelector && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">Selecione o Marketplace</h3>
-            <div className="space-y-2">
-              <button
-                onClick={() => handleMarketplaceSelect('mercado_livre')}
-                className="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded transition"
-              >
-                <div className="font-medium">🇧🇷 Mercado Livre</div>
-                <div className="text-xs text-slate-400">Cole o link do produto</div>
-              </button>
-              <button
-                onClick={() => handleMarketplaceSelect('aliexpress')}
-                className="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded transition"
-              >
-                <div className="font-medium">🌐 AliExpress</div>
-                <div className="text-xs text-slate-400">Preencher dados manualmente</div>
-              </button>
-              <button
-                onClick={() => handleMarketplaceSelect('shopee')}
-                className="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded transition"
-              >
-                <div className="font-medium">🛒 Shopee</div>
-                <div className="text-xs text-slate-400">Preencher dados manualmente</div>
-              </button>
-              <button
-                onClick={() => handleMarketplaceSelect('amazon')}
-                className="w-full text-left px-4 py-3 bg-slate-800 hover:bg-slate-700 rounded transition"
-              >
-                <div className="font-medium">📦 Amazon</div>
-                <div className="text-xs text-slate-400">Preencher dados manualmente</div>
-              </button>
-            </div>
+            <h3 className="text-xl font-semibold mb-4">Importar Produto</h3>
+            <p className="text-sm text-slate-400 mb-4">Atualmente, apenas Mercado Livre permite importação via API. Outros marketplaces podem ser adicionados no futuro.</p>
+            <button
+              onClick={() => handleMarketplaceSelect('mercado_livre')}
+              className="w-full text-left px-4 py-3 bg-cyan-500/20 hover:bg-cyan-500/30 rounded transition border border-cyan-500/50"
+            >
+              <div className="font-medium text-cyan-300">🇧🇷 Mercado Livre</div>
+              <div className="text-xs text-slate-400">Cole o link do produto para importar dados automaticamente</div>
+            </button>
             <button
               onClick={() => setShowMarketplaceSelector(false)}
               className="w-full mt-4 px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition"
@@ -110,7 +84,7 @@ export function AffiliateProductsTab() {
       )}
 
       {/* Mercado Livre Import Form */}
-      {selectedMarketplace === 'mercado_livre' && !showForm && (
+      {selectedMarketplace === 'mercado_livre' && (
         <div className="glass-panel p-6 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Importar do Mercado Livre</h3>
           <MercadoLivreImportForm
@@ -121,10 +95,7 @@ export function AffiliateProductsTab() {
             }}
           />
           <button
-            onClick={() => {
-              setSelectedMarketplace(null);
-              setShowMarketplaceSelector(true);
-            }}
+            onClick={() => setSelectedMarketplace(null)}
             className="mt-4 px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600"
           >
             ← Voltar
@@ -132,15 +103,12 @@ export function AffiliateProductsTab() {
         </div>
       )}
 
-      {/* Create/Edit Form for Manual Entry */}
-      {showForm && (
+      {/* Edit Form */}
+      {editingProduct && showForm && (
         <div className="glass-panel p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingProduct ? 'Editar Produto' : `Novo Produto - ${selectedMarketplace?.replace('_', ' ').toUpperCase()}`}
-          </h3>
+          <h3 className="text-lg font-semibold mb-4">Editar Produto</h3>
           <AffiliateProductForm
-            product={editingProduct || undefined}
-            marketplace={selectedMarketplace as any}
+            product={editingProduct}
             onSuccess={handleFormSuccess}
             onCancel={handleFormCancel}
           />
