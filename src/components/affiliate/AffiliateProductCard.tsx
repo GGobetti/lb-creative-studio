@@ -70,20 +70,20 @@ export function AffiliateProductCard({
         )}
 
         {/* Rating */}
-        {details?.rating != null && (
+        {details && details.rating != null && (
           <div className="flex items-center gap-1 mb-3">
             <span>⭐</span>
             <span className="text-xs font-medium">
-              {typeof details.rating === 'number' ? details.rating.toFixed(1) : '0.0'} ({details.rating_count || 0} reviews)
+              {(details.rating || 0).toFixed(1)} ({details.rating_count || 0} reviews)
             </span>
           </div>
         )}
 
         <div className="mt-auto">
           {/* Price */}
-          {details?.price != null && typeof details.price === 'number' && (
+          {details && (
             <div className="text-lg font-bold text-cyan-400 mb-3">
-              R$ {details.price.toFixed(2)}
+              R$ {(details.price || 0).toFixed(2)}
             </div>
           )}
 
