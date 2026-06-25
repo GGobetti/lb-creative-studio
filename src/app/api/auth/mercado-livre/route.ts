@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       console.error('[ML OAuth Error]', error, errorDescription);
       return NextResponse.redirect(
         new URL(
-          `/dashboard/affiliate?error=${encodeURIComponent(error)}&description=${encodeURIComponent(errorDescription || '')}`,
+          `/affiliate?error=${encodeURIComponent(error)}&description=${encodeURIComponent(errorDescription || '')}`,
           req.nextUrl.origin
         )
       );
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       console.error('[Token Exchange Error]', errorData);
       return NextResponse.redirect(
         new URL(
-          `/dashboard/affiliate?error=token_exchange_failed&details=${encodeURIComponent(JSON.stringify(errorData))}`,
+          `/affiliate?error=token_exchange_failed&details=${encodeURIComponent(JSON.stringify(errorData))}`,
           req.nextUrl.origin
         )
       );
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
     if (profile?.role !== 'sysadmin') {
       return NextResponse.redirect(
         new URL(
-          `/dashboard/affiliate?error=unauthorized`,
+          `/affiliate?error=unauthorized`,
           req.nextUrl.origin
         )
       );
@@ -154,7 +154,7 @@ export async function GET(req: NextRequest) {
       console.error('[Store Credentials Error]', insertError);
       return NextResponse.redirect(
         new URL(
-          `/dashboard/affiliate?error=store_credentials_failed`,
+          `/affiliate?error=store_credentials_failed`,
           req.nextUrl.origin
         )
       );
