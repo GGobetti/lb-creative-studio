@@ -29,16 +29,23 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    if (!code || !state) {
+    if (!code) {
       return NextResponse.json(
-        { error: 'Missing code or state parameter' },
+        { error: 'Missing code parameter' },
         { status: 400 }
       );
     }
 
-    // Verify state matches (basic CSRF protection)
-    // In production, store and validate against session
-    // For now, we'll use the code directly
+    // Verify state matches (CSRF protection)
+    if (state) {
+      const storedState = req.cookies.get('ml_oauth_state')?.value;
+      if (!storedState || state !== storedState) {
+        return NextResponse.json(
+          { error: 'Invalid state parameter' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Exchange code for access token
     const tokenResponse = await fetch('https://api.mercadolibre.com/oauth/token', {
