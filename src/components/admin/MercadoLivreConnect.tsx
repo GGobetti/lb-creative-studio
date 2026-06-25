@@ -37,12 +37,16 @@ export function MercadoLivreConnect() {
       }
 
       // Check if already connected
-      const { data } = await supabase
+      const { data, error: queryError } = await supabase
         .from('marketplace_credentials')
         .select('id')
         .eq('admin_id', session.user.id)
         .eq('marketplace', 'mercado_livre')
-        .single();
+        .maybeSingle();
+
+      if (queryError && queryError.code !== 'PGRST116') {
+        throw queryError;
+      }
 
       isSetConnected(!!data);
     } catch (err) {
