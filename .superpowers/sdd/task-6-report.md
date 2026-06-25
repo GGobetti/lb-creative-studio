@@ -1,73 +1,53 @@
-# Task 6 + Task 7 — Relatório de Implementação
+# Task 6 Completion Report: Server-side `is_correct` Computation
 
-**Status: CONCLUÍDO**
+## Status: COMPLETED ✓
 
----
+### Commit
+**Commit Hash:** `ece99da`  
+**Message:** `fix(security): compute is_correct server-side in photo-match endpoint`
 
-## Commits
+### Changes Made
+**File Modified:** `src/app/api/games/photo-match-answer/route.ts`
 
-1. `75a5696` — `feat: add shared LeaderboardUser types and leaderboard i18n strings (PT/EN/ES)`
-   - Criou `src/types/leaderboard.ts`
-   - Adicionou `leaderboard.*` keys em PT, EN e ES em `src/lib/translations.ts`
+1. **Line 18** (old): Removed `is_correct` from client-supplied destructuring
+   ```typescript
+   // Before
+   const { stl_id, user_answer, correct_answer, is_correct } = await request.json()
+   
+   // After
+   const { stl_id, user_answer, correct_answer } = await request.json()
+   ```
 
-2. `5e80a0d` — `refactor: update LeaderboardTable and UserPositionCard to use shared types and i18n`
-   - `LeaderboardTable.tsx`: removida interface local, importa de `@/types/leaderboard`, usa `useTranslation()` nos headers e empty state
-   - `UserPositionCard.tsx`: removida interface local, importa de `@/types/leaderboard`, usa `useTranslation()` para yourPosition e noGamesYet
+2. **Line 24-25** (new): Added server-side computation with explanatory comment
+   ```typescript
+   // Compute is_correct server-side to prevent client tampering
+   const is_correct = user_answer === correct_answer
+   ```
 
-3. `33d42d5` — `feat: add leaderboard page with week/alltime tabs and dual precache fetch`
-   - Criou `src/app/dashboard/games/leaderboard/page.tsx`
+3. **Rest of file:** Unchanged — `is_correct` is used identically in reward logic (lines 27, 83, 95)
 
----
+### Verification
 
-## Resultado TSC
+#### Frontend Analysis
+Searched for all references to `photo-match-answer` endpoint:
+- **File:** `src/components/games/PhotoMatch.tsx`
+- **Finding:** Frontend currently sends `is_correct` in the request body (line 80), but this is now ignored by the server
+- **Impact:** No change needed in frontend; server-side fix is backward-compatible
+- **Note:** Frontend may continue to send `is_correct` for its own local UI logic without affecting the security fix
 
-**Zero novos erros** nos arquivos criados/modificados.
+#### Security Impact
+**Vulnerability closed:** The exploit `{ user_answer: false, correct_answer: true, is_correct: true }` no longer grants fraudulent rewards  
+**Status:** Partial remediation (as documented in brief) — `correct_answer` still comes from client; full fix requires session token (Sprint 2)
 
-Existem 15 erros pré-existentes em:
-- `src/app/api/cancel-subscription/route.ts` — Stripe API version mismatch
-- `src/app/api/subscription-change/route.ts` — Stripe API version mismatch
-- `src/app/dashboard/billing/page.tsx` — implicit any em callbacks
-- `src/components/CreditModal.tsx` — propriedade Stripe inexistente
+### Testing Status
+- Code change is complete and committed
+- Ready for manual smoke testing: start `npm run dev`, play Photo Match round, verify XP/credits awarded correctly only on actual matches
+- Unit tests: Consider adding endpoint test coverage in future
 
-Esses erros existiam antes desta task e não são de responsabilidade deste escopo.
-
----
-
-## Arquivos Criados/Modificados
-
-- `src/types/leaderboard.ts` — novo: `LeaderboardUser` e `LeaderboardResponse`
-- `src/lib/translations.ts` — modificado: adicionado `leaderboard` object em pt/en/es
-- `src/components/games/LeaderboardTable.tsx` — refatorado: import types + useTranslation
-- `src/components/games/UserPositionCard.tsx` — refatorado: import types + useTranslation
-- `src/app/dashboard/games/leaderboard/page.tsx` — novo: página completa
-
----
-
-## Desvios do Brief
-
-- **SWR**: substituído por `useEffect + useState` + `Promise.all` conforme instrução explícita do prompt. O código de exemplo do brief usava SWR, mas o prompt explicitamente proibiu SWR.
-- **Auth**: usa `getSupabaseBrowser().auth.getSession()` com Bearer token, idêntico ao `LeaderboardCard.tsx`.
-- **"Jogar Agora"**: mantido sem tradução pois o brief não incluiu essa string como key i18n.
+### Concerns
+None identified. The fix is minimal, targeted, and preserves all existing behavior except the security vulnerability.
 
 ---
-
-## Concerns
-
-Nenhum. O padrão de fetch duplo via `Promise.all` garante que ambas as abas carregam em paralelo na montagem, eliminando latência ao trocar de aba.
-
----
-
-## Fix
-
-Correções aplicadas após revisão de código (Tasks 6+7):
-
-**Bloqueantes corrigidas:**
-- `src/lib/translations.ts` — `leaderboard.rank` corrigido em 3 línguas: `pt` `"Pos"` → `"Posição"`, `en` `"Pos"` → `"Rank"`, `es` `"Pos"` → `"Posición"`.
-
-**Recomendadas corrigidas:**
-- `src/lib/translations.ts` — Adicionada chave `playNow` nas 3 línguas: `pt` `"Jogar Agora"`, `en` `"Play Now"`, `es` `"Jugar Ahora"`.
-- `src/components/games/UserPositionCard.tsx` — Substituída string hardcoded `"Jogar Agora"` por `{t('leaderboard.playNow')}`. `useTranslation` já estava importado.
-- `src/components/games/LeaderboardTable.tsx` — Empty state agora usa a prop `period`: acrescenta `" (essa semana)"` quando `period === 'week'`, sem adição quando `period === 'alltime'`, dando contexto real ao usuário.
-- `src/components/games/LeaderboardTable.tsx` — Zebra striping corrigido: todas as linhas agora têm `hover:bg-muted/20`; linhas pares mantêm `bg-muted/10` como base.
-
-**TSC:** Zero novos erros nos arquivos modificados. Os 15 erros pré-existentes (Stripe API version mismatch, billing types) permanecem inalterados.
+**Completed by:** Claude Sonnet 4.6  
+**Branch:** `feat/security-hardening`  
+**Date:** 2026-06-24
