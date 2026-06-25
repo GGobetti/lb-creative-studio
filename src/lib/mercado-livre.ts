@@ -56,18 +56,48 @@ export async function resolveMLShortUrl(
   shortUrl: string
 ): Promise<string | null> {
   try {
-    const response = await fetch(shortUrl, {
-      redirect: 'follow',
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (compatible; LBCreativeBot/1.0)',
-      },
-    });
+    // Try to extract ID directly from any format
+    const directMatch = shortUrl.match(/MLA\d+|MLB\d+|MLM\d+|MLV\d+/);
+    if (directMatch) {
+      return directMatch[0];
+    }
 
-    const urlString = response.url;
-    // Extract item ID from URL: https://www.mercadolivre.com.br/...MLA123456789...
-    const match = urlString.match(/MLA\d+|MLB\d+|MLM\d+|MLV\d+/);
-    return match ? match[0] : null;
+    // Try to resolve short URL with fetch
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+    try {
+      const response = await fetch(shortUrl, {
+        redirect: 'follow',
+        signal: controller.signal,
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const urlString = response.url;
+        // Extract item ID from URL: https://www.mercadolivre.com.br/...MLA123456789...
+        const match = urlString.match(/MLA\d+|MLB\d+|MLM\d+|MLV\d+/);
+        if (match) {
+          return match[0];
+        }
+      }
+
+      return null;
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.warn('[ML URL Resolve] Timeout reaching URL');
+      } else {
+        console.warn('[ML URL Resolve] Fetch failed, trying alternative method');
+      }
+      return null;
+    }
   } catch (error) {
     console.error('[Resolve Short URL Error]', error);
     return null;
