@@ -1100,6 +1100,16 @@ export function PhotoCurator() {
                   <p className="text-sm font-medium break-words leading-tight" title={row.file_name}>
                     {row.title || row.file_name}
                   </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {Array.from(categoryCache[row.id] || []).map((cat) => (
+                      <span
+                        key={cat}
+                        className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 text-xs font-medium"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
                   <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
                     <p>{photos.length} foto(s)</p>
                     {row.telegram_group_name && (
