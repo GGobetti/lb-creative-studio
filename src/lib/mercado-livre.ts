@@ -48,6 +48,30 @@ export async function fetchMLProductData(
 
     console.log(`[ML API] /items/ returned ${itemsResponse.status}, trying /products/...`);
 
+    // If /items/ returned 403 with token, try search by ID as alternative
+    if (itemsResponse.status === 403 && accessToken) {
+      try {
+        const searchResp = await fetch(
+          `https://api.mercadolibre.com/sites/MLB/search?q=${productId}&limit=1`,
+          { headers }
+        );
+        if (searchResp.ok) {
+          const searchData = await searchResp.json();
+          const result = searchData.results?.[0];
+          if (result?.id) {
+            console.log('[ML API] Found via search fallback:', result.id);
+            const itemResp = await fetch(`https://api.mercadolibre.com/items/${result.id}`, { headers });
+            if (itemResp.ok) {
+              const data = await itemResp.json();
+              return { ...data, _source: 'items', affiliate_id: productId };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[ML API] Search fallback failed:', e);
+      }
+    }
+
     // Try /products/ for catalog products (URL has /p/MLB...)
     const productsResponse = await fetch(
       `https://api.mercadolibre.com/products/${productId}`,
@@ -157,12 +181,17 @@ export async function resolveMLShortUrl(
       return directMatch[0];
     }
 
-    // Try to extract affiliate ID (KTXFEU-ACQ3 format)
-    const affiliateMatch = shortUrl.match(/[A-Z0-9]+-[A-Z0-9]+/);
+    // Try to extract affiliate ID (KTXFEU-ACQ3 format) — must NOT start with ML country prefix
+    const affiliateMatch = shortUrl.match(/(?<![A-Z])([A-Z0-9]{4,}-[A-Z0-9]+)/);
     if (affiliateMatch) {
-      const affiliateId = affiliateMatch[0];
+      const affiliateId = affiliateMatch[1];
+      // If it looks like MLB-digits, strip the dash (URL encoding artifact)
+      const cleanId = affiliateId.replace(/^(ML[A-Z])-(\d+)$/, '$1$2');
+      if (cleanId !== affiliateId) {
+        console.log('[ML Resolve] Fixed malformed product ID:', affiliateId, '->', cleanId);
+        return cleanId;
+      }
       console.log('[ML Resolve] Found affiliate ID:', affiliateId);
-      // Return affiliate ID - will be handled by special resolution endpoint
       return affiliateId;
     }
 

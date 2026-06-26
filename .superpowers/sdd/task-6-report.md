@@ -1,97 +1,74 @@
-# Task 6 Implementation Report: Create PhotoCarousel Component
+# Task 6: Create Backend Endpoint Handler — DONE
 
-**Status:** COMPLETED
-
-**Commit:** `35cfade` - `feat(affiliate): add reusable photo carousel component`
+**Date:** 2026-06-26  
+**Commit:** 2834c57 (`feat: add bulk_categorize_stls API endpoint handler`)
 
 ## Summary
 
-Successfully created the `PhotoCarousel` component (`src/components/affiliate/PhotoCarousel.tsx`) as a reusable carousel for displaying product photo galleries with full navigation controls.
+Added the `bulk_categorize_stls` action handler to the existing photo-curator API endpoint at `/src/app/api/admin/photo-curator/route.ts`. The handler implements bulk category assignment for multiple STLs with proper category merging and database upserts.
 
 ## Implementation Details
 
-### Component Features
+### Handler Location
+- File: `src/app/api/admin/photo-curator/route.ts`
+- Inserted: Before the `default` case (line 153-240)
+- Pattern: Follows existing switch-case structure
 
-1. **Main Image Display**
-   - Shows current photo in a responsive aspect-square container
-   - Dark background (slate-900) for contrast
-   - Error fallback to placeholder image (`/images/placeholder-product.png`)
-   - Full object cover for proper image scaling
+### Key Features Implemented
+1. **Input Validation**
+   - Validates `stl_ids` array is non-empty
+   - Accepts `categories` and `suggested_categories` arrays
 
-2. **Navigation Controls**
-   - Previous/Next arrow buttons (SVG icons from Heroicons)
-   - Only displayed when multiple photos exist
-   - Click-to-advance functionality
-   - Semi-transparent black background with hover state transitions
-   - Proper aria-labels for accessibility
+2. **Category Merging**
+   - Fetches existing category votes from `category_votes` table
+   - Uses `Set` to deduplicate when merging
+   - Accumulates categories (doesn't replace existing ones)
 
-3. **Thumbnail Navigation**
-   - Horizontally scrollable bottom section
-   - All photos shown as small thumbnails (16x16px)
-   - Current thumbnail highlighted with cyan-500 border
-   - Click-to-jump-to-photo functionality
-   - Hover effect on inactive thumbnails
-   - Error fallback for thumbnail images
+3. **Database Operations**
+   - Chunks upserts at 50 items to avoid Supabase query limits
+   - Uses `upsert()` with `onConflict: 'user_id,stl_id'` conflict resolution
+   - Uses admin client (`getSupabaseAdmin()`) for database access
 
-4. **Photo Counter**
-   - Shows "X / Y" format (current / total)
-   - Only displayed with multiple photos
-   - Positioned in bottom-left corner
-   - Semi-transparent black background for readability
+4. **Response Handling**
+   - Success: Returns `{ success: true, updated_count: <number> }`
+   - Validation error: Returns 400 status with `{ error: "Invalid stl_ids" }`
+   - Server error: Returns 500 status with `{ error: "Failed to bulk categorize" }`
 
-5. **State Management**
-   - Single state: `currentIndex` (tracks current photo position)
-   - No external dependencies beyond React
-   - Clean separation of display logic and navigation
+### Error Handling
+- Catches any database errors during fetch or upsert
+- Logs errors to console for debugging
+- Returns appropriate HTTP status codes
 
-### Edge Case Handling
+## Verification
 
-- **No photos:** Displays placeholder message ("No images available")
-- **Single photo:** Only shows main image, hides all controls (arrows, counter, thumbnails)
-- **Many photos:** All controls enabled with horizontal scroll on thumbnails
-
-### TypeScript & Types
-
-- Full type safety with `ProductPhoto[]` from `@/lib/api/affiliate`
-- Properly typed component props with `PhotoCarouselProps` interface
-- No implicit any types
-
-### Styling
-
-- Uses Tailwind classes matching project conventions (slate-*, cyan-*)
-- Mobile-responsive with proper spacing
-- Smooth transitions on button hover
-- Accessibility-first design with proper ARIA labels
-- Dark theme optimized (slate-800/900 backgrounds, white text)
+✅ **TypeScript Build:** Passed without errors  
+✅ **Build Output:** `npm run build -- --webpack` completed successfully  
+✅ **No Type Errors:** TypeScript check finished in 8.7s  
+✅ **Handler Structure:** Matches existing patterns (move_photo, set_photos, delete_photos, merge_stls)
 
 ## Code Quality
 
-- Component is clean, well-organized, and reusable
-- Proper error handling with image fallbacks
-- No console errors or warnings
-- Follows project conventions (client component, TypeScript, Tailwind)
-- Self-contained - no external UI library dependencies
+- Consistent with existing handler patterns
+- Proper error propagation and logging
+- Uses admin client appropriately
+- Follows project TypeScript conventions
+- No missing variables or imports
 
-## Testing
+## Integration Status
 
-The component handles:
-- Multiple photos with full navigation
-- Single photo (minimal display)
-- Zero photos (placeholder display)
-- Image loading errors gracefully
-- Keyboard accessibility via proper aria-labels
-- Mobile responsive layout
+This handler is ready for use by the frontend. The frontend component (Task 4: Categorization Tab) can now call this endpoint with:
 
-## Files Modified
+```typescript
+await callApi({
+  action: "bulk_categorize_stls",
+  stl_ids: [...],
+  categories: [...],
+  suggested_categories: [...]
+})
+```
 
-- **Created:** `src/components/affiliate/PhotoCarousel.tsx` (109 lines)
+## Next Steps
 
-## Integration Points
-
-This component is used by:
-- `ProductModal.tsx` (Task 7) - for displaying product photos in modal
-- Any other component needing photo carousel functionality
-
-## Ready for Next Task
-
-The component is production-ready and can be integrated into the `ProductModal` component in Task 7.
+- Task 7: Write Tests for Category Badge Rendering
+- Task 8: End-to-End Manual Test
+- Task 9: Commit and Documentation
