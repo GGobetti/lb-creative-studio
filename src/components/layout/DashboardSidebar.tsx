@@ -109,7 +109,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         { name: t("sidebar.portfolio", "Portfólio"), href: "/dashboard/portfolio", icon: Folder },
         { name: t("sidebar.customers", "Clientes"), href: "/dashboard/customers", icon: Users },
         { name: t("sidebar.quotations", "Cotações"), href: "/dashboard/quotations", icon: FileText },
-        { name: t("sidebar.affiliate", "Loja de Afiliados"), href: "/affiliate", icon: ShoppingCart },
+        { name: t("sidebar.affiliate", "Loja de Afiliados"), href: "/dashboard/affiliate", icon: ShoppingCart },
       ],
     },
     {

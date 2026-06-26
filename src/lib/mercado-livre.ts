@@ -56,32 +56,41 @@ export async function fetchMLProductData(
 
     if (productsResponse.ok) {
       const data = await productsResponse.json();
-      console.log('[ML API] Found as catalog product:', productId);
+      const bbw = data.buy_box_winner;
+      console.log('[ML API] Found as catalog product:', productId, '| buy_box_winner price:', bbw?.price, 'item_id:', bbw?.item_id);
 
-      // Fetch buy box winner for price/stock info
-      try {
-        // Search for items in this catalog product to get price/stock
-        const searchResponse = await fetch(
-          `https://api.mercadolibre.com/sites/MLB/search?catalog_product_id=${productId}&limit=1`,
-          { headers }
-        );
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-          const winner = searchData.results?.[0];
-          if (winner) {
-            console.log('[ML API] Found listing:', winner.id, 'price:', winner.price, 'stock:', winner.available_quantity);
+      // If buy_box_winner exists, fetch the actual item for full price/stock data
+      if (bbw?.item_id) {
+        try {
+          const itemResponse = await fetch(
+            `https://api.mercadolibre.com/items/${bbw.item_id}`,
+            { headers }
+          );
+          if (itemResponse.ok) {
+            const itemData = await itemResponse.json();
+            console.log('[ML API] Fetched buy box item:', bbw.item_id, 'price:', itemData.price, 'stock:', itemData.available_quantity);
             return {
               ...data,
               _source: 'products',
-              price: winner.sale_price || winner.price || 0,
-              available_quantity: winner.available_quantity > 0 ? winner.available_quantity : 1,
-              sold_quantity: winner.sold_quantity || 0,
-              condition: winner.condition || 'new',
+              price: itemData.sale_price || itemData.price || bbw.price || 0,
+              available_quantity: itemData.available_quantity > 0 ? itemData.available_quantity : 1,
+              sold_quantity: itemData.sold_quantity || 0,
+              condition: itemData.condition || 'new',
             };
           }
+        } catch (e) {
+          console.warn('[ML API] Could not fetch buy box item:', e);
         }
-      } catch (e) {
-        console.warn('[ML API] Could not fetch listing info:', e);
+      }
+
+      // Fallback: use price directly from buy_box_winner if available
+      if (bbw?.price) {
+        return {
+          ...data,
+          _source: 'products',
+          price: bbw.price,
+          available_quantity: 1,
+        };
       }
 
       return { ...data, _source: 'products' };
