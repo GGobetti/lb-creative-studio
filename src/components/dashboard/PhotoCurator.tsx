@@ -9,6 +9,8 @@ import {
   ImageOff, AlertTriangle, Search as SearchIcon,
   Hand, ArrowDownToLine, Combine, CheckSquare, Square, Archive,
 } from "lucide-react"
+import { PhotoCuratorCategoryTab } from "./PhotoCuratorCategoryTab"
+import { STL_CATEGORIES } from "@/types/games"
 
 interface StlRow {
   id: string
@@ -136,6 +138,13 @@ export function PhotoCurator() {
   // Categorias já atribuídas a cada STL: stl_id -> Set de categorias
   const [categoryCache, setCategoryCache] = useState<Record<string, Set<string>>>({})
   const [loadingCategories, setLoadingCategories] = useState(false)
+
+  // Bulk categorization state
+  const [bulkAction, setBulkAction] = useState<"none" | "validate" | "categorize" | "merge">("none")
+  const [bulkSelectedCategories, setBulkSelectedCategories] = useState<Set<string>>(new Set())
+  const [bulkSuggestion, setBulkSuggestion] = useState("")
+  const [showBulkSuggestionInput, setShowBulkSuggestionInput] = useState(false)
+  const [bulkCategorizing, setBulkCategorizing] = useState(false)
 
   const persistReviewed = useCallback((next: Set<string>) => {
     setReviewed(next)
@@ -321,6 +330,23 @@ export function PhotoCurator() {
     }
     return res.json()
   }, [getToken])
+
+  /* ---------- bulk categorization helpers ---------- */
+  const toggleBulkCategory = useCallback((cat: string) => {
+    setBulkSelectedCategories((prev) => {
+      const next = new Set(prev)
+      next.has(cat) ? next.delete(cat) : next.add(cat)
+      return next
+    })
+  }, [])
+
+  const handleBulkRemoveSuggestion = useCallback((cat: string) => {
+    setBulkSelectedCategories((prev) => {
+      const next = new Set(prev)
+      next.delete(cat)
+      return next
+    })
+  }, [])
 
   /* ---------- toggle de filtros ---------- */
   const toggleFilter = (chip: FilterChip) => {
@@ -862,35 +888,12 @@ export function PhotoCurator() {
         {/* Coluna esquerda */}
         <div>
 
-      {/* Barra de ações em massa (sticky — acompanha o scroll) */}
+      {/* Barra de ações em massa (sticky — acompanha o scroll) com tabs */}
       {selected.size > 0 && (
         <div className="sticky top-0 z-30 mb-4 rounded-xl border border-primary/40 bg-background/95 backdrop-blur shadow-lg p-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <Combine className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">{selected.size} selecionado(s)</span>
-
-            <button
-              onClick={() => bulkSetReviewed(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs border border-success/40 bg-success/10 text-success hover:bg-success/20"
-            >
-              <Check className="w-3 h-3" /> Validar selecionados
-            </button>
-            <button
-              onClick={() => bulkSetReviewed(false)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs border border-border hover:bg-muted"
-            >
-              <X className="w-3 h-3" /> Remover validação
-            </button>
-            <button
-              onClick={selectAllFiltered}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs border border-border hover:bg-muted"
-            >
-              <CheckSquare className="w-3 h-3" /> Selecionar todos ({filtered.length})
-            </button>
-
-            {selected.size >= 2 && (
-              <span className="text-xs text-muted-foreground">· escolha o principal p/ mesclar:</span>
-            )}
             <button
               onClick={clearSelection}
               className="ml-auto flex items-center gap-1 px-2 py-1 rounded text-xs border border-border hover:bg-muted"
@@ -899,49 +902,138 @@ export function PhotoCurator() {
             </button>
           </div>
 
-          {selected.size > 8 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Merge fica disponível com até 8 selecionados. Para validar em massa, use o botão acima.
-            </p>
+          {/* Tabs: Validar, Categorizar, Mesclar */}
+          <div className="flex border-b border-border gap-0 mb-3">
+            <button
+              onClick={() => setBulkAction("validate")}
+              className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+                bulkAction === "validate"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Validar
+            </button>
+            <button
+              onClick={() => setBulkAction("categorize")}
+              className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+                bulkAction === "categorize"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Categorizar
+            </button>
+            <button
+              onClick={() => setBulkAction("merge")}
+              className={`px-3 py-2 text-xs font-medium border-b-2 transition ${
+                bulkAction === "merge"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Mesclar
+            </button>
+          </div>
+
+          {/* Tab Content: Validar */}
+          {bulkAction === "validate" && (
+            <div className="space-y-2">
+              <button
+                onClick={() => bulkSetReviewed(true)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-success/40 bg-success/10 text-success hover:bg-success/20 text-sm font-medium"
+              >
+                <Check className="w-4 h-4" /> Validar todos os selecionados
+              </button>
+              <button
+                onClick={() => bulkSetReviewed(false)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm font-medium"
+              >
+                <X className="w-4 h-4" /> Remover validação
+              </button>
+              <button
+                onClick={selectAllFiltered}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm font-medium"
+              >
+                <CheckSquare className="w-4 h-4" /> Selecionar todos ({filtered.length})
+              </button>
+            </div>
           )}
 
-          {selected.size >= 2 && selected.size <= 8 && (
-            <div className="mt-3 space-y-1.5 max-h-[40vh] overflow-y-auto">
-              {[...selected].map((id) => {
-                const r = rows.find((x) => x.id === id)
-                if (!r) return null
-                return (
-                  <label
-                    key={id}
-                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm ${
-                      mergePrimary === id ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="merge-primary"
-                      checked={mergePrimary === id}
-                      onChange={() => setMergePrimary(id)}
-                      className="accent-primary"
-                    />
-                    <span className="font-medium truncate flex-1" title={r.file_name}>
-                      {r.title || r.file_name}
-                    </span>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {(r.photos || []).length} foto(s) · {r.telegram_group_name || "—"} · {formatDateTime(r.created_at)}
-                    </span>
-                    {mergePrimary === id && <span className="text-xs text-primary font-medium shrink-0">principal</span>}
-                  </label>
-                )
-              })}
+          {/* Tab Content: Categorizar */}
+          {bulkAction === "categorize" && (
+            <div className="space-y-3">
+              <PhotoCuratorCategoryTab
+                selectedCategories={bulkSelectedCategories}
+                toggleCategory={toggleBulkCategory}
+                handleRemoveSuggestion={handleBulkRemoveSuggestion}
+                suggestion={bulkSuggestion}
+                setSuggestion={setBulkSuggestion}
+                showSuggestionInput={showBulkSuggestionInput}
+                setShowSuggestionInput={setShowBulkSuggestionInput}
+              />
               <button
-                onClick={doMerge}
-                disabled={!mergePrimary || merging}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 disabled:opacity-50"
+                onClick={() => {
+                  // TODO: Implementar bulkApplyCategories (Task 5)
+                  alert("Endpoint ainda não implementado (Task 5)")
+                }}
+                disabled={bulkSelectedCategories.size === 0 || bulkCategorizing}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
               >
-                {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Combine className="w-4 h-4" />}
-                Mesclar no principal
+                {bulkCategorizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Aplicar em Massa
               </button>
+            </div>
+          )}
+
+          {/* Tab Content: Mesclar */}
+          {bulkAction === "merge" && (
+            <div className="space-y-2">
+              {selected.size > 8 ? (
+                <p className="text-xs text-muted-foreground px-2 py-2">
+                  Merge fica disponível com até 8 selecionados. Desselecione alguns para continuar.
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground px-2">Escolha o arquivo principal:</p>
+                  <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
+                    {[...selected].map((id) => {
+                      const r = rows.find((x) => x.id === id)
+                      if (!r) return null
+                      return (
+                        <label
+                          key={id}
+                          className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm transition ${
+                            mergePrimary === id ? "border-primary bg-primary/10" : "border-border hover:bg-muted/50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="merge-primary"
+                            checked={mergePrimary === id}
+                            onChange={() => setMergePrimary(id)}
+                            className="accent-primary"
+                          />
+                          <span className="font-medium truncate flex-1" title={r.file_name}>
+                            {r.title || r.file_name}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {(r.photos || []).length} foto(s)
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={doMerge}
+                    disabled={!mergePrimary || merging}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+                  >
+                    {merging ? <Loader2 className="w-4 h-4 animate-spin" /> : <Combine className="w-4 h-4" />}
+                    Mesclar no principal
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
