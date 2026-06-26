@@ -195,9 +195,11 @@ export default function StlSearchPage() {
           query = query.or('has_appended_photos.is.null,has_appended_photos.eq.false').is("thumbnail_url", null);
         }
 
-        query = query
-          .order("created_at", { ascending: false })
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+        query = query.order("created_at", { ascending: false });
+
+        if (!categoryFilter) {
+          query = query.range(page * pageSize, (page + 1) * pageSize - 1);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
@@ -237,7 +239,7 @@ export default function StlSearchPage() {
             }));
 
           setItems(prev => page === 0 ? mapped : [...prev, ...mapped]);
-          setHasMore(data.length === pageSize);
+          setHasMore(!categoryFilter && data.length === pageSize);
         }
       } catch (err) {
         console.error("Error fetching telegram stls:", err);
