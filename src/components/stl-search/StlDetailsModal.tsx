@@ -536,6 +536,17 @@ export function StlDetailsModal({
                       </div>
                     </div>
 
+                    {/* Telegram Group Info (Admin Only) */}
+                    {isAdmin && item.telegramGroupName && (
+                      <div className="flex items-start gap-3 pt-4 border-t border-border/50">
+                        <MessageSquare className="w-4 h-4 text-primary/70 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground font-semibold mb-1">Origem (Telegram)</p>
+                          <p className="text-sm text-foreground font-medium">{item.telegramGroupName}</p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* ── Seção de Partes do Modelo ────────────── */}
                     {hasParts && (
                       <div className="space-y-3">
