@@ -1,7 +1,19 @@
 import { useState } from "react";
-import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon } from "lucide-react";
+import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon, Calendar } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
 import { useAppStore } from "@/store/store";
+
+/**
+ * Format date to Portuguese locale (pt-BR)
+ * Example: "2026-06-25T10:30:00Z" → "25 jun 2026"
+ */
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 interface StlCardProps {
   item: StlItem;
@@ -136,7 +148,19 @@ export function StlCard({
         <h3 className="text-base font-bold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
           {item.title}
         </h3>
-        
+
+        {/* Download Count & Upload Date */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3 flex-wrap">
+          <div className="flex items-center gap-1">
+            <Download className="w-3.5 h-3.5 text-emerald-500/70" />
+            <span className="font-semibold">{item.downloadCount || 0}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
+            <span className="font-semibold">{formatDate(item.addedAt)}</span>
+          </div>
+        </div>
+
         {/* Source info — visível apenas para admins */}
         {isAdmin && item.telegramGroupName && (
           <div className="flex items-center gap-2 text-muted-foreground text-xs mt-auto mb-3">
