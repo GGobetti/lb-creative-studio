@@ -284,23 +284,26 @@ export function PhotoCurator() {
       const supabase = getSupabaseBrowser()
       const stlIds = rows.map((r) => r.id)
 
-      // Fetch em chunks de 100 pra não estourar limite
+      // Lê categorias canônicas direto de telegram_indexed_stls (não de category_votes,
+      // que só tem os votos manuais — a auto-categorização SQL escreve só aqui)
       const CHUNK = 100
-      const allVotes: any[] = []
+      const allRows: { id: string; categories: string[] }[] = []
       for (let i = 0; i < stlIds.length; i += CHUNK) {
         const chunk = stlIds.slice(i, i + CHUNK)
         const { data, error } = await supabase
-          .from("category_votes")
-          .select("stl_id, categories")
-          .in("stl_id", chunk)
+          .from("telegram_indexed_stls")
+          .select("id, categories")
+          .in("id", chunk)
         if (error) throw error
-        allVotes.push(...(data || []))
+        allRows.push(...(data || []))
       }
 
       // Monta cache: stl_id -> Set<categories>
       const cache: Record<string, Set<string>> = {}
-      for (const vote of allVotes) {
-        cache[vote.stl_id] = new Set(vote.categories || [])
+      for (const row of allRows) {
+        if (row.categories?.length > 0) {
+          cache[row.id] = new Set(row.categories)
+        }
       }
       setCategoryCache(cache)
     } catch (err) {
