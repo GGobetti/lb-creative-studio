@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchAffiliateProducts, AffiliateProduct } from '@/lib/api/affiliate';
+import { getSupabaseBrowser } from '@/lib/supabase';
 import { AffiliateProductForm } from './AffiliateProductForm';
 import { AffiliateProductsList } from './AffiliateProductsList';
 import { MercadoLivreImportForm } from './MercadoLivreImportForm';
@@ -49,12 +50,59 @@ export function AffiliateProductsTab() {
   const handleMarketplaceSelect = (marketplace: Marketplace) => {
     setSelectedMarketplace(marketplace);
     setShowMarketplaceSelector(false);
-    // Only Mercado Livre import is supported via API
-    // Other marketplaces can be created via ML API in the future
+  };
+
+  const handleMLAuth = async () => {
+    try {
+      const supabase = getSupabaseBrowser();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user?.id;
+
+      if (!userId) {
+        alert('Você precisa estar autenticado');
+        return;
+      }
+
+      // Redirect to ML authorization
+      const response = await fetch(
+        `/api/auth/mercado-livre-url?user_id=${userId}`
+      );
+      const data = await response.json();
+
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        alert('Erro ao gerar URL de autorização');
+      }
+    } catch (err) {
+      alert('Erro ao conectar');
+      console.error(err);
+    }
   };
 
   return (
     <div className="space-y-6">
+      {/* ML Connection Status */}
+      <div className="glass-panel p-6 rounded-lg bg-amber-900/20 border border-amber-700/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-amber-300 mb-1">
+              ⚠️ Conectar ao Mercado Livre
+            </h3>
+            <p className="text-sm text-amber-100">
+              Para importar produtos, você precisa conectar sua conta do Mercado
+              Livre. Clique abaixo para autorizar.
+            </p>
+          </div>
+          <button
+            onClick={handleMLAuth}
+            className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded font-medium whitespace-nowrap ml-4"
+          >
+            Conectar ao ML
+          </button>
+        </div>
+      </div>
+
       {/* Marketplace Selector Modal */}
       {showMarketplaceSelector && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
