@@ -133,6 +133,10 @@ export function PhotoCurator() {
   const [bucketOpen, setBucketOpen] = useState(false)
   const [bucketSelected, setBucketSelected] = useState<Set<string>>(new Set()) // URLs selecionadas no bucket
 
+  // Categorias já atribuídas a cada STL: stl_id -> Set de categorias
+  const [categoryCache, setCategoryCache] = useState<Record<string, Set<string>>>({})
+  const [loadingCategories, setLoadingCategories] = useState(false)
+
   const persistReviewed = useCallback((next: Set<string>) => {
     setReviewed(next)
     if (typeof window !== "undefined") {
@@ -256,8 +260,46 @@ export function PhotoCurator() {
     } catch {}
   }, [])
 
+  const fetchCategoryVotes = useCallback(async () => {
+    if (rows.length === 0) return
+    setLoadingCategories(true)
+    try {
+      const supabase = getSupabaseBrowser()
+      const stlIds = rows.map((r) => r.id)
+
+      // Fetch em chunks de 100 pra não estourar limite
+      const CHUNK = 100
+      const allVotes: any[] = []
+      for (let i = 0; i < stlIds.length; i += CHUNK) {
+        const chunk = stlIds.slice(i, i + CHUNK)
+        const { data, error } = await supabase
+          .from("category_votes")
+          .select("stl_id, categories")
+          .in("stl_id", chunk)
+        if (error) throw error
+        allVotes.push(...(data || []))
+      }
+
+      // Monta cache: stl_id -> Set<categories>
+      const cache: Record<string, Set<string>> = {}
+      for (const vote of allVotes) {
+        cache[vote.stl_id] = new Set(vote.categories || [])
+      }
+      setCategoryCache(cache)
+    } catch (err) {
+      console.error("Erro ao carregar categorias:", err)
+    } finally {
+      setLoadingCategories(false)
+    }
+  }, [rows.length])
+
   useEffect(() => { fetchRows(); fetchBucket() }, [fetchRows, fetchBucket])
 
+  useEffect(() => {
+    if (rows.length > 0) {
+      fetchCategoryVotes()
+    }
+  }, [rows.length, fetchCategoryVotes])
 
   /* ---------- token helper p/ chamadas admin ---------- */
   const getToken = useCallback(async () => {
