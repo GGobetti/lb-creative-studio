@@ -1,9 +1,8 @@
 # LB Creative Studio — Deep Dive Completo
 
-> ⚠️ **Documento histórico (snapshot Jun/2026).** Algumas afirmações estão desatualizadas — ex.: "scraper migrado sem Express/sem portas" (o `lb-creative-scrapper` ainda tinha Express/Next.js) e o fluxo de download via proxy. Fonte de verdade atual: [`../ARCHITECTURE.md`](../ARCHITECTURE.md).
-
 **Data:** Junho 2026  
-**Última atualização:** 2026-06-20 — pós-Sprint 8 + Backlog Sprint (U2/U5/U6/U7/D6/S5)  
+**Última atualização:** 2026-06-26 — pós-Sprint 9 (Sistema de Afiliados ML)  
+**Arquitetura geral:** [`../ARCHITECTURE.md`](../ARCHITECTURE.md)  
 **Escopo:** UI/UX · Código · Segurança · Banco de Dados · Arquitetura  
 **Skills usadas:** `code-review` (max effort) · `supabase-postgres-best-practices` · `ui-ux-pro-max`  
 **Agents executados:** Code Quality · Database/Supabase · Architecture & Store
