@@ -57,43 +57,82 @@ export async function fetchMLProductData(
     if (productsResponse.ok) {
       const data = await productsResponse.json();
       const bbw = data.buy_box_winner;
-      console.log('[ML API] Found as catalog product:', productId, '| buy_box_winner price:', bbw?.price, 'item_id:', bbw?.item_id);
+      console.log('[ML API] Catalog product buy_box_winner:', JSON.stringify(bbw));
 
-      // If buy_box_winner exists, fetch the actual item for full price/stock data
-      if (bbw?.item_id) {
+      // Strategy 1: fetch item directly from buy_box_winner
+      const itemId = bbw?.item_id;
+      if (itemId) {
         try {
-          const itemResponse = await fetch(
-            `https://api.mercadolibre.com/items/${bbw.item_id}`,
-            { headers }
-          );
+          const itemResponse = await fetch(`https://api.mercadolibre.com/items/${itemId}`, { headers });
           if (itemResponse.ok) {
             const itemData = await itemResponse.json();
-            console.log('[ML API] Fetched buy box item:', bbw.item_id, 'price:', itemData.price, 'stock:', itemData.available_quantity);
+            console.log('[ML API] buy_box item price:', itemData.price, 'stock:', itemData.available_quantity);
             return {
               ...data,
               _source: 'products',
-              price: itemData.sale_price || itemData.price || bbw.price || 0,
+              price: itemData.sale_price || itemData.price || 0,
               available_quantity: itemData.available_quantity > 0 ? itemData.available_quantity : 1,
               sold_quantity: itemData.sold_quantity || 0,
               condition: itemData.condition || 'new',
             };
           }
         } catch (e) {
-          console.warn('[ML API] Could not fetch buy box item:', e);
+          console.warn('[ML API] Could not fetch buy_box item:', e);
         }
       }
 
-      // Fallback: use price directly from buy_box_winner if available
-      if (bbw?.price) {
-        return {
-          ...data,
-          _source: 'products',
-          price: bbw.price,
-          available_quantity: 1,
-        };
+      // Strategy 2: search for items linked to this catalog product
+      try {
+        const itemsResponse = await fetch(
+          `https://api.mercadolibre.com/products/${productId}/items?limit=1`,
+          { headers }
+        );
+        if (itemsResponse.ok) {
+          const itemsData = await itemsResponse.json();
+          const firstItem = itemsData.results?.[0] || itemsData[0];
+          console.log('[ML API] /products/items result:', JSON.stringify(firstItem)?.substring(0, 200));
+          if (firstItem?.price) {
+            return {
+              ...data,
+              _source: 'products',
+              price: firstItem.sale_price || firstItem.price,
+              available_quantity: firstItem.available_quantity > 0 ? firstItem.available_quantity : 1,
+              sold_quantity: firstItem.sold_quantity || 0,
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('[ML API] /products/items failed:', e);
       }
 
-      return { ...data, _source: 'products' };
+      // Strategy 3: search by ID text
+      try {
+        const searchResponse = await fetch(
+          `https://api.mercadolibre.com/sites/MLB/search?q=${productId}&limit=1`,
+          { headers }
+        );
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          const result = searchData.results?.[0];
+          console.log('[ML API] search result price:', result?.price, 'stock:', result?.available_quantity);
+          if (result?.price) {
+            return {
+              ...data,
+              _source: 'products',
+              price: result.sale_price || result.price,
+              available_quantity: result.available_quantity > 0 ? result.available_quantity : 1,
+              sold_quantity: result.sold_quantity || 0,
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('[ML API] search fallback failed:', e);
+      }
+
+      // Last resort: use whatever price exists in catalog data
+      const fallbackPrice = bbw?.price || data.price || 0;
+      console.log('[ML API] Using fallback price:', fallbackPrice);
+      return { ...data, _source: 'products', price: fallbackPrice, available_quantity: 1 };
     }
 
     throw new Error(`ML API error: product ${productId} not found (items: ${itemsResponse.status}, products: ${productsResponse.status})`);
