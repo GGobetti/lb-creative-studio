@@ -34,19 +34,33 @@ export async function fetchMLProductData(
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    const response = await fetch(
+    // Try /items/ first (regular listings)
+    const itemsResponse = await fetch(
       `https://api.mercadolibre.com/items/${productId}`,
-      {
-        headers,
-      }
+      { headers }
     );
 
-    if (!response.ok) {
-      throw new Error(`ML API error: ${response.statusText}`);
+    if (itemsResponse.ok) {
+      const data = await itemsResponse.json();
+      console.log('[ML API] Found as item:', productId);
+      return { ...data, _source: 'items' };
     }
 
-    const data = await response.json();
-    return data;
+    console.log(`[ML API] /items/ returned ${itemsResponse.status}, trying /products/...`);
+
+    // Try /products/ for catalog products (URL has /p/MLB...)
+    const productsResponse = await fetch(
+      `https://api.mercadolibre.com/products/${productId}`,
+      { headers }
+    );
+
+    if (productsResponse.ok) {
+      const data = await productsResponse.json();
+      console.log('[ML API] Found as catalog product:', productId);
+      return { ...data, _source: 'products' };
+    }
+
+    throw new Error(`ML API error: product ${productId} not found (items: ${itemsResponse.status}, products: ${productsResponse.status})`);
   } catch (error) {
     console.error('[Fetch ML Product Error]', error);
     throw error;
@@ -157,23 +171,26 @@ export interface MLProductResult {
  * Transform ML product data to our affiliate_products format
  */
 export function transformMLProductData(mlData: any): MLProductResult {
-  // Extract images
-  const pictures = mlData.pictures || [];
-  const photos = pictures.map((pic: any, index: number) => ({
-    url: pic.secure_url || pic.url,
-    source_id: pic.id || `ml_photo_${index}`,
-    is_primary: index === 0,
-  }));
+  const isProduct = mlData._source === 'products';
 
-  // Extract description (handle multiple descriptions)
+  // Extract images — products API uses different field name
+  const pictures = mlData.pictures || mlData.main_features?.filter((f: any) => f.picture_id) || [];
+  const photos = pictures.map((pic: any, index: number) => ({
+    url: pic.secure_url || pic.url || pic.thumbnail,
+    source_id: pic.id || pic.picture_id || `ml_photo_${index}`,
+    is_primary: index === 0,
+  })).filter((p: any) => p.url);
+
+  // Extract description
   let description = '';
-  if (mlData.descriptions && Array.isArray(mlData.descriptions)) {
+  if (mlData.short_description?.content) {
+    description = mlData.short_description.content;
+  } else if (mlData.descriptions && Array.isArray(mlData.descriptions)) {
     description = mlData.descriptions
       .map((d: any) => d.text || '')
       .filter((t: string) => t.length > 0)
       .join('\n\n');
-  }
-  if (!description && mlData.description) {
+  } else if (mlData.description) {
     description = mlData.description;
   }
 
@@ -189,37 +206,43 @@ export function transformMLProductData(mlData: any): MLProductResult {
         }))
     );
   }
-  // Add common payment method names
   if (paymentMethods.length === 0) {
     paymentMethods.push(
-      { name: 'Credit Card', installments: 12 },
-      { name: 'Debit Card' },
+      { name: 'Cartão de Crédito', installments: 12 },
+      { name: 'Cartão de Débito' },
       { name: 'Pix' }
     );
   }
 
-  // Extract condition
-  const condition: 'new' | 'used' | null = mlData.condition === 'used' ? 'used' : 'new';
+  // Extract condition — products API uses attributes
+  let condition: 'new' | 'used' | null = 'new';
+  if (mlData.condition === 'used') {
+    condition = 'used';
+  } else if (isProduct && mlData.attributes) {
+    const condAttr = mlData.attributes.find((a: any) => a.id === 'ITEM_CONDITION');
+    if (condAttr?.value_name?.toLowerCase().includes('usado')) condition = 'used';
+  }
 
-  // Extract category (name from category_id if available)
-  let category = mlData.category_name || mlData.category_id || null;
+  // Category
+  const category = mlData.category_name || mlData.domain_id || mlData.category_id || null;
 
-  // Extract ratings
+  // Ratings
   const rating = mlData.rating ? parseFloat(mlData.rating) : null;
   const ratingCount = mlData.rating_count || mlData.ratings_count || 0;
 
-  // Extract stock
+  // Stock & sales
   const stockQuantity = mlData.available_quantity || 0;
-
-  // Extract sales count
   const salesCount = mlData.sold_quantity || 0;
 
-  // Price handling (use sale_price if available, otherwise price)
-  const price = mlData.sale_price || mlData.price || 0;
+  // Price — products API may have buy_box_winner or price
+  const price = mlData.sale_price || mlData.buy_box_winner?.price || mlData.price || 0;
+
+  // Title — products API uses name instead of title
+  const name = mlData.title || mlData.name || 'Produto sem nome';
 
   return {
     productBase: {
-      name: mlData.title,
+      name,
       marketplace: 'mercado_livre',
     },
     details: {
