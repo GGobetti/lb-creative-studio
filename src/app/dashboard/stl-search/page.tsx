@@ -12,7 +12,30 @@ import { getSupabaseBrowser } from "@/lib/supabase";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
 import { useToast } from "@/components/ui/Toast";
 
-const PAGE_SIZE = 50;
+const usePageSize = () => {
+  const [pageSize, setPageSize] = useState(28);
+
+  useEffect(() => {
+    const updatePageSize = () => {
+      if (typeof window === 'undefined') return;
+
+      const width = window.innerWidth;
+      if (width >= 1280) {
+        setPageSize(28); // xl: 4 columns
+      } else if (width >= 1024) {
+        setPageSize(24); // lg: 3 columns
+      } else {
+        setPageSize(20); // md/sm: 2 columns
+      }
+    };
+
+    updatePageSize();
+    window.addEventListener('resize', updatePageSize);
+    return () => window.removeEventListener('resize', updatePageSize);
+  }, []);
+
+  return pageSize;
+};
 
 function formatBytes(bytes: number, decimals = 2) {
   if (bytes === 0) return "0 Bytes";
@@ -27,6 +50,7 @@ export default function StlSearchPage() {
   const profile = useAppStore((s) => s.profile);
   const refreshCredits = useAppStore((s) => s.refreshCredits);
   const { toast } = useToast();
+  const pageSize = usePageSize();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [items, setItems] = useState<StlItem[]>([]);
@@ -167,7 +191,7 @@ export default function StlSearchPage() {
 
         query = query
           .order("created_at", { ascending: false })
-          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+          .range(page * pageSize, (page + 1) * pageSize - 1);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -207,7 +231,7 @@ export default function StlSearchPage() {
             }));
 
           setItems((prev) => page === 0 ? mapped : [...prev, ...mapped]);
-          setHasMore(data.length === PAGE_SIZE);
+          setHasMore(data.length === pageSize);
         }
       } catch (err) {
         console.error("Error fetching telegram stls:", err);
@@ -217,7 +241,7 @@ export default function StlSearchPage() {
     };
 
     fetchItems();
-  }, [debouncedQuery, printerFilter, photoFilter, page]);
+  }, [debouncedQuery, printerFilter, photoFilter, page, pageSize]);
 
   const fetchRankings = async () => {
     setIsLoadingRankings(true);
@@ -930,14 +954,26 @@ export default function StlSearchPage() {
             deleteSelection={deleteSelection}
           />
 
-          {hasMore && !showOnlyFavorites && (
-            <div className="flex justify-center mt-8">
+          {!showOnlyFavorites && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0 || isLoading}
+                className="px-4 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                ← Anterior
+              </button>
+
+              <div className="text-sm font-semibold text-muted-foreground">
+                Página {page + 1} {hasMore ? "de ?" : `(${(page + 1) * pageSize} carregados)`}
+              </div>
+
               <button
                 onClick={() => setPage((p) => p + 1)}
-                disabled={isLoading}
-                className="px-6 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-50 transition-all"
+                disabled={!hasMore || isLoading}
+                className="px-4 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Carregar mais"}
+                Próxima →
               </button>
             </div>
           )}

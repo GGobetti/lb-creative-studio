@@ -42,7 +42,8 @@ export const mockStlItems: StlItem[] = [
     telegramGroupName: "3D Print Masters",
     telegramMessageId: 1001,
     fileSize: "24 MB",
-    addedAt: "2026-06-14T10:00:00Z"
+    addedAt: "2026-06-14T10:00:00Z",
+    downloadCount: 342
   },
   {
     id: "2",
@@ -52,7 +53,8 @@ export const mockStlItems: StlItem[] = [
     telegramGroupName: "Geeky STLs",
     telegramMessageId: 2045,
     fileSize: "12 MB",
-    addedAt: "2026-06-13T15:30:00Z"
+    addedAt: "2026-06-13T15:30:00Z",
+    downloadCount: 128
   },
   {
     id: "3",
@@ -62,7 +64,8 @@ export const mockStlItems: StlItem[] = [
     telegramGroupName: "3D Print Masters",
     telegramMessageId: 1050,
     fileSize: "156 MB",
-    addedAt: "2026-06-12T09:15:00Z"
+    addedAt: "2026-06-12T09:15:00Z",
+    downloadCount: 87
   },
   {
     id: "4",
@@ -72,7 +75,8 @@ export const mockStlItems: StlItem[] = [
     telegramGroupName: "Free STL Daily",
     telegramMessageId: 5002,
     fileSize: "3 MB",
-    addedAt: "2026-06-10T11:20:00Z"
+    addedAt: "2026-06-10T11:20:00Z",
+    downloadCount: 512
   },
   {
     id: "5",
@@ -82,7 +86,8 @@ export const mockStlItems: StlItem[] = [
     telegramGroupName: "Geeky STLs",
     telegramMessageId: 2100,
     fileSize: "45 MB",
-    addedAt: "2026-06-09T18:45:00Z"
+    addedAt: "2026-06-09T18:45:00Z",
+    downloadCount: 256
   },
   {
     id: "6",
@@ -92,6 +97,7 @@ export const mockStlItems: StlItem[] = [
     telegramGroupName: "3D Print Masters",
     telegramMessageId: 1105,
     fileSize: "88 MB",
-    addedAt: "2026-06-08T14:10:00Z"
+    addedAt: "2026-06-08T14:10:00Z",
+    downloadCount: 193
   }
 ];
