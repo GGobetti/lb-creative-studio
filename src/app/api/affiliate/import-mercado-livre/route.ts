@@ -127,40 +127,20 @@ export async function POST(req: NextRequest) {
       try {
         mlProductData = await fetchMLProductData(productId, accessToken);
       } catch (tokenApiError) {
-        // Last resort for unified products (/up/MLBU): search by URL slug title
+        // Unified products (/up/MLBU) with variations require catalog_product OAuth scope
+        // which we don't have. We cannot import data from a different item as it would
+        // mismatch the affiliate link and confuse customers.
         if (productId.startsWith('MLBU')) {
-          const slugMatch = affiliateLink.match(/mercadolivre\.com\.br\/([^/?#]+)\/up\/MLBU/);
-          if (slugMatch) {
-            const searchTerms = slugMatch[1].replace(/-/g, ' ').substring(0, 120);
-            console.log('[Import] MLBU fallback: searching by slug:', searchTerms);
-            const headers: Record<string, string> = {
-              accept: 'application/json',
-              Authorization: `Bearer ${accessToken}`,
-            };
-            const searchResp = await fetch(
-              `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerms)}&limit=5`,
-              { headers }
-            );
-            if (searchResp.ok) {
-              const searchData = await searchResp.json();
-              for (const result of searchData.results ?? []) {
-                if (!result?.id) continue;
-                const itemResp = await fetch(
-                  `https://api.mercadolibre.com/items/${result.id}`,
-                  { headers }
-                );
-                if (itemResp.ok) {
-                  console.log('[Import] MLBU fallback found accessible item:', result.id);
-                  mlProductData = { ...await itemResp.json(), _source: 'items' };
-                  break;
-                }
-              }
-            }
-          }
-          if (!mlProductData) throw tokenApiError;
-        } else {
-          throw tokenApiError;
+          return NextResponse.json(
+            {
+              error:
+                'Este produto tem variações (cores/tamanhos) e usa um formato de URL não suportado pela API pública do Mercado Livre. ' +
+                'Para importar, acesse o produto no ML, selecione a variação desejada, e copie a URL direta do produto (deve conter /p/MLB... no endereço).',
+            },
+            { status: 422 }
+          );
         }
+        throw tokenApiError;
       }
     }
 
