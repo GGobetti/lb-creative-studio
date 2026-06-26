@@ -232,15 +232,29 @@ export async function POST(request: NextRequest) {
           })
 
           // Upsert (insert or update) em chunks
+          // Para cada STL, tenta fazer DELETE + INSERT ou UPDATE direto
           const CHUNK = 50
           for (let i = 0; i < upserts.length; i += CHUNK) {
             const chunk = upserts.slice(i, i + CHUNK)
-            const { error } = await admin
-              .from('category_votes')
-              .upsert(chunk, { onConflict: 'user_id,stl_id', ignoreDuplicates: false })
-            if (error) {
-              console.error('Upsert error details:', error)
-              throw error
+
+            // Para cada upsert, tenta delete a linha existente primeiro, depois insert
+            for (const record of chunk) {
+              // Delete existente
+              await admin
+                .from('category_votes')
+                .delete()
+                .eq('user_id', record.user_id)
+                .eq('stl_id', record.stl_id)
+
+              // Insert novo
+              const { error: insertErr } = await admin
+                .from('category_votes')
+                .insert([record])
+
+              if (insertErr) {
+                console.error('Insert error for record:', record, insertErr)
+                throw insertErr
+              }
             }
           }
 
