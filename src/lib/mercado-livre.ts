@@ -34,51 +34,54 @@ export async function fetchMLProductData(
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    // Try /items/ first (regular listings)
-    const itemsResponse = await fetch(
-      `https://api.mercadolibre.com/items/${productId}`,
-      { headers }
-    );
+    // MLBU = Unified Product (ML Brasil Unified) — skip /items/, go straight to /products/
+    // Also try stripping the U: MLBU4014275688 → MLB4014275688 as fallback catalog ID
+    const isUnified = productId.startsWith('MLBU');
+    let itemsStatus = 'skipped';
 
-    if (itemsResponse.ok) {
-      const data = await itemsResponse.json();
-      console.log('[ML API] Found as item:', productId);
-      return { ...data, _source: 'items' };
-    }
+    if (!isUnified) {
+      // Try /items/ first (regular listings)
+      const itemsResponse = await fetch(
+        `https://api.mercadolibre.com/items/${productId}`,
+        { headers }
+      );
+      itemsStatus = String(itemsResponse.status);
 
-    console.log(`[ML API] /items/ returned ${itemsResponse.status}, trying /products/...`);
-
-    // If /items/ returned 403 with token, try search by ID as alternative
-    if (itemsResponse.status === 403 && accessToken) {
-      try {
-        const searchResp = await fetch(
-          `https://api.mercadolibre.com/sites/MLB/search?q=${productId}&limit=1`,
-          { headers }
-        );
-        if (searchResp.ok) {
-          const searchData = await searchResp.json();
-          const result = searchData.results?.[0];
-          if (result?.id) {
-            console.log('[ML API] Found via search fallback:', result.id);
-            const itemResp = await fetch(`https://api.mercadolibre.com/items/${result.id}`, { headers });
-            if (itemResp.ok) {
-              const data = await itemResp.json();
-              return { ...data, _source: 'items', affiliate_id: productId };
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('[ML API] Search fallback failed:', e);
+      if (itemsResponse.ok) {
+        const data = await itemsResponse.json();
+        console.log('[ML API] Found as item:', productId);
+        return { ...data, _source: 'items' };
       }
+
+      console.log(`[ML API] /items/ returned ${itemsResponse.status}, trying /products/...`);
+    } else {
+      console.log(`[ML API] Unified product ${productId}, skipping /items/ and going to /products/...`);
     }
 
-    // Try /products/ for catalog products (URL has /p/MLB...)
-    const productsResponse = await fetch(
-      `https://api.mercadolibre.com/products/${productId}`,
-      { headers }
-    );
+    // Try /products/ for catalog products and unified products
+    // For MLBU: try both MLBU4014275688 and MLB4014275688 (without U)
+    const productCandidates = isUnified
+      ? [productId, productId.replace('MLBU', 'MLB')]
+      : [productId];
 
-    if (productsResponse.ok) {
+    let productsResponse: Response | null = null;
+    let usedProductId = productId;
+
+    for (const candidate of productCandidates) {
+      const resp = await fetch(
+        `https://api.mercadolibre.com/products/${candidate}`,
+        { headers }
+      );
+      if (resp.ok) {
+        productsResponse = resp;
+        usedProductId = candidate;
+        console.log(`[ML API] Found catalog product with ID: ${candidate}`);
+        break;
+      }
+      console.log(`[ML API] /products/${candidate} returned ${resp.status}`);
+    }
+
+    if (productsResponse !== null) {
       const data = await productsResponse.json();
       const bbw = data.buy_box_winner;
       console.log('[ML API] Catalog product buy_box_winner:', JSON.stringify(bbw));
@@ -108,7 +111,7 @@ export async function fetchMLProductData(
       // Strategy 2: search for items linked to this catalog product
       try {
         const itemsResponse = await fetch(
-          `https://api.mercadolibre.com/products/${productId}/items?limit=1`,
+          `https://api.mercadolibre.com/products/${usedProductId}/items?limit=1`,
           { headers }
         );
         if (itemsResponse.ok) {
@@ -159,7 +162,7 @@ export async function fetchMLProductData(
       return { ...data, _source: 'products', price: fallbackPrice, available_quantity: 1 };
     }
 
-    throw new Error(`ML API error: product ${productId} not found (items: ${itemsResponse.status}, products: ${productsResponse.status})`);
+    throw new Error(`ML API error: product ${productId} not found (items: ${itemsStatus}, products: not found)`);
   } catch (error) {
     console.error('[Fetch ML Product Error]', error);
     throw error;
@@ -174,6 +177,14 @@ export async function resolveMLShortUrl(
   shortUrl: string
 ): Promise<string | null> {
   try {
+    // Check for unified product (MLBU) in URL path: /up/MLBU4014275688
+    // Must check BEFORE generic MLB regex (which won't match MLBU but finds wid=MLB... in query)
+    const unifiedMatch = shortUrl.match(/\/up\/(MLBU\d+)/);
+    if (unifiedMatch) {
+      console.log('[ML Resolve] Found unified product ID:', unifiedMatch[1]);
+      return unifiedMatch[1];
+    }
+
     // Try to extract internal ML ID directly (MLA/MLB/MLM/MLV format)
     const directMatch = shortUrl.match(/MLA\d+|MLB\d+|MLM\d+|MLV\d+/);
     if (directMatch) {
