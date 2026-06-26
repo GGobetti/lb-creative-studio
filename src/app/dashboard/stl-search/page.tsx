@@ -169,7 +169,8 @@ export default function StlSearchPage() {
           .is("parent_id", null) // filtro no DB, não no cliente
           .neq("id", "00000000-0000-0000-0000-000000000000") // ignora a caixinha de fotos
           .eq("needs_validation", false)
-          .eq("marked_for_removal", false);
+          .eq("marked_for_removal", false)
+          .eq("is_deleted", false);
 
         if (trimmed) {
           if (isTagSearch) {
@@ -271,6 +272,7 @@ export default function StlSearchPage() {
         .neq("id", "00000000-0000-0000-0000-000000000000")
         .eq("needs_validation", false)
         .eq("marked_for_removal", false)
+        .eq("is_deleted", false)
         .order("download_count", { ascending: false })
         .limit(10);
 
@@ -282,6 +284,7 @@ export default function StlSearchPage() {
         .neq("id", "00000000-0000-0000-0000-000000000000")
         .eq("needs_validation", false)
         .eq("marked_for_removal", false)
+        .eq("is_deleted", false)
         .order("favorites_count", { ascending: false })
         .limit(10);
 
@@ -568,6 +571,7 @@ export default function StlSearchPage() {
           .neq("id", "00000000-0000-0000-0000-000000000000")
           .eq("needs_validation", false)
           .eq("marked_for_removal", false)
+          .eq("is_deleted", false)
           .order("created_at", { ascending: false })
           .then(({ data }: { data: any[] | null }) => {
             if (data) {

@@ -139,6 +139,9 @@ export function PhotoCurator() {
   const [categoryCache, setCategoryCache] = useState<Record<string, Set<string>>>({})
   const [loadingCategories, setLoadingCategories] = useState(false)
 
+  // Lixeira: exibe STLs com is_deleted = true para restauração
+  const [showLixeira, setShowLixeira] = useState(false)
+
   // Bulk categorization state
   const [bulkAction, setBulkAction] = useState<"none" | "validate" | "categorize" | "merge">("none")
   const [bulkSelectedCategories, setBulkSelectedCategories] = useState<Set<string>>(new Set())
@@ -218,7 +221,7 @@ export function PhotoCurator() {
   }, [])
 
   /* ---------- carregar STLs ---------- */
-  const fetchRows = useCallback(async () => {
+  const fetchRows = useCallback(async (lixeira = false) => {
     setLoading(true)
     try {
       const supabase = getSupabaseBrowser()
@@ -229,7 +232,7 @@ export function PhotoCurator() {
         const { data, error } = await supabase
           .from("telegram_indexed_stls")
           .select("id, title, file_name, photos, telegram_group_name, created_at, reviewed_at")
-          .eq("is_deleted", false)
+          .eq("is_deleted", lixeira)
           .neq("id", PHOTO_BUCKET_ID)
           .order("created_at", { ascending: true })
           .range(offset, offset + PAGE - 1)
@@ -313,7 +316,7 @@ export function PhotoCurator() {
     }
   }, [rows.length])
 
-  useEffect(() => { fetchRows(); fetchBucket() }, [fetchRows, fetchBucket])
+  useEffect(() => { fetchRows(showLixeira); fetchBucket() }, [fetchRows, fetchBucket, showLixeira])
 
   useEffect(() => {
     if (rows.length > 0) {
@@ -863,13 +866,26 @@ export function PhotoCurator() {
             Arraste fotos entre arquivos, exclua erradas e detecte duplicatas. (R2 não é afetado.)
           </p>
         </div>
-        <button
-          onClick={fetchRows}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          Recarregar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowLixeira((v) => !v)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${
+              showLixeira
+                ? "bg-destructive/10 text-destructive border-destructive/40"
+                : "border-border hover:bg-muted"
+            }`}
+          >
+            <Trash2 className="w-4 h-4" />
+            {showLixeira ? `Lixeira (${rows.length})` : "Ver Lixeira"}
+          </button>
+          <button
+            onClick={() => fetchRows(showLixeira)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted text-sm"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Recarregar
+          </button>
+        </div>
       </div>
 
       {/* Filtros — sticky no topo, FULL WIDTH (fora do grid) */}
@@ -1273,6 +1289,25 @@ export function PhotoCurator() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {showLixeira ? (
+                      <button
+                        onClick={async () => {
+                          setBusyId(row.id)
+                          const supabase = getSupabaseBrowser()
+                          await supabase
+                            .from("telegram_indexed_stls")
+                            .update({ is_deleted: false })
+                            .eq("id", row.id)
+                          setRows((prev) => prev.filter((r) => r.id !== row.id))
+                          setBusyId(null)
+                        }}
+                        disabled={busyId === row.id}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs border border-success/50 bg-success/10 text-success hover:bg-success/20 disabled:opacity-50"
+                      >
+                        {busyId === row.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        Restaurar
+                      </button>
+                    ) : (
                     <button
                       onClick={() => toggleReviewed(row.id)}
                       className={`flex items-center gap-1 px-2 py-1 rounded text-xs border ${
@@ -1283,6 +1318,8 @@ export function PhotoCurator() {
                     >
                       <Check className="w-3 h-3" /> {isReviewed ? "Revisado" : "Validar"}
                     </button>
+                    )}
+                    {!showLixeira && (<>
                     <button
                       onClick={() => detectDupes(row.id)}
                       disabled={photos.length < 2 || scanningId === row.id}
@@ -1300,6 +1337,7 @@ export function PhotoCurator() {
                         <ArrowDownToLine className="w-3 h-3" /> Soltar aqui
                       </button>
                     )}
+                    </>)}
                   </div>
 
                   {/* Barra de confirmação de duplicatas */}

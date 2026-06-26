@@ -20,6 +20,7 @@ export async function loadPhotoMatchQuestions(limit = 10): Promise<PhotoMatchQue
   const { data, error } = await supabase
     .from('telegram_indexed_stls')
     .select('id, title, photos, description')
+    .eq('is_deleted', false)
     .limit(limit + 5)
 
   if (error || !data || data.length < 2) {
@@ -68,6 +69,7 @@ export async function loadTagDetectiveQuestions(limit = 8): Promise<TagDetective
   const { data, error } = await supabase
     .from('telegram_indexed_stls')
     .select('id, title, photos, tags')
+    .eq('is_deleted', false)
     .limit(limit + 10)
 
   if (error || !data || data.length < 2) {
@@ -112,6 +114,7 @@ export async function loadCategorySortItems(limit = 10): Promise<SortableStl[]> 
   const { count: totalCount } = await supabase
     .from('telegram_indexed_stls')
     .select('id', { count: 'exact', head: true })
+    .eq('is_deleted', false)
 
   const offset = totalCount && totalCount > limit
     ? Math.floor(Math.random() * (totalCount - limit))
@@ -120,6 +123,7 @@ export async function loadCategorySortItems(limit = 10): Promise<SortableStl[]> 
   const { data, error } = await supabase
     .from('telegram_indexed_stls')
     .select('id, title, photos, description')
+    .eq('is_deleted', false)
     .range(offset, offset + limit - 1)
 
   if (error || !data) {
@@ -144,12 +148,13 @@ export async function loadAuditQuestions(limit = 5): Promise<AuditQuestion[]> {
   const { count: totalCount, error: countError } = await supabase
     .from('telegram_indexed_stls')
     .select('id', { count: 'exact', head: true })
+    .eq('is_deleted', false)
 
   if (countError || !totalCount || totalCount <= limit) {
-    // If count fails or too few items, just load without offset
     const { data, error } = await supabase
       .from('telegram_indexed_stls')
       .select('id, title, photos, description, tags, file_name')
+      .eq('is_deleted', false)
       .limit(limit)
 
     if (error || !data) {
@@ -174,6 +179,7 @@ export async function loadAuditQuestions(limit = 5): Promise<AuditQuestion[]> {
   const { data, error } = await supabase
     .from('telegram_indexed_stls')
     .select('id, title, photos, description, tags, file_name')
+    .eq('is_deleted', false)
     .range(randomOffset, randomOffset + limit - 1)
 
   if (error || !data) {
