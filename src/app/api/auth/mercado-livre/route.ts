@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
 
     const { error: insertError } = await supabase
       .from('marketplace_credentials')
-      .upsert([
+      .upsert(
         {
           admin_id: userId,
           marketplace: 'mercado_livre',
@@ -131,8 +131,10 @@ export async function GET(req: NextRequest) {
           refresh_token,
           user_id_marketplace: ml_user_id?.toString(),
           expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
         },
-      ]);
+        { onConflict: 'admin_id,marketplace' }
+      );
 
     if (insertError) {
       console.error('[Store Credentials Error]', insertError);
