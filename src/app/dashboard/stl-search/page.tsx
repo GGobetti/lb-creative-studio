@@ -995,7 +995,7 @@ export default function StlSearchPage() {
             deleteSelection={deleteSelection}
           />
 
-          {!showOnlyFavorites && (
+          {!showOnlyFavorites && !categoryFilter && (
             <div className="flex justify-center items-center gap-4 mt-8">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
@@ -1006,7 +1006,7 @@ export default function StlSearchPage() {
               </button>
 
               <div className="text-sm font-semibold text-muted-foreground">
-                Página {page + 1} {hasMore ? "de ?" : `(${(page + 1) * pageSize} carregados)`}
+                Página {page + 1} {hasMore ? "de ?" : `(${items.length} carregados)`}
               </div>
 
               <button
