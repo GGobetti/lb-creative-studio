@@ -146,12 +146,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Success - redirect back to dashboard
+    // Success - redirect back to admin
     return NextResponse.redirect(
-      new URL(
-        `/dashboard/affiliate?success=mercado_livre_connected&ml_user=${ml_user_id}`,
-        req.nextUrl.origin
-      )
+      new URL(`/dashboard/admin?success=mercado_livre_connected`, req.nextUrl.origin)
     );
   } catch (err) {
     console.error('[Mercado Livre OAuth Error]', err);
