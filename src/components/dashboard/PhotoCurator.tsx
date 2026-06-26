@@ -348,6 +348,45 @@ export function PhotoCurator() {
     })
   }, [])
 
+  /* ---------- bulk apply categories ---------- */
+  const bulkApplyCategories = useCallback(async () => {
+    if (bulkSelectedCategories.size === 0 || selected.size === 0) return
+    setBulkCategorizing(true)
+
+    const stlIds = [...selected]
+    const categories = [...bulkSelectedCategories]
+    const standardCategories = categories.filter((c) => STL_CATEGORIES.includes(c))
+    const suggestedCategories = categories.filter((c) => !STL_CATEGORIES.includes(c))
+
+    // Otimista: atualiza categoryCache localmente
+    const optimisticCache = { ...categoryCache }
+    for (const stlId of stlIds) {
+      const currentCats = optimisticCache[stlId] || new Set<string>()
+      optimisticCache[stlId] = new Set([...currentCats, ...categories])
+    }
+    setCategoryCache(optimisticCache)
+
+    try {
+      await callApi({
+        action: "bulk_categorize_stls",
+        stl_ids: stlIds,
+        categories: standardCategories,
+        suggested_categories: suggestedCategories,
+      })
+      // Sucesso - mantém cache otimista
+      setBulkAction("none")
+      setBulkSelectedCategories(new Set())
+      alert(`✅ Categorias aplicadas a ${stlIds.length} arquivo(s)`)
+    } catch (e: any) {
+      console.error("Falha ao aplicar categorias:", e)
+      // Rollback
+      setCategoryCache(categoryCache)
+      alert(`Erro ao aplicar categorias: ${e.message}`)
+    } finally {
+      setBulkCategorizing(false)
+    }
+  }, [bulkSelectedCategories, selected, categoryCache, callApi])
+
   /* ---------- toggle de filtros ---------- */
   const toggleFilter = (chip: FilterChip) => {
     setActiveFilters((prev) => {
@@ -973,10 +1012,7 @@ export function PhotoCurator() {
                 setShowSuggestionInput={setShowBulkSuggestionInput}
               />
               <button
-                onClick={() => {
-                  // TODO: Implementar bulkApplyCategories (Task 5)
-                  alert("Endpoint ainda não implementado (Task 5)")
-                }}
+                onClick={bulkApplyCategories}
                 disabled={bulkSelectedCategories.size === 0 || bulkCategorizing}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
               >
