@@ -8,7 +8,6 @@ const supabase = createClient(
 
 const ML_CLIENT_ID = process.env.MERCADO_LIVRE_CLIENT_ID!;
 const ML_CLIENT_SECRET = process.env.MERCADO_LIVRE_CLIENT_SECRET!;
-const ML_REDIRECT_URI = process.env.MERCADO_LIVRE_REDIRECT_URI!;
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +16,11 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get('state');
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
+
+    // Build redirect_uri dynamically
+    const host = req.headers.get('host') || 'localhost:3000';
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const redirectUri = `${protocol}://${host}/api/auth/mercado-livre`;
 
     // Handle errors from ML
     if (error) {
@@ -59,7 +63,7 @@ export async function GET(req: NextRequest) {
         client_id: ML_CLIENT_ID,
         client_secret: ML_CLIENT_SECRET,
         code,
-        redirect_uri: ML_REDIRECT_URI,
+        redirect_uri: redirectUri,
       }).toString(),
     });
 
