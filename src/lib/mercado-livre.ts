@@ -60,27 +60,28 @@ export async function fetchMLProductData(
 
       // Fetch buy box winner for price/stock info
       try {
+        // Search for items in this catalog product to get price/stock
         const searchResponse = await fetch(
-          `https://api.mercadolibre.com/products/${productId}/items?limit=1`,
+          `https://api.mercadolibre.com/sites/MLB/search?catalog_product_id=${productId}&limit=1`,
           { headers }
         );
         if (searchResponse.ok) {
           const searchData = await searchResponse.json();
           const winner = searchData.results?.[0];
           if (winner) {
-            console.log('[ML API] Found buy box winner:', winner.id, 'price:', winner.price);
+            console.log('[ML API] Found listing:', winner.id, 'price:', winner.price, 'stock:', winner.available_quantity);
             return {
               ...data,
               _source: 'products',
               price: winner.sale_price || winner.price || 0,
-              available_quantity: winner.available_quantity || 0,
+              available_quantity: winner.available_quantity > 0 ? winner.available_quantity : 1,
               sold_quantity: winner.sold_quantity || 0,
-              condition: winner.condition || data.condition || 'new',
+              condition: winner.condition || 'new',
             };
           }
         }
       } catch (e) {
-        console.warn('[ML API] Could not fetch buy box winner:', e);
+        console.warn('[ML API] Could not fetch listing info:', e);
       }
 
       return { ...data, _source: 'products' };
