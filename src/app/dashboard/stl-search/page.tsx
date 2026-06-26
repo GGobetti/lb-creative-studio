@@ -230,7 +230,7 @@ export default function StlSearchPage() {
               printer_type: item.printer_type || "fdm"
             }));
 
-          setItems((prev) => page === 0 ? mapped : [...prev, ...mapped]);
+          setItems(mapped);
           setHasMore(data.length === pageSize);
         }
       } catch (err) {
