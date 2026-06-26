@@ -2,6 +2,44 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+---
+
+## 🚦 STATUS ATUAL — 2026-06-26
+
+| Task | Status | Notas |
+|------|--------|-------|
+| 1 — DB Migrations | ✅ Completo | 3 tabelas criadas em produção (Supabase) |
+| 2 — ML Data Extraction | ✅ Completo | Suporta `/items/` e `/products/` (catálogo) com 3 estratégias de fallback para preço/estoque |
+| 3 — Import Endpoint | ✅ Completo | Multi-table com token refresh, public API fallback |
+| 4 — GET Products Endpoint | ✅ Completo | Retorna products + details + photos aninhados |
+| 5 — TypeScript Types | ✅ Completo | AffiliateProduct, ProductDetails, ProductPhoto |
+| 6 — PhotoCarousel | ✅ Completo | Galeria com thumbnails e navegação |
+| 7 — ProductModal | ✅ Completo | Modal com galeria + todos os detalhes |
+| 8 — AffiliateProductCard | ✅ Completo | Card com rating, stock, foto count |
+| 9 — AffiliateProductGrid | ✅ Completo | Grid com search, filtros, modal state |
+| 10 — /affiliate pública | ✅ Completo | Acessível sem login |
+| 11 — AffiliateCarousel | ✅ Completo | Carousel na home com autoplay |
+| 12 — Home Page Carousel | ✅ Completo | Integrado na landing page |
+| 13 — Testes & Bug Fixes | ⚠️ Parcial | Importação ✅, Modal ✅, Carousel **não testado** |
+| 14 — DB Migrations Verify | ✅ Completo | Tabelas verificadas e funcionando em produção |
+
+### Fixes adicionais não planejados (implementados em produção):
+- ✅ OAuth ML: redirect_uri dinâmico (localhost vs produção)
+- ✅ OAuth ML: user_id no parâmetro `state` (sobrevive redirect cross-site)
+- ✅ OAuth ML: upsert com `onConflict` para reconexão
+- ✅ OAuth ML: todos os erros redirecionam para `/dashboard/admin`
+- ✅ Sidebar: link "Loja de Afiliados" corrigido para `/dashboard/affiliate`
+- ✅ `/dashboard/affiliate`: página dentro do layout com navbar/sidebar
+- ✅ API catálogo ML: suporte a produtos com `/p/MLB...` no URL (endpoint `/products/`)
+- ✅ Preço/estoque: 3 estratégias em cascata para produtos de catálogo
+- ✅ Imagem placeholder para erros de carregamento
+
+### Pendente:
+- ⏳ Testar carousel na home page
+- ⏳ Testar modal em mobile/tablet
+
+---
+
 **Goal:** Expand Mercado Livre affiliate product system with normalized database, complete product data extraction (ratings, sales, photos, stock, categories, payment methods), public product listing page, product detail modal with photo gallery, and home page carousel.
 
 **Architecture:** Three-layer approach:

@@ -1,8 +1,8 @@
 # Mercado Livre Integration Expansion - Design Spec
 
 **Date:** 2026-06-25  
-**Status:** Design Phase  
-**Branch:** `feat/mercado-livre-full-integration`
+**Status:** ✅ Implementado em produção (main) — Carousel pendente de teste  
+**Branch:** `main`
 
 ---
 
