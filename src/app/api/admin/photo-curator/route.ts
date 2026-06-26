@@ -237,8 +237,11 @@ export async function POST(request: NextRequest) {
             const chunk = upserts.slice(i, i + CHUNK)
             const { error } = await admin
               .from('category_votes')
-              .upsert(chunk, { onConflict: 'user_id,stl_id' })
-            if (error) throw error
+              .upsert(chunk, { onConflict: 'user_id,stl_id', ignoreDuplicates: false })
+            if (error) {
+              console.error('Upsert error details:', error)
+              throw error
+            }
           }
 
           return NextResponse.json({
