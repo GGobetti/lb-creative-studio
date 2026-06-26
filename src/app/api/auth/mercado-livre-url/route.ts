@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   try {
     const clientId = process.env.MERCADO_LIVRE_CLIENT_ID;
-    const redirectUri = process.env.MERCADO_LIVRE_REDIRECT_URI;
+
+    // Use dynamic redirect URI based on environment
+    const host = req.headers.get('host') || 'localhost:3000';
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const redirectUri = `${protocol}://${host}/api/auth/mercado-livre`;
 
     if (!clientId || !redirectUri) {
       return NextResponse.json(
