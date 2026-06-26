@@ -57,6 +57,32 @@ export async function fetchMLProductData(
     if (productsResponse.ok) {
       const data = await productsResponse.json();
       console.log('[ML API] Found as catalog product:', productId);
+
+      // Fetch buy box winner for price/stock info
+      try {
+        const searchResponse = await fetch(
+          `https://api.mercadolibre.com/products/${productId}/items?limit=1`,
+          { headers }
+        );
+        if (searchResponse.ok) {
+          const searchData = await searchResponse.json();
+          const winner = searchData.results?.[0];
+          if (winner) {
+            console.log('[ML API] Found buy box winner:', winner.id, 'price:', winner.price);
+            return {
+              ...data,
+              _source: 'products',
+              price: winner.sale_price || winner.price || 0,
+              available_quantity: winner.available_quantity || 0,
+              sold_quantity: winner.sold_quantity || 0,
+              condition: winner.condition || data.condition || 'new',
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('[ML API] Could not fetch buy box winner:', e);
+      }
+
       return { ...data, _source: 'products' };
     }
 
