@@ -189,6 +189,71 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, action, merged_count: merged_ids.length, parts_count: newPartsCount })
       }
 
+      case 'bulk_categorize_stls': {
+        const { stl_ids, categories, suggested_categories } = body as {
+          stl_ids: string[]
+          categories: string[]
+          suggested_categories: string[]
+        }
+
+        if (!Array.isArray(stl_ids) || stl_ids.length === 0) {
+          return NextResponse.json({ error: 'Invalid stl_ids' }, { status: 400 })
+        }
+
+        const userId = user.id
+        const now = new Date().toISOString()
+
+        try {
+          // Pega categorias existentes para cada STL
+          const { data: existingVotes } = await admin
+            .from('category_votes')
+            .select('stl_id, categories, suggested_categories')
+            .in('stl_id', stl_ids)
+
+          const votesByStl = new Map(existingVotes?.map((v) => [v.stl_id, v]))
+
+          // Para cada STL, merge as categorias
+          const upserts = stl_ids.map((stlId) => {
+            const existing = votesByStl.get(stlId)
+            const mergedCategories = Array.from(
+              new Set([...(existing?.categories || []), ...categories])
+            )
+            const mergedSuggested = Array.from(
+              new Set([...(existing?.suggested_categories || []), ...suggested_categories])
+            )
+
+            return {
+              user_id: userId,
+              stl_id: stlId,
+              categories: mergedCategories,
+              suggested_categories: mergedSuggested,
+              created_at: now,
+            }
+          })
+
+          // Upsert (insert or update) em chunks
+          const CHUNK = 50
+          for (let i = 0; i < upserts.length; i += CHUNK) {
+            const chunk = upserts.slice(i, i + CHUNK)
+            const { error } = await admin
+              .from('category_votes')
+              .upsert(chunk, { onConflict: 'user_id,stl_id' })
+            if (error) throw error
+          }
+
+          return NextResponse.json({
+            success: true,
+            updated_count: stl_ids.length,
+          })
+        } catch (err) {
+          console.error('Erro ao aplicar categorias em massa:', err)
+          return NextResponse.json(
+            { error: 'Failed to bulk categorize' },
+            { status: 500 }
+          )
+        }
+      }
+
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
