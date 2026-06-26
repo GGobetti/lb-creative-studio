@@ -58,57 +58,74 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get ML credentials
-    const { data: credentials, error: credError } = await supabase
-      .from('marketplace_credentials')
-      .select('access_token, refresh_token, expires_at')
-      .eq('admin_id', user.user.id)
-      .eq('marketplace', 'mercado_livre')
-      .single();
+    // Try to fetch without token first (public API)
+    let mlProductData = null;
+    let accessToken = undefined;
 
-    if (credError || !credentials) {
-      return NextResponse.json(
-        { error: 'Mercado Livre not connected. Please authorize first.' },
-        { status: 403 }
-      );
-    }
+    try {
+      console.log('[Import] Trying to fetch product from public ML API:', productId);
+      mlProductData = await fetchMLProductData(productId, undefined);
+    } catch (publicApiError) {
+      console.log('[Import] Public API failed, trying with OAuth token...');
 
-    // Token refresh if needed
-    let accessToken = credentials.access_token;
-    const expiresAt = new Date(credentials.expires_at);
+      // If public API fails, try with OAuth token
+      const { data: credentials, error: credError } = await supabase
+        .from('marketplace_credentials')
+        .select('access_token, refresh_token, expires_at')
+        .eq('admin_id', user.user.id)
+        .eq('marketplace', 'mercado_livre')
+        .single();
 
-    if (expiresAt < new Date()) {
-      try {
-        const { refreshMLAccessToken } = await import('@/lib/mercado-livre');
-        const refreshed = await refreshMLAccessToken(
-          credentials.refresh_token,
-          process.env.MERCADO_LIVRE_CLIENT_SECRET!
-        );
-
-        await supabase
-          .from('marketplace_credentials')
-          .update({
-            access_token: refreshed.access_token,
-            refresh_token: refreshed.refresh_token,
-            expires_at: new Date(
-              Date.now() + refreshed.expires_in * 1000
-            ).toISOString(),
-          })
-          .eq('admin_id', user.user.id)
-          .eq('marketplace', 'mercado_livre');
-
-        accessToken = refreshed.access_token;
-      } catch (err) {
-        console.error('[Token Refresh Failed]', err);
+      if (credError || !credentials) {
         return NextResponse.json(
-          { error: 'Token expired and could not be refreshed. Please reconnect.' },
+          {
+            error:
+              'Product not found in public API. Please connect your Mercado Livre account to access private products.',
+          },
           { status: 403 }
         );
       }
-    }
 
-    // Fetch ML product data
-    const mlProductData = await fetchMLProductData(productId, accessToken);
+      // Token refresh if needed
+      accessToken = credentials.access_token;
+      const expiresAt = new Date(credentials.expires_at);
+
+      if (expiresAt < new Date()) {
+        try {
+          const { refreshMLAccessToken } = await import('@/lib/mercado-livre');
+          const refreshed = await refreshMLAccessToken(
+            credentials.refresh_token,
+            process.env.MERCADO_LIVRE_CLIENT_SECRET!
+          );
+
+          await supabase
+            .from('marketplace_credentials')
+            .update({
+              access_token: refreshed.access_token,
+              refresh_token: refreshed.refresh_token,
+              expires_at: new Date(
+                Date.now() + refreshed.expires_in * 1000
+              ).toISOString(),
+            })
+            .eq('admin_id', user.user.id)
+            .eq('marketplace', 'mercado_livre');
+
+          accessToken = refreshed.access_token;
+        } catch (err) {
+          console.error('[Token Refresh Failed]', err);
+          return NextResponse.json(
+            {
+              error:
+                'Token expired and could not be refreshed. Please reconnect.',
+            },
+            { status: 403 }
+          );
+        }
+      }
+
+      // Try again with token
+      mlProductData = await fetchMLProductData(productId, accessToken);
+    }
 
     // Transform to our format
     const { productBase, details, photos } = transformMLProductData(mlProductData);

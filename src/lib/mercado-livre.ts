@@ -23,16 +23,21 @@ export function generateMLAuthorizationUrl(): string {
  */
 export async function fetchMLProductData(
   productId: string,
-  accessToken: string
+  accessToken?: string
 ) {
   try {
+    const headers: Record<string, string> = {
+      'accept': 'application/json',
+    };
+
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
     const response = await fetch(
       `https://api.mercadolibre.com/items/${productId}`,
       {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'accept': 'application/json',
-        },
+        headers,
       }
     );
 
