@@ -340,10 +340,40 @@ Sistema de gamificação completo:
 - U2: OnboardingTour 4 passos com spotlight Framer Motion *(migration manual: `onboarding_completed` no Supabase)*
 - D6: Migration pg_cron cleanup `telegram_scraper_jobs` *(apply manual no Supabase Dashboard)*
 
+### ✅ Sprint 9 — Sistema de Afiliados Mercado Livre — CONCLUÍDO (2026-06-26)
+
+> [`docs/superpowers/plans/2026-06-25-mercado-livre-full-integration.md`](superpowers/plans/2026-06-25-mercado-livre-full-integration.md)
+
+**DB — 3 tabelas normalizadas em produção:**
+- `affiliate_products` — produto base (marketplace, affiliate_link, is_active, is_public)
+- `affiliate_product_details` — preço, descrição, categoria, condição, formas de pagamento, estoque, vendas, rating
+- `affiliate_product_photos` — galeria com is_primary e position
+- `marketplace_credentials` — tokens OAuth por admin/marketplace
+
+**OAuth Mercado Livre:**
+- redirect_uri dinâmico via `host` do request (funciona em localhost e Vercel)
+- user_id no parâmetro `state` (sobrevive redirect cross-site)
+- upsert com `onConflict: 'admin_id,marketplace'` para reconexão
+- Botão "Conectar ao ML" visível no painel admin
+
+**ML API — Suporte a produtos de catálogo (`/p/MLB...`):**
+- Tenta `/items/{id}` primeiro; se 404 usa `/products/{id}`
+- 3 estratégias em cascata para preço/estoque em catálogos
+- Fotos, descrição, categoria, rating, formas de pagamento extraídos
+
+**Frontend:**
+- `/affiliate` — página pública sem login (grid de produtos com filtros e busca)
+- `/dashboard/affiliate` — mesma página dentro do layout com navbar/sidebar
+- Modal com galeria de fotos + todos os detalhes do produto
+- Sidebar: "Loja de Afiliados" → `/dashboard/affiliate`
+- Carousel na home com 5 produtos e autoplay (⚠️ não testado ainda)
+
 ### 🔜 Próximos Itens
 
 **Produto (curto prazo):**
 - U8: Exibir custo de crédito no card do STL antes do download
+- ⚠️ Testar carousel de afiliados na home page
+- ⚠️ Testar modal de produto em mobile/tablet
 - Stripe sandbox: conectar webhook em modo Test (`stripe listen` local ou endpoint ngrok) para validar fluxo de assinatura end-to-end
 
 **Longo prazo (quando for ao ar para beta testers):**
@@ -351,7 +381,7 @@ Sistema de gamificação completo:
 - Hub Maker com conteúdo real (atualmente placeholder)
 - Landing page: prova social (testimonials, contador de usuários, pricing visível)
 - Leaderboard semanal real com ranking de XP
-- Afiliados de filamento
+- Adicionar mais produtos afiliados (AliExpress, Shopee, Amazon futuramente)
 
 ---
 
@@ -417,3 +447,16 @@ Sistema de gamificação completo:
 - Layout: [`src/app/dashboard/layout.tsx`](src/app/dashboard/layout.tsx)
 - Sidebar: [`src/components/layout/DashboardSidebar.tsx`](src/components/layout/DashboardSidebar.tsx)
 - STL Search: [`src/app/dashboard/stl-search/page.tsx`](src/app/dashboard/stl-search/page.tsx)
+
+### Afiliados (Sprint 9)
+- ML lib: [`src/lib/mercado-livre.ts`](src/lib/mercado-livre.ts)
+- OAuth URL: [`src/app/api/auth/mercado-livre-url/route.ts`](src/app/api/auth/mercado-livre-url/route.ts)
+- OAuth callback: [`src/app/api/auth/mercado-livre/route.ts`](src/app/api/auth/mercado-livre/route.ts)
+- Importação: [`src/app/api/affiliate/import-mercado-livre/route.ts`](src/app/api/affiliate/import-mercado-livre/route.ts)
+- API produtos: [`src/app/api/affiliate/products/route.ts`](src/app/api/affiliate/products/route.ts)
+- Página pública: [`src/app/affiliate/page.tsx`](src/app/affiliate/page.tsx)
+- Página dashboard: [`src/app/dashboard/affiliate/page.tsx`](src/app/dashboard/affiliate/page.tsx)
+- Grid: [`src/components/affiliate/AffiliateProductGrid.tsx`](src/components/affiliate/AffiliateProductGrid.tsx)
+- Modal: [`src/components/affiliate/ProductModal.tsx`](src/components/affiliate/ProductModal.tsx)
+- Carousel home: [`src/components/landing/AffiliateCarousel.tsx`](src/components/landing/AffiliateCarousel.tsx)
+- Admin tab: [`src/components/admin/AffiliateProductsTab.tsx`](src/components/admin/AffiliateProductsTab.tsx)
