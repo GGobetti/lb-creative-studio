@@ -124,7 +124,44 @@ export async function POST(req: NextRequest) {
       }
 
       // Try again with token
-      mlProductData = await fetchMLProductData(productId, accessToken);
+      try {
+        mlProductData = await fetchMLProductData(productId, accessToken);
+      } catch (tokenApiError) {
+        // Last resort for unified products (/up/MLBU): search by URL slug title
+        if (productId.startsWith('MLBU')) {
+          const slugMatch = affiliateLink.match(/mercadolivre\.com\.br\/([^/?#]+)\/up\/MLBU/);
+          if (slugMatch) {
+            const searchTerms = slugMatch[1].replace(/-/g, ' ').substring(0, 120);
+            console.log('[Import] MLBU fallback: searching by slug:', searchTerms);
+            const headers: Record<string, string> = {
+              accept: 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            };
+            const searchResp = await fetch(
+              `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerms)}&limit=5`,
+              { headers }
+            );
+            if (searchResp.ok) {
+              const searchData = await searchResp.json();
+              for (const result of searchData.results ?? []) {
+                if (!result?.id) continue;
+                const itemResp = await fetch(
+                  `https://api.mercadolibre.com/items/${result.id}`,
+                  { headers }
+                );
+                if (itemResp.ok) {
+                  console.log('[Import] MLBU fallback found accessible item:', result.id);
+                  mlProductData = { ...await itemResp.json(), _source: 'items' };
+                  break;
+                }
+              }
+            }
+          }
+          if (!mlProductData) throw tokenApiError;
+        } else {
+          throw tokenApiError;
+        }
+      }
     }
 
     // Transform to our format
