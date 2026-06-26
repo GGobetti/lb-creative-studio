@@ -167,7 +167,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     <>
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 flex w-64 flex-col relative overflow-y-auto
+          fixed inset-y-0 left-0 z-10 flex w-64 flex-col relative overflow-y-auto
           transition-transform duration-300 ease-in-out
           lg:my-4 lg:ml-4 lg:h-[calc(100vh-2rem)] lg:rounded-2xl lg:shadow-overlay lg:static lg:translate-x-0 lg:overflow-hidden
           bg-[var(--sidebar-bg)] glass-sidebar border-r border-[var(--sidebar-border)]
