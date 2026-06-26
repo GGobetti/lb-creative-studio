@@ -222,15 +222,23 @@ export function PhotoCurator() {
     setLoading(true)
     try {
       const supabase = getSupabaseBrowser()
-      const { data, error } = await supabase
-        .from("telegram_indexed_stls")
-        .select("id, title, file_name, photos, telegram_group_name, created_at, reviewed_at")
-        .eq("is_deleted", false)
-        .neq("id", PHOTO_BUCKET_ID)
-        .order("created_at", { ascending: true })
-        .limit(2000)
-      if (error) throw error
-      setRows(data || [])
+      const PAGE = 1000
+      const allData: StlRow[] = []
+      let offset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from("telegram_indexed_stls")
+          .select("id, title, file_name, photos, telegram_group_name, created_at, reviewed_at")
+          .eq("is_deleted", false)
+          .neq("id", PHOTO_BUCKET_ID)
+          .order("created_at", { ascending: true })
+          .range(offset, offset + PAGE - 1)
+        if (error) throw error
+        allData.push(...(data || []))
+        if (!data || data.length < PAGE) break
+        offset += PAGE
+      }
+      setRows(allData)
     } catch (err) {
       console.error("Erro ao carregar STLs:", err)
     } finally {
