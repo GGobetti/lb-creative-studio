@@ -25,8 +25,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Generate state for CSRF protection
-    const state = Math.random().toString(36).substring(2, 15);
+    // Encode user_id in state so it survives the cross-site redirect
+    const nonce = Math.random().toString(36).substring(2, 15);
+    const state = `${nonce}:${userId}`;
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -37,22 +38,7 @@ export async function GET(req: NextRequest) {
 
     const authUrl = `https://auth.mercadolibre.com/authorization?${params.toString()}`;
 
-    // Store state and user_id in cookies for callback
-    const response = NextResponse.json({ authUrl });
-    response.cookies.set('ml_oauth_state', state, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 600, // 10 minutes
-    });
-    response.cookies.set('ml_oauth_user_id', userId, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 600, // 10 minutes
-    });
-
-    return response;
+    return NextResponse.json({ authUrl });
   } catch (err) {
     console.error('[ML Auth URL Error]', err);
     return NextResponse.json(
