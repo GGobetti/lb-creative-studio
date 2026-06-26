@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { X, Heart, Download, MessageSquare, Calendar, HardDrive, FileText, ChevronLeft, ChevronRight, Trash2, Send, Plus, Upload, Loader2, Layers, Unlink, Package, Star, ImageIcon } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
 import { useAppStore } from "@/store/store";
@@ -315,30 +316,20 @@ export function StlDetailsModal({
   const hasParts = item.parts && item.parts.length > 0;
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-          onClick={onClose}
-        />
+    <Dialog.Root open={true} onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        {/* Backdrop with blur */}
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
 
-        {/* Modal Card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 16 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
-          className="relative w-full max-w-4xl bg-card border border-border rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh] md:max-h-[85vh] z-10 backdrop-blur-md"
-        >
+        {/* Modal Content Container */}
+        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-card shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-200 p-0 flex flex-col md:flex-row max-h-[90vh]">
+
           {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-20 p-2 bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full border border-border backdrop-blur-md transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <Dialog.Close asChild>
+            <button className="absolute right-4 top-4 z-50 rounded-full border border-border bg-muted/80 hover:bg-muted p-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          </Dialog.Close>
 
           {/* ── LEFT: Galeria Unificada ───────────────────────────── */}
           <div className="relative w-full md:w-1/2 aspect-square md:aspect-auto md:h-full min-h-[300px] md:min-h-[500px] bg-muted/20 flex items-center justify-center overflow-hidden border-r border-border/40">
@@ -454,7 +445,7 @@ export function StlDetailsModal({
           </div>
 
           {/* ── RIGHT: Detalhes ───────────────────────────────────── */}
-          <div className="w-full md:w-1/2 p-6 md:p-7 flex flex-col justify-between overflow-y-auto bg-card">
+          <div className="w-full md:w-1/2 p-6 md:p-7 flex flex-col justify-between overflow-y-auto bg-card max-h-[90vh] md:max-h-[85vh]">
             <div className="flex-1 flex flex-col min-h-0">
               {/* Header */}
               <div className="shrink-0 mb-4">
@@ -776,8 +767,8 @@ export function StlDetailsModal({
               )}
             </div>
           </div>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
