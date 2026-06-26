@@ -204,57 +204,56 @@ export async function POST(request: NextRequest) {
         const now = new Date().toISOString()
 
         try {
-          // Pega categorias existentes para cada STL
-          const { data: existingVotes } = await admin
-            .from('category_votes')
-            .select('stl_id, categories, suggested_categories')
-            .in('stl_id', stl_ids)
+          // Pega categorias existentes em ambas as tabelas
+          const [existingVotesRes, existingStlsRes] = await Promise.all([
+            admin
+              .from('category_votes')
+              .select('stl_id, categories, suggested_categories')
+              .in('stl_id', stl_ids),
+            admin
+              .from('telegram_indexed_stls')
+              .select('id, categories')
+              .in('id', stl_ids),
+          ])
 
-          const votesByStl = new Map(existingVotes?.map((v) => [v.stl_id, v]))
+          const votesByStl = new Map(existingVotesRes.data?.map((v) => [v.stl_id, v]))
+          const stlById = new Map(existingStlsRes.data?.map((s) => [s.id, s]))
 
-          // Para cada STL, merge as categorias
-          const upserts = stl_ids.map((stlId) => {
-            const existing = votesByStl.get(stlId)
-            const mergedCategories = Array.from(
-              new Set([...(existing?.categories || []), ...categories])
-            )
-            const mergedSuggested = Array.from(
-              new Set([...(existing?.suggested_categories || []), ...suggested_categories])
-            )
-
-            return {
-              user_id: userId,
-              stl_id: stlId,
-              categories: mergedCategories,
-              suggested_categories: mergedSuggested,
-              created_at: now,
-            }
-          })
-
-          // Upsert (insert or update) em chunks
-          // Para cada STL, tenta fazer DELETE + INSERT ou UPDATE direto
+          // Para cada STL, merge e persiste em ambas as tabelas
           const CHUNK = 50
-          for (let i = 0; i < upserts.length; i += CHUNK) {
-            const chunk = upserts.slice(i, i + CHUNK)
+          for (let i = 0; i < stl_ids.length; i += CHUNK) {
+            const chunk = stl_ids.slice(i, i + CHUNK)
 
-            // Para cada upsert, tenta delete a linha existente primeiro, depois insert
-            for (const record of chunk) {
-              // Delete existente
-              await admin
-                .from('category_votes')
-                .delete()
-                .eq('user_id', record.user_id)
-                .eq('stl_id', record.stl_id)
+            for (const stlId of chunk) {
+              const existingVote = votesByStl.get(stlId)
+              const existingStl = stlById.get(stlId)
 
-              // Insert novo
-              const { error: insertErr } = await admin
-                .from('category_votes')
-                .insert([record])
+              // Merge acumulando (não substitui)
+              const mergedCategories = Array.from(
+                new Set([...(existingStl?.categories || []), ...(existingVote?.categories || []), ...categories])
+              )
+              const mergedSuggested = Array.from(
+                new Set([...(existingVote?.suggested_categories || []), ...suggested_categories])
+              )
 
-              if (insertErr) {
-                console.error('Insert error for record:', record, insertErr)
-                throw insertErr
-              }
+              // 1. Materializa direto no STL (fonte canônica p/ busca)
+              const { error: stlErr } = await admin
+                .from('telegram_indexed_stls')
+                .update({ categories: mergedCategories })
+                .eq('id', stlId)
+              if (stlErr) throw stlErr
+
+              // 2. Registra vote do admin (histórico)
+              await admin.from('category_votes').delete()
+                .eq('user_id', userId).eq('stl_id', stlId)
+              const { error: insertErr } = await admin.from('category_votes').insert([{
+                user_id: userId,
+                stl_id: stlId,
+                categories: mergedCategories,
+                suggested_categories: mergedSuggested,
+                created_at: now,
+              }])
+              if (insertErr) console.warn('category_votes insert warning:', insertErr)
             }
           }
 

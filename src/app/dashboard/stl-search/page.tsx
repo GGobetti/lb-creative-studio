@@ -6,7 +6,8 @@ import { StlGrid } from "@/components/stl-search/StlGrid";
 import { StlDetailsModal } from "@/components/stl-search/StlDetailsModal";
 import { MergePartsModal } from "@/components/stl-search/MergePartsModal";
 import { StlItem } from "@/lib/mockStlData";
-import { PackageSearch, Heart, Trophy, TrendingUp, Loader2, Download, GitMerge, Trash2, X as XIcon, CheckSquare } from "lucide-react";
+import { PackageSearch, Heart, Trophy, TrendingUp, Loader2, Download, GitMerge, Trash2, X as XIcon, CheckSquare, Tag } from "lucide-react";
+import { STL_CATEGORIES } from "@/types/games";
 import { useAppStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
@@ -58,6 +59,7 @@ export default function StlSearchPage() {
   const [hasMore, setHasMore] = useState(false);
   const [printerFilter, setPrinterFilter] = useState<"all" | "resin" | "fdm">("all");
   const [photoFilter, setPhotoFilter] = useState<"all" | "with_photo" | "without_photo">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StlItem | null>(null);
@@ -149,7 +151,7 @@ export default function StlSearchPage() {
   useEffect(() => {
     setPage(0);
     setItems([]);
-  }, [debouncedQuery, printerFilter, photoFilter]);
+  }, [debouncedQuery, printerFilter, photoFilter, categoryFilter]);
 
   // Fetch real STL files from Supabase telegram_indexed_stls (paginated)
   useEffect(() => {
@@ -177,6 +179,10 @@ export default function StlSearchPage() {
             // Partial text search (contains)
             query = query.or(`title.ilike.%${trimmed}%,file_name.ilike.%${trimmed}%`);
           }
+        }
+
+        if (categoryFilter) {
+          query = query.contains("categories", [categoryFilter]);
         }
 
         if (printerFilter !== "all") {
@@ -241,7 +247,7 @@ export default function StlSearchPage() {
     };
 
     fetchItems();
-  }, [debouncedQuery, printerFilter, photoFilter, page, pageSize]);
+  }, [debouncedQuery, printerFilter, photoFilter, categoryFilter, page, pageSize]);
 
   const fetchRankings = async () => {
     setIsLoadingRankings(true);
@@ -772,13 +778,44 @@ export default function StlSearchPage() {
       {activeSearchTab === "explore" ? (
         /* Results Section */
         <div className="py-2">
+          {/* Category Filter */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Categorias</span>
+              {categoryFilter && (
+                <button
+                  onClick={() => setCategoryFilter(null)}
+                  className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <XIcon className="w-3 h-3" /> Limpar filtro
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {STL_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap ${
+                    categoryFilter === cat
+                      ? "bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-600/30"
+                      : "bg-muted text-muted-foreground border-border hover:bg-muted/80 hover:text-foreground"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Printer Type Filter */}
           <div className="flex gap-2 mb-6">
             <button
               onClick={() => setPrinterFilter("all")}
               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                printerFilter === "all" 
-                  ? "bg-primary text-primary-foreground border-primary" 
+                printerFilter === "all"
+                  ? "bg-primary text-primary-foreground border-primary"
                   : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
               }`}
             >
@@ -811,11 +848,13 @@ export default function StlSearchPage() {
               <h2 className="text-lg font-bold text-foreground">
                 {mergeMode
                   ? `Selecione os arquivos para mesclar (${mergeSelection.length} selecionados)`
-                  : showOnlyFavorites 
-                    ? "Favoritos salvos" 
-                    : searchQuery 
-                      ? `Resultados para "${searchQuery}"` 
-                      : "Modelos Recentes"}
+                  : showOnlyFavorites
+                    ? "Favoritos salvos"
+                    : categoryFilter
+                      ? `Categoria: ${categoryFilter}${searchQuery ? ` · "${searchQuery}"` : ""}`
+                      : searchQuery
+                        ? `Resultados para "${searchQuery}"`
+                        : "Modelos Recentes"}
               </h2>
               {!mergeMode && (
                 <span className="text-xs text-muted-foreground font-semibold bg-muted border border-border px-3 py-1 rounded-full">
