@@ -22,7 +22,7 @@ interface StlRow {
   reviewed_at: string | null
 }
 
-type FilterChip = "suspicious" | "no_photo" | "with_photos" | "unreviewed" | "reviewed"
+type FilterChip = "suspicious" | "no_photo" | "with_photos" | "unreviewed" | "reviewed" | "no_category"
 
 const PAGE_SIZE = 40
 const SUSPICIOUS_THRESHOLD = 4 // 4+ fotos = provável contaminação
@@ -441,6 +441,10 @@ export function PhotoCurator() {
           if (chip === "suspicious") return n >= SUSPICIOUS_THRESHOLD
           if (chip === "no_photo") return n === 0
           if (chip === "with_photos") return n > 0
+          if (chip === "no_category") {
+            const cats = categoryCache[r.id]
+            return !cats || cats.size === 0
+          }
           return false
         })
       }
@@ -450,7 +454,7 @@ export function PhotoCurator() {
 
       return false
     })
-  }, [rows, search, activeFilters, reviewed])
+  }, [rows, search, activeFilters, reviewed, categoryCache])
 
   const paged = useMemo(
     () => filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
@@ -462,7 +466,7 @@ export function PhotoCurator() {
 
   /* ---------- contadores ---------- */
   const counts = useMemo(() => {
-    let suspicious = 0, noPhoto = 0, withPhotos = 0, unreviewed = 0, unreviewedWithPhotos = 0
+    let suspicious = 0, noPhoto = 0, withPhotos = 0, unreviewed = 0, unreviewedWithPhotos = 0, noCategory = 0
     for (const r of rows) {
       const n = (r.photos || []).length
       const isRev = reviewed.has(r.id)
@@ -473,9 +477,11 @@ export function PhotoCurator() {
         unreviewed++
         if (n > 0) unreviewedWithPhotos++
       }
+      const cats = categoryCache[r.id]
+      if (!cats || cats.size === 0) noCategory++
     }
-    return { total: rows.length, suspicious, noPhoto, withPhotos, unreviewed, unreviewedWithPhotos }
-  }, [rows, reviewed])
+    return { total: rows.length, suspicious, noPhoto, withPhotos, unreviewed, unreviewedWithPhotos, noCategory }
+  }, [rows, reviewed, categoryCache])
 
   /* ---------- mutação local otimista ---------- */
   const patchRowPhotos = useCallback((id: string, photos: string[]) => {
@@ -885,6 +891,7 @@ export function PhotoCurator() {
           ["suspicious", `⚠️ Suspeitos 4+ (${counts.suspicious})`],
           ["no_photo", `Sem foto (${counts.noPhoto})`],
           ["with_photos", `📷 Com fotos (${counts.withPhotos})`],
+          ["no_category", loadingCategories ? `🏷️ Sem categoria (...)` : `🏷️ Sem categoria (${counts.noCategory})`],
           ["unreviewed", `🔍 Não revisados (${counts.unreviewed})`],
         ] as [FilterChip, string][]).map(([chip, label]) => (
           <button
