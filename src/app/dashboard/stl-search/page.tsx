@@ -954,14 +954,26 @@ export default function StlSearchPage() {
             deleteSelection={deleteSelection}
           />
 
-          {hasMore && !showOnlyFavorites && (
-            <div className="flex justify-center mt-8">
+          {!showOnlyFavorites && (
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0 || isLoading}
+                className="px-4 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                ← Anterior
+              </button>
+
+              <div className="text-sm font-semibold text-muted-foreground">
+                Página {page + 1} {hasMore ? "de ?" : `(${(page + 1) * pageSize} carregados)`}
+              </div>
+
               <button
                 onClick={() => setPage((p) => p + 1)}
-                disabled={isLoading}
-                className="px-6 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-50 transition-all"
+                disabled={!hasMore || isLoading}
+                className="px-4 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Carregar mais"}
+                Próxima →
               </button>
             </div>
           )}
