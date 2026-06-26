@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate affiliate ownership — only allow links with our tool ID
+    const requiredToolId = process.env.ML_AFFILIATE_TOOL_ID;
+    if (requiredToolId && !affiliateLink.includes(`matt_tool_id=${requiredToolId}`)) {
+      return NextResponse.json(
+        { error: 'Link inválido: use apenas links gerados pelo seu perfil de afiliado do Mercado Livre.' },
+        { status: 400 }
+      );
+    }
+
     // Resolve short URL
     const productId = await resolveMLShortUrl(affiliateLink);
     if (!productId) {
