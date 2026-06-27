@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { PlayCircle, Download, Users, ExternalLink } from "lucide-react"
+import { PlayCircle, Download, Users, ExternalLink, ArrowRight } from "lucide-react"
+import Link from "next/link"
 import { HubLink } from "@/types/hub-links"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { getYouTubeEmbedUrl, isYouTubeUrl } from "@/lib/youtube"
@@ -74,6 +75,46 @@ function LinkCard({ link }: { link: HubLink }) {
   )
 }
 
+function SectionPreview({ title, icon: Icon, theme, links, href }: { title: string; icon: any; theme: string; links: HubLink[]; href: string }) {
+  const preview = links.slice(0, 3)
+  const hasMore = links.length > 3
+
+  if (links.length === 0) return null
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <Icon className="text-primary" size={24} />
+          {title}
+        </h2>
+        {hasMore && (
+          <span className="text-sm text-muted-foreground">
+            {links.length} {links.length === 1 ? "recurso" : "recursos"}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+        {preview.map((link) => (
+          <LinkCard key={link.id} link={link} />
+        ))}
+      </div>
+
+      {hasMore && (
+        <div className="flex justify-center">
+          <Link
+            href={href}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg border border-border hover:border-primary text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Ver todos ({links.length} recursos) <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
+    </section>
+  )
+}
+
 export default function HubPage() {
   const [links, setLinks] = useState<HubLink[]>([])
   const [loading, setLoading] = useState(true)
@@ -110,9 +151,10 @@ export default function HubPage() {
       <div className="space-y-8 pb-10 animate-pulse">
         <div className="h-8 w-48 bg-muted rounded" />
         <div className="h-40 bg-muted rounded-xl" />
-        <div className="grid grid-cols-2 gap-6">
-          <div className="h-64 bg-muted rounded-xl" />
-          <div className="h-64 bg-muted rounded-xl" />
+        <div className="grid grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-64 bg-muted rounded-xl" />
+          ))}
         </div>
       </div>
     )
@@ -149,45 +191,30 @@ export default function HubPage() {
         </section>
       )}
 
-      {/* Tutoriais */}
-      {grouped.tutoriais.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-            <PlayCircle className="text-primary" /> Tutoriais
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {grouped.tutoriais.map((link) => (
-              <LinkCard key={link.id} link={link} />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Sections */}
+      <SectionPreview
+        title="Tutoriais"
+        icon={PlayCircle}
+        theme="tutoriais"
+        links={grouped.tutoriais}
+        href="/dashboard/hub/tutoriais"
+      />
 
-      {/* IA Tools */}
-      {grouped.ia.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-foreground mb-4">Ferramentas IA</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {grouped.ia.map((link) => (
-              <LinkCard key={link.id} link={link} />
-            ))}
-          </div>
-        </section>
-      )}
+      <SectionPreview
+        title="Ferramentas IA"
+        icon={null}
+        theme="ia"
+        links={grouped.ia}
+        href="/dashboard/hub/ia"
+      />
 
-      {/* Calibração */}
-      {grouped.calibracao.length > 0 && (
-        <section>
-          <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-            <Download className="text-primary" /> Calibração (MakerWorld)
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {grouped.calibracao.map((link) => (
-              <LinkCard key={link.id} link={link} />
-            ))}
-          </div>
-        </section>
-      )}
+      <SectionPreview
+        title="Calibração (MakerWorld)"
+        icon={Download}
+        theme="calibracao"
+        links={grouped.calibracao}
+        href="/dashboard/hub/calibracao"
+      />
 
       {links.length === 0 && (
         <div className="text-center py-20 text-muted-foreground">
