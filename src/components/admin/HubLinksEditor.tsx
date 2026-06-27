@@ -5,7 +5,7 @@ import { HubLink, HubTheme } from "@/types/hub-links"
 import { HubLinkForm } from "./HubLinkForm"
 import { HubLinkCard } from "./HubLinkCard"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, Trash2, X } from "lucide-react"
+import { Loader2, Trash2, X, Plus } from "lucide-react"
 import { getSupabaseBrowser } from "@/lib/supabase"
 
 async function authedFetch(url: string, options: RequestInit = {}): Promise<Response> {
@@ -43,6 +43,7 @@ export function HubLinksEditor({
 }: HubLinksEditorProps) {
   const [activeTheme, setActiveTheme] = useState<HubTheme>("tutoriais")
   const [editingLink, setEditingLink] = useState<HubLink | null>(null)
+  const [showForm, setShowForm] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -50,18 +51,27 @@ export function HubLinksEditor({
 
   const themeLinks = links.filter((l) => l.theme === activeTheme)
 
-  useEffect(() => {
-    if (editingLink && editingLink.theme !== activeTheme) {
-      setActiveTheme(editingLink.theme)
-    }
-  }, [editingLink, activeTheme])
+  const handleAddClick = () => {
+    setEditingLink(null)
+    setShowForm(true)
+  }
+
+  const handleEditClick = (link: HubLink) => {
+    setEditingLink(link)
+    setActiveTheme(link.theme)
+    setShowForm(true)
+  }
+
+  const handleCloseForm = () => {
+    setShowForm(false)
+    setEditingLink(null)
+  }
 
   const handleCreateOrUpdate = useCallback(
     async (data: any) => {
       setSaving(true)
       try {
         if (editingLink) {
-          // Update
           const res = await authedFetch(`/api/admin/hub-links/${editingLink.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -72,9 +82,8 @@ export function HubLinksEditor({
 
           const newLinks = links.map((l) => (l.id === updated.id ? updated : l))
           onLinksChange(newLinks)
-          setEditingLink(null)
+          handleCloseForm()
         } else {
-          // Create
           const res = await authedFetch("/api/admin/hub-links", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -84,7 +93,7 @@ export function HubLinksEditor({
           const { data: created } = await res.json()
 
           onLinksChange([...links, created])
-          setActiveTheme(created.theme)
+          handleCloseForm()
         }
       } catch (err: any) {
         onError(err.message)
@@ -143,12 +152,10 @@ export function HubLinksEditor({
     async (fromIndex: number, toIndex: number) => {
       if (fromIndex === toIndex) return
 
-      // Reorder locally first
       const reordered = Array.from(themeLinks)
       const [moved] = reordered.splice(fromIndex, 1)
       reordered.splice(toIndex, 0, moved)
 
-      // Update positions in state
       const newPositions = reordered.map((l, i) => ({ ...l, position: i }))
       const allLinks = links.map((l) => {
         const updated = newPositions.find((p) => p.id === l.id)
@@ -156,7 +163,6 @@ export function HubLinksEditor({
       })
       onLinksChange(allLinks)
 
-      // Persist to API
       try {
         const res = await authedFetch("/api/admin/hub-links/reorder", {
           method: "PUT",
@@ -168,7 +174,6 @@ export function HubLinksEditor({
         if (!res.ok) throw new Error("Failed to reorder")
       } catch (err: any) {
         onError(err.message)
-        // Revert on error
         onLinksChange(links)
       }
     },
@@ -201,22 +206,39 @@ export function HubLinksEditor({
         ))}
       </div>
 
-      {/* Form */}
-      <div>
-        <HubLinkForm
-          link={editingLink?.theme === activeTheme ? editingLink : null}
-          theme={activeTheme}
-          onSubmit={handleCreateOrUpdate}
-          onCancel={() => setEditingLink(null)}
-          loading={saving}
-        />
-      </div>
+      {/* Add Button */}
+      <button
+        onClick={handleAddClick}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity"
+      >
+        <Plus size={18} /> Adicionar Link
+      </button>
 
-      {/* List with Drag and Drop Support */}
+      {/* Form - Animated */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ type: "spring", damping: 20, stiffness: 200 }}
+          >
+            <HubLinkForm
+              link={editingLink}
+              theme={activeTheme}
+              onSubmit={handleCreateOrUpdate}
+              onCancel={handleCloseForm}
+              loading={saving}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* List */}
       <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20">
         {themeLinks.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
-            Nenhum link neste tema. Adicione um acima.
+            Nenhum link neste tema. Clique em "Adicionar Link" acima.
           </p>
         ) : (
           <div className="space-y-2">
@@ -244,7 +266,6 @@ export function HubLinksEditor({
                 }`}
               >
                 <div className="group flex items-center gap-3">
-                  {/* Drag Handle */}
                   <div className="cursor-grab active:cursor-grabbing p-2 text-muted-foreground group-hover:text-foreground transition-colors">
                     <div className="flex flex-col gap-1">
                       <div className="w-1 h-1 rounded-full bg-current" />
@@ -253,18 +274,16 @@ export function HubLinksEditor({
                     </div>
                   </div>
 
-                  {/* Card */}
                   <div className="flex-1">
                     <HubLinkCard
                       link={link}
                       isDragging={draggingIndex === index}
-                      onEdit={() => setEditingLink(link)}
+                      onEdit={() => handleEditClick(link)}
                       onToggle={() => handleToggle(link.id)}
                       onDelete={() => setShowDeleteConfirm(link.id)}
                     />
                   </div>
 
-                  {/* Delete Button */}
                   <button
                     onClick={() => setShowDeleteConfirm(link.id)}
                     disabled={deletingId === link.id}
@@ -283,7 +302,7 @@ export function HubLinksEditor({
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Modal */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -293,7 +312,6 @@ export function HubLinksEditor({
               exit={{ opacity: 0, scale: 0.95 }}
               className="relative w-full max-w-sm mx-4 bg-card rounded-lg shadow-xl border border-border p-6 space-y-6"
             >
-              {/* Close Button */}
               <button
                 onClick={() => setShowDeleteConfirm(null)}
                 className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -301,7 +319,6 @@ export function HubLinksEditor({
                 <X size={20} />
               </button>
 
-              {/* Content */}
               <div className="space-y-2">
                 <h2 className="text-xl font-bold text-foreground">Deletar Link</h2>
                 <p className="text-sm text-muted-foreground">
@@ -309,7 +326,6 @@ export function HubLinksEditor({
                 </p>
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 justify-end">
                 <button
                   onClick={() => setShowDeleteConfirm(null)}
