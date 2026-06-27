@@ -21,7 +21,7 @@ export function HubLinkCard({
 }: HubLinkCardProps) {
   return (
     <div
-      className={`bg-card border border-border rounded-xl p-4 transition-all overflow-hidden ${
+      className={`bg-card border border-border rounded-xl p-4 transition-all overflow-hidden w-full max-w-full ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
       }`}
     >

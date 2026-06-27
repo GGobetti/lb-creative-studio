@@ -235,7 +235,7 @@ export function HubLinksEditor({
       </AnimatePresence>
 
       {/* List */}
-      <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20">
+      <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/20 overflow-hidden">
         {themeLinks.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             Nenhum link neste tema. Clique em "Adicionar Link" acima.
