@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { PlayCircle, Download, Users, ExternalLink, ArrowRight } from "lucide-react"
+import { PlayCircle, Download, Users, ExternalLink, ArrowRight, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { HubLink } from "@/types/hub-links"
 import { getSupabaseBrowser } from "@/lib/supabase"
@@ -202,7 +202,7 @@ export default function HubPage() {
 
       <SectionPreview
         title="Ferramentas IA"
-        icon={null}
+        icon={Sparkles}
         theme="ia"
         links={grouped.ia}
         href="/dashboard/hub/ia"
