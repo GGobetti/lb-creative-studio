@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { HubLink, HubTheme } from "@/types/hub-links"
 import { HubLinkForm } from "./HubLinkForm"
 import { HubLinkCard } from "./HubLinkCard"
@@ -49,6 +49,12 @@ export function HubLinksEditor({
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
 
   const themeLinks = links.filter((l) => l.theme === activeTheme)
+
+  useEffect(() => {
+    if (editingLink && editingLink.theme !== activeTheme) {
+      setActiveTheme(editingLink.theme)
+    }
+  }, [editingLink, activeTheme])
 
   const handleCreateOrUpdate = useCallback(
     async (data: any) => {
