@@ -23,7 +23,7 @@ export const CreateHubLinkSchema = z.object({
 
 export type CreateHubLinkInput = z.infer<typeof CreateHubLinkSchema>
 
-export const UpdateHubLinkSchema = CreateHubLinkSchema.extend({
+export const UpdateHubLinkSchema = CreateHubLinkSchema.partial().extend({
   is_active: z.boolean().optional(),
 })
 
