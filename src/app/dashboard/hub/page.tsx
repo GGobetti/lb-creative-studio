@@ -5,7 +5,7 @@ import { PlayCircle, Download, Users, ExternalLink, ArrowRight, Sparkles } from 
 import Link from "next/link"
 import { HubLink } from "@/types/hub-links"
 import { getSupabaseBrowser } from "@/lib/supabase"
-import { getYouTubeEmbedUrl, isYouTubeUrl } from "@/lib/youtube"
+import { getYouTubeEmbedUrl, isYouTubeUrl, isInstagramUrl } from "@/lib/youtube"
 
 function LinkCard({ link }: { link: HubLink }) {
   const isYT = isYouTubeUrl(link.url)
@@ -26,6 +26,15 @@ function LinkCard({ link }: { link: HubLink }) {
         <div className="p-4">
           <h3 className="font-semibold text-foreground">{link.title}</h3>
           <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
+          {link.tags && link.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {link.tags.map((tag) => (
+                <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -52,6 +61,15 @@ function LinkCard({ link }: { link: HubLink }) {
         <div className="p-4">
           <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{link.title}</h3>
           <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
+          {link.tags && link.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {link.tags.map((tag) => (
+                <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </a>
     )
@@ -67,6 +85,15 @@ function LinkCard({ link }: { link: HubLink }) {
       <div>
         <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{link.title}</h3>
         <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
+        {link.tags && link.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-3">
+            {link.tags.map((tag) => (
+              <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
         <ExternalLink size={12} /> Abrir link
@@ -85,7 +112,7 @@ function SectionPreview({ title, icon: Icon, theme, links, href }: { title: stri
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <Icon className="text-primary" size={24} />
+          {Icon && <Icon className="text-primary" size={24} />}
           {title}
         </h2>
         {hasMore && (
@@ -140,7 +167,8 @@ export default function HubPage() {
   }, [])
 
   const grouped = {
-    tutoriais: links.filter((l) => l.theme === "tutoriais"),
+    youtube: links.filter((l) => l.theme === "tutoriais" && isYouTubeUrl(l.url)),
+    instagram: links.filter((l) => l.theme === "tutoriais" && isInstagramUrl(l.url)),
     ia: links.filter((l) => l.theme === "ia"),
     calibracao: links.filter((l) => l.theme === "calibracao"),
     comunidade: links.filter((l) => l.theme === "comunidade"),
@@ -191,15 +219,25 @@ export default function HubPage() {
         </section>
       )}
 
-      {/* Sections */}
+      {/* YouTube */}
       <SectionPreview
-        title="Tutoriais"
+        title="Vídeos do YouTube"
         icon={PlayCircle}
-        theme="tutoriais"
-        links={grouped.tutoriais}
-        href="/dashboard/hub/tutoriais"
+        theme="youtube"
+        links={grouped.youtube}
+        href="/dashboard/hub/tutoriais?type=youtube"
       />
 
+      {/* Instagram */}
+      <SectionPreview
+        title="Vídeos do Instagram"
+        icon={null}
+        theme="instagram"
+        links={grouped.instagram}
+        href="/dashboard/hub/tutoriais?type=instagram"
+      />
+
+      {/* IA Tools */}
       <SectionPreview
         title="Ferramentas IA"
         icon={Sparkles}
@@ -208,6 +246,7 @@ export default function HubPage() {
         href="/dashboard/hub/ia"
       />
 
+      {/* Calibração */}
       <SectionPreview
         title="Calibração (MakerWorld)"
         icon={Download}

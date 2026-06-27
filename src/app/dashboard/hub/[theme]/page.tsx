@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { HubLink, HubTheme } from "@/types/hub-links"
 import { getSupabaseBrowser } from "@/lib/supabase"
-import { getYouTubeEmbedUrl, isYouTubeUrl } from "@/lib/youtube"
+import { getYouTubeEmbedUrl, isYouTubeUrl, isInstagramUrl } from "@/lib/youtube"
 import { ExternalLink } from "lucide-react"
 
 const THEME_LABELS: Record<HubTheme, string> = {
@@ -34,6 +35,15 @@ function LinkCard({ link }: { link: HubLink }) {
         <div className="p-4">
           <h3 className="font-semibold text-foreground">{link.title}</h3>
           <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
+          {link.tags && link.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {link.tags.map((tag) => (
+                <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -60,6 +70,15 @@ function LinkCard({ link }: { link: HubLink }) {
         <div className="p-4">
           <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{link.title}</h3>
           <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
+          {link.tags && link.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              {link.tags.map((tag) => (
+                <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </a>
     )
@@ -75,6 +94,15 @@ function LinkCard({ link }: { link: HubLink }) {
       <div>
         <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">{link.title}</h3>
         <p className="text-sm text-muted-foreground mt-1">{link.description}</p>
+        {link.tags && link.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-3">
+            {link.tags.map((tag) => (
+              <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary transition-colors">
         <ExternalLink size={12} /> Abrir link
@@ -87,6 +115,8 @@ export default function HubThemePage({ params }: { params: Promise<{ theme: stri
   const [theme, setTheme] = useState<HubTheme | null>(null)
   const [links, setLinks] = useState<HubLink[]>([])
   const [loading, setLoading] = useState(true)
+  const searchParams = useSearchParams()
+  const videoType = searchParams.get("type")
 
   useEffect(() => {
     ;(async () => {
@@ -107,14 +137,26 @@ export default function HubThemePage({ params }: { params: Promise<{ theme: stri
         })
         if (!res.ok) throw new Error("Failed to fetch hub links")
         const { data } = await res.json()
-        setLinks(data.filter((l: HubLink) => l.theme === themeParam))
+
+        let filtered = data.filter((l: HubLink) => l.theme === themeParam)
+
+        // Filter by video type for tutoriais
+        if (themeParam === "tutoriais" && videoType) {
+          if (videoType === "youtube") {
+            filtered = filtered.filter((l: HubLink) => isYouTubeUrl(l.url))
+          } else if (videoType === "instagram") {
+            filtered = filtered.filter((l: HubLink) => isInstagramUrl(l.url))
+          }
+        }
+
+        setLinks(filtered)
       } catch (err) {
         console.error("Error fetching hub links:", err)
       } finally {
         setLoading(false)
       }
     })()
-  }, [params])
+  }, [params, videoType])
 
   if (!theme || loading) {
     return (
@@ -140,6 +182,13 @@ export default function HubThemePage({ params }: { params: Promise<{ theme: stri
     )
   }
 
+  let displayTitle = THEME_LABELS[theme]
+  if (theme === "tutoriais" && videoType === "youtube") {
+    displayTitle = "Vídeos do YouTube"
+  } else if (theme === "tutoriais" && videoType === "instagram") {
+    displayTitle = "Vídeos do Instagram"
+  }
+
   return (
     <div className="space-y-6 pb-10">
       <div className="flex items-center gap-3">
@@ -151,12 +200,47 @@ export default function HubThemePage({ params }: { params: Promise<{ theme: stri
           <ArrowLeft size={20} />
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{THEME_LABELS[theme]}</h1>
+          <h1 className="text-3xl font-bold text-foreground">{displayTitle}</h1>
           <p className="text-muted-foreground mt-1">
             {links.length} {links.length === 1 ? "recurso" : "recursos"} disponível{links.length === 1 ? "" : "s"}
           </p>
         </div>
       </div>
+
+      {theme === "tutoriais" && (
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/hub/tutoriais"
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              !videoType
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border hover:border-primary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Todos
+          </Link>
+          <Link
+            href="/dashboard/hub/tutoriais?type=youtube"
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              videoType === "youtube"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border hover:border-primary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            YouTube
+          </Link>
+          <Link
+            href="/dashboard/hub/tutoriais?type=instagram"
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              videoType === "instagram"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border hover:border-primary text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Instagram
+          </Link>
+        </div>
+      )}
 
       {links.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">

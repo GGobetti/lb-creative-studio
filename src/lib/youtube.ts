@@ -28,3 +28,12 @@ export function isYouTubeUrl(url: string): boolean {
     return false
   }
 }
+
+export function isInstagramUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.hostname.includes("instagram.com") || u.hostname.includes("instagr.am")
+  } catch {
+    return false
+  }
+}

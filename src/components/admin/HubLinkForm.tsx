@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { HubLink, HubTheme, CreateHubLinkSchema } from "@/types/hub-links"
-import { AlertCircle, Wand2 } from "lucide-react"
+import { HubLink, HubTheme, HubTag, CreateHubLinkSchema, PREDEFINED_TAGS } from "@/types/hub-links"
+import { AlertCircle, Wand2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getYouTubeThumbnail, isYouTubeUrl } from "@/lib/youtube"
 
@@ -28,6 +28,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
     description: link?.description || "",
     url: link?.url || "",
     thumbnail_url: link?.thumbnail_url || "",
+    tags: (link?.tags || []) as HubTag[],
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -38,6 +39,15 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
     if (thumb) setFormData((f) => ({ ...f, thumbnail_url: thumb }))
   }
 
+  const toggleTag = (tag: HubTag) => {
+    setFormData((f) => ({
+      ...f,
+      tags: f.tags.includes(tag)
+        ? f.tags.filter((t) => t !== tag)
+        : [...f.tags, tag],
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrors({})
@@ -45,17 +55,27 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
       const payload = {
         ...formData,
         thumbnail_url: formData.thumbnail_url || null,
+        tags: formData.tags.length > 0 ? formData.tags : null,
       }
       const validated = CreateHubLinkSchema.parse(payload)
       setSubmitting(true)
       await onSubmit(validated)
       if (!link) {
-        setFormData((f) => ({ ...f, title: "", description: "", url: "", thumbnail_url: "" }))
+        setFormData((f) => ({
+          ...f,
+          title: "",
+          description: "",
+          url: "",
+          thumbnail_url: "",
+          tags: [],
+        }))
       }
     } catch (err: any) {
       if (err.errors) {
         const errMap: Record<string, string> = {}
-        err.errors.forEach((e: any) => { errMap[e.path.join(".")] = e.message })
+        err.errors.forEach((e: any) => {
+          errMap[e.path.join(".")] = e.message
+        })
         setErrors(errMap)
       } else {
         setErrors({ form: err.message })
@@ -88,7 +108,9 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
           className={inputClass}
         >
           {THEMES.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
           ))}
         </select>
       </div>
@@ -137,8 +159,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-200">
-          Thumbnail (opcional){" "}
-          {errors.thumbnail_url && <span className="text-red-400">({errors.thumbnail_url})</span>}
+          Thumbnail (opcional) {errors.thumbnail_url && <span className="text-red-400">({errors.thumbnail_url})</span>}
         </label>
         <div className="flex gap-2">
           <input
@@ -170,6 +191,31 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
             onError={(e) => (e.currentTarget.style.display = "none")}
           />
         )}
+      </div>
+
+      <div>
+        <label className="mb-3 block text-sm font-medium text-slate-200">
+          Tags (opcional)
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {PREDEFINED_TAGS.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => toggleTag(tag)}
+              disabled={submitting || loading}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium transition-colors",
+                formData.tags.includes(tag)
+                  ? "bg-cyan-500 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+              )}
+            >
+              {tag}
+              {formData.tags.includes(tag) && <X size={14} />}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-2 pt-4">

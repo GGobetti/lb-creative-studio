@@ -1,6 +1,17 @@
 import { z } from "zod"
 
 export type HubTheme = "tutoriais" | "ia" | "calibracao" | "comunidade"
+export type HubTag = "Iniciante" | "Intermediário" | "Avançado" | "Dica rápida" | "Troubleshooting" | "Configuração" | "Otimização"
+
+export const PREDEFINED_TAGS: HubTag[] = [
+  "Iniciante",
+  "Intermediário",
+  "Avançado",
+  "Dica rápida",
+  "Troubleshooting",
+  "Configuração",
+  "Otimização",
+]
 
 export interface HubLink {
   id: string
@@ -9,6 +20,7 @@ export interface HubLink {
   description: string
   url: string
   thumbnail_url?: string | null
+  tags?: HubTag[] | null
   position: number
   is_active: boolean
   created_at: string
@@ -21,6 +33,10 @@ export const CreateHubLinkSchema = z.object({
   description: z.string().min(1).max(1000),
   url: z.string().url("Invalid URL format"),
   thumbnail_url: z.string().url().nullable().optional(),
+  tags: z.array(z.enum([
+    "Iniciante", "Intermediário", "Avançado", "Dica rápida",
+    "Troubleshooting", "Configuração", "Otimização"
+  ])).optional(),
 })
 
 export type CreateHubLinkInput = z.infer<typeof CreateHubLinkSchema>
