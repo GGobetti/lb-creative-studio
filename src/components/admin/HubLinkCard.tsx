@@ -21,36 +21,38 @@ export function HubLinkCard({
 }: HubLinkCardProps) {
   return (
     <div
-      className={`bg-card border border-border rounded-xl p-4 transition-all overflow-hidden w-full max-w-full ${
+      className={`bg-card border border-border rounded-xl p-4 transition-all overflow-hidden w-full max-w-full h-48 ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
       }`}
     >
-      <div className="flex gap-3">
+      <div className="flex gap-3 h-full">
         <div className="text-muted-foreground mt-1 cursor-grab active:cursor-grabbing flex-shrink-0">
           <GripVertical size={20} />
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col">
           {/* Thumbnail */}
           {link.thumbnail_url && (
-            <div className="mb-3 rounded overflow-hidden border border-border/50">
+            <div className="mb-2 rounded overflow-hidden border border-border/50 flex-shrink-0">
               <img
                 src={link.thumbnail_url}
                 alt={link.title}
-                className="w-full h-auto max-h-24 object-cover"
+                className="w-full h-20 object-cover"
                 onError={(e) => (e.currentTarget.style.display = "none")}
               />
             </div>
           )}
 
-          {/* Content */}
-          <h3 className="font-semibold text-foreground break-words">{link.title}</h3>
-          <p className="text-sm text-muted-foreground mt-1 break-words whitespace-normal">{link.description}</p>
-          <p className="text-xs text-muted-foreground/70 mt-2 break-all">{link.url}</p>
+          {/* Content - expands to fill available space */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <h3 className="font-semibold text-foreground break-words line-clamp-2">{link.title}</h3>
+            <p className="text-sm text-muted-foreground mt-1 break-words whitespace-normal line-clamp-2">{link.description}</p>
+            <p className="text-xs text-muted-foreground/70 mt-1 break-all line-clamp-1">{link.url}</p>
+          </div>
 
-          {/* Tags */}
+          {/* Tags - sticky to bottom */}
           {link.tags && link.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-1 mt-2 flex-shrink-0">
               {link.tags.map((tag) => (
                 <span key={tag} className="inline-block px-2 py-0.5 text-xs rounded bg-primary/20 text-primary">
                   {tag}
