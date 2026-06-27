@@ -8,6 +8,7 @@ export interface HubLink {
   title: string
   description: string
   url: string
+  thumbnail_url?: string | null
   position: number
   is_active: boolean
   created_at: string
@@ -19,6 +20,7 @@ export const CreateHubLinkSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().min(1).max(1000),
   url: z.string().url("Invalid URL format"),
+  thumbnail_url: z.string().url().nullable().optional(),
 })
 
 export type CreateHubLinkInput = z.infer<typeof CreateHubLinkSchema>
