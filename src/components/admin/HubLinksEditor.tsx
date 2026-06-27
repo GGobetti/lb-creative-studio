@@ -6,6 +6,20 @@ import { HubLinkForm } from "./HubLinkForm"
 import { HubLinkCard } from "./HubLinkCard"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Trash2, X } from "lucide-react"
+import { getSupabaseBrowser } from "@/lib/supabase"
+
+async function authedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const { data: { session } } = await getSupabaseBrowser().auth.getSession()
+  const token = session?.access_token ?? ""
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+  })
+}
 
 const THEMES: { value: HubTheme; label: string }[] = [
   { value: "tutoriais", label: "Tutoriais" },
@@ -42,7 +56,7 @@ export function HubLinksEditor({
       try {
         if (editingLink) {
           // Update
-          const res = await fetch(`/api/admin/hub-links/${editingLink.id}`, {
+          const res = await authedFetch(`/api/admin/hub-links/${editingLink.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -55,7 +69,7 @@ export function HubLinksEditor({
           setEditingLink(null)
         } else {
           // Create
-          const res = await fetch("/api/admin/hub-links", {
+          const res = await authedFetch("/api/admin/hub-links", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -79,7 +93,7 @@ export function HubLinksEditor({
     async (id: string) => {
       setDeletingId(id)
       try {
-        const res = await fetch(`/api/admin/hub-links/${id}`, { method: "DELETE" })
+        const res = await authedFetch(`/api/admin/hub-links/${id}`, { method: "DELETE" })
         if (!res.ok) throw new Error("Failed to delete")
 
         onLinksChange(links.filter((l) => l.id !== id))
@@ -100,7 +114,7 @@ export function HubLinksEditor({
 
       setSaving(true)
       try {
-        const res = await fetch(`/api/admin/hub-links/${id}`, {
+        const res = await authedFetch(`/api/admin/hub-links/${id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ is_active: !link.is_active }),
@@ -138,7 +152,7 @@ export function HubLinksEditor({
 
       // Persist to API
       try {
-        const res = await fetch("/api/admin/hub-links/reorder", {
+        const res = await authedFetch("/api/admin/hub-links/reorder", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

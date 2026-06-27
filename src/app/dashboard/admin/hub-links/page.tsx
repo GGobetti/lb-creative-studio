@@ -1,10 +1,28 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAppStore } from "@/store/store"
+import { getSupabaseBrowser } from "@/lib/supabase"
 import { HubLink } from "@/types/hub-links"
 import { HubLinksEditor } from "@/components/admin/HubLinksEditor"
 import { HubLinksPreview } from "@/components/admin/HubLinksPreview"
+
+async function getToken(): Promise<string> {
+  const { data: { session } } = await getSupabaseBrowser().auth.getSession()
+  return session?.access_token ?? ""
+}
+
+export async function authedFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = await getToken()
+  return fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+  })
+}
 
 export default function HubLinksAdminPage() {
   const { profile } = useAppStore()
@@ -13,41 +31,33 @@ export default function HubLinksAdminPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Check admin access
-  useEffect(() => {
-    if (profile?.role !== "sysadmin") {
-      setError("Unauthorized: Admin access required")
-      return
+  const fetchLinks = useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await authedFetch("/api/admin/hub-links")
+      if (!res.ok) throw new Error("Failed to fetch links")
+      const { data } = await res.json()
+      setLinks(data)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-  }, [profile])
+  }, [])
 
-  // Fetch links on mount
   useEffect(() => {
-    const fetchLinks = async () => {
-      try {
-        setLoading(true)
-        const res = await fetch("/api/admin/hub-links")
-        if (!res.ok) throw new Error("Failed to fetch links")
-        const { data } = await res.json()
-        setLinks(data)
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     if (profile?.role === "sysadmin") {
       fetchLinks()
+    } else if (profile && profile.role !== "sysadmin") {
+      setError("Acesso restrito a administradores.")
+      setLoading(false)
     }
-  }, [profile])
+  }, [profile, fetchLinks])
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground">{error}</h1>
-        </div>
+      <div className="flex items-center justify-center py-20">
+        <p className="text-destructive font-medium">{error}</p>
       </div>
     )
   }
@@ -62,7 +72,6 @@ export default function HubLinksAdminPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Editor - 60% on desktop */}
         <div className="lg:col-span-2">
           <HubLinksEditor
             links={links}
@@ -72,7 +81,6 @@ export default function HubLinksAdminPage() {
           />
         </div>
 
-        {/* Preview - 40% on desktop */}
         <div className="lg:col-span-1">
           <HubLinksPreview links={links.filter((l) => l.is_active)} />
         </div>

@@ -1,14 +1,33 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseUserClient } from "@/lib/supabase"
 import { CreateHubLinkSchema } from "@/types/hub-links"
-import { verifyAdminAccess } from "@/lib/auth"
+
+function getAuthToken(req: NextRequest): string | null {
+  return req.headers.get("authorization")?.replace("Bearer ", "") || null
+}
+
+async function verifyAdmin(token: string) {
+  const supabase = getSupabaseUserClient(token)
+  const { data: { user }, error } = await supabase.auth.getUser(token)
+  if (error || !user) throw Object.assign(new Error("Unauthorized"), { status: 401 })
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.role !== "sysadmin") throw Object.assign(new Error("Forbidden"), { status: 403 })
+  return supabase
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
-    await verifyAdminAccess(token)
+    const token = getAuthToken(req)
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const supabase = getSupabaseUserClient(token)
+    const supabase = await verifyAdmin(token)
+
     const { data, error } = await supabase
       .from("hub_theme_links")
       .select("*")
@@ -28,15 +47,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
-    await verifyAdminAccess(token)
+    const token = getAuthToken(req)
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    const supabase = await verifyAdmin(token)
 
     const body = await req.json()
     const validated = CreateHubLinkSchema.parse(body)
 
-    const supabase = getSupabaseUserClient(token)
-
-    // Get max position for this theme
     const { data: existing } = await supabase
       .from("hub_theme_links")
       .select("position")
@@ -48,10 +66,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from("hub_theme_links")
-      .insert({
-        ...validated,
-        position: nextPosition,
-      })
+      .insert({ ...validated, position: nextPosition })
       .select()
       .single()
 
@@ -61,10 +76,7 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     console.error("Error creating hub link:", err)
     if (err.name === "ZodError") {
-      return NextResponse.json(
-        { error: "Validation failed", details: err.errors },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Validation failed", details: err.errors }, { status: 400 })
     }
     return NextResponse.json(
       { error: err.message || "Failed to create hub link" },
