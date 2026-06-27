@@ -1,10 +1,85 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { fetchMLProductData } from '@/lib/mercado-livre';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! // Server-side only
 );
+
+/** Extract ML product ID from affiliate link */
+function extractMLProductId(affiliateLink: string): string | null {
+  // Try /p/MLB... format
+  const pMatch = affiliateLink.match(/\/p\/(MLB\d+)/);
+  if (pMatch) return pMatch[1];
+
+  // Try /up/MLBU... format
+  const upMatch = affiliateLink.match(/\/up\/(MLBU\d+)/);
+  if (upMatch) return upMatch[1];
+
+  return null;
+}
+
+/** Fetch fresh price from ML API with fallback to stored price */
+async function getFreshMLPrice(
+  productId: string,
+  fallbackPrice: number,
+  accessToken?: string
+): Promise<number> {
+  try {
+    const mlData = await fetchMLProductData(productId, accessToken);
+    const price = (mlData as any)?.sale_price || (mlData as any)?.price;
+    return price ? parseFloat(String(price)) : fallbackPrice;
+  } catch (err) {
+    console.warn('[Fresh Price] Failed for', productId, '- using fallback:', fallbackPrice);
+    return fallbackPrice;
+  }
+}
+
+/** Fetch fresh prices with concurrency limit */
+async function enrichProductsWithFreshPrices(
+  products: any[],
+  adminId: string
+): Promise<any[]> {
+  // Get OAuth token if available
+  const { data: credentials } = await supabase
+    .from('marketplace_credentials')
+    .select('access_token')
+    .eq('admin_id', adminId)
+    .eq('marketplace', 'mercado_livre')
+    .single();
+
+  const accessToken = credentials?.access_token;
+
+  // Fetch prices in parallel with max concurrency of 3
+  const concurrency = 3;
+  const results = [...products];
+  const pending = results.map((p, idx) => ({ idx, product: p }));
+
+  while (pending.length > 0) {
+    const batch = pending.splice(0, concurrency);
+    await Promise.all(
+      batch.map(async ({ idx, product }) => {
+        if (product.marketplace !== 'mercado_livre') return;
+
+        const mlId = extractMLProductId(product.affiliate_link);
+        if (!mlId) return;
+
+        const freshPrice = await getFreshMLPrice(
+          mlId,
+          product.details?.price || 0,
+          accessToken
+        );
+
+        if (results[idx]?.details) {
+          results[idx].details.price = freshPrice;
+        }
+      })
+    );
+  }
+
+  return results;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,6 +146,26 @@ export async function GET(req: NextRequest) {
       details: product.details?.[0] || null,
       photos: (product.photos || []).sort((a: any, b: any) => a.position - b.position),
     }));
+
+    // Fetch fresh prices for Mercado Livre products (with timeout)
+    const shouldFreshPrices = searchParams.get('fresh-prices') !== 'false';
+    if (shouldFreshPrices && formattedProducts.some((p: any) => p.marketplace === 'mercado_livre')) {
+      try {
+        const adminId = formattedProducts[0]?.admin_id;
+        const pricesPromise = enrichProductsWithFreshPrices(formattedProducts, adminId);
+
+        // Timeout after 5 seconds
+        const timeoutPromise = new Promise<any[]>((resolve) => {
+          setTimeout(() => resolve(formattedProducts), 5000);
+        });
+
+        const enrichedProducts = await Promise.race([pricesPromise, timeoutPromise]);
+        return NextResponse.json({ products: enrichedProducts }, { status: 200 });
+      } catch (err) {
+        console.warn('[Fresh Prices] Error - returning cached prices:', err);
+        return NextResponse.json({ products: formattedProducts }, { status: 200 });
+      }
+    }
 
     return NextResponse.json({ products: formattedProducts }, { status: 200 });
   } catch (err) {
