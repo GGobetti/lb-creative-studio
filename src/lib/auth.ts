@@ -1,7 +1,7 @@
-import { getSupabaseServer } from "@/lib/supabase"
+import { getSupabaseUserClient } from "@/lib/supabase"
 
-export async function verifyAdminAccess() {
-  const supabase = getSupabaseServer()
+export async function verifyAdminAccess(token: string) {
+  const supabase = getSupabaseUserClient(token)
   const {
     data: { user },
   } = await supabase.auth.getUser()

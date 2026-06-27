@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseServer } from "@/lib/supabase"
+import { getSupabaseUserClient } from "@/lib/supabase"
 import { CreateHubLinkSchema } from "@/types/hub-links"
 import { verifyAdminAccess } from "@/lib/auth"
 
 export async function GET(req: NextRequest) {
   try {
-    await verifyAdminAccess()
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
+    await verifyAdminAccess(token)
 
-    const supabase = getSupabaseServer()
+    const supabase = getSupabaseUserClient(token)
     const { data, error } = await supabase
       .from("hub_theme_links")
       .select("*")
@@ -27,12 +28,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await verifyAdminAccess()
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
+    await verifyAdminAccess(token)
 
     const body = await req.json()
     const validated = CreateHubLinkSchema.parse(body)
 
-    const supabase = getSupabaseServer()
+    const supabase = getSupabaseUserClient(token)
 
     // Get max position for this theme
     const { data: existing } = await supabase

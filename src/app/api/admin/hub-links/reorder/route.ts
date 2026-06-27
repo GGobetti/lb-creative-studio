@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseServer } from "@/lib/supabase"
+import { getSupabaseUserClient } from "@/lib/supabase"
 import { ReorderSchema } from "@/types/hub-links"
 import { verifyAdminAccess } from "@/lib/auth"
 
 export async function PUT(req: NextRequest) {
   try {
-    await verifyAdminAccess()
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
+    await verifyAdminAccess(token)
 
     const body = await req.json()
     const validated = ReorderSchema.parse(body)
 
-    const supabase = getSupabaseServer()
+    const supabase = getSupabaseUserClient(token)
 
     // Update each link's position
     await Promise.all(

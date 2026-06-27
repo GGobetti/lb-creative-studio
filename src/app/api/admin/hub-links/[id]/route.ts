@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseServer } from "@/lib/supabase"
+import { getSupabaseUserClient } from "@/lib/supabase"
 import { UpdateHubLinkSchema } from "@/types/hub-links"
 import { verifyAdminAccess } from "@/lib/auth"
 
@@ -8,13 +8,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await verifyAdminAccess()
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
+    await verifyAdminAccess(token)
 
     const { id } = await params
     const body = await req.json()
     const validated = UpdateHubLinkSchema.parse(body)
 
-    const supabase = getSupabaseServer()
+    const supabase = getSupabaseUserClient(token)
     const { data, error } = await supabase
       .from("hub_theme_links")
       .update(validated)
@@ -50,10 +51,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await verifyAdminAccess()
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") || ""
+    await verifyAdminAccess(token)
 
     const { id } = await params
-    const supabase = getSupabaseServer()
+    const supabase = getSupabaseUserClient(token)
     const { error } = await supabase
       .from("hub_theme_links")
       .delete()
