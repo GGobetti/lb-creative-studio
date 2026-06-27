@@ -1,19 +1,23 @@
-# Bulk STL Categorization — Progress Ledger
+# Hub Links Admin — Progress Ledger
 
 ## Completed Tasks
 
-- **Task 1:** Load existing categories on mount — COMPLETE (commit d4c8341, review clean)
-- **Task 2:** Render category badges — COMPLETE (commit 23df0ce, review clean)
-- **Task 3:** Create PhotoCuratorCategoryTab component — COMPLETE (commits 7331c11 + 7331c11 fix, review clean)
+- **Task 1:** Database Migration (commit 6993e8e, review clean)
 
 ## In Progress
 
-- **Task 4:** Extend bulk-actions menu with tabs (dispatching)
+- Task 2: Types & Validation (dispatching)
 
 ## Remaining
 
-- Task 5: Implement bulkApplyCategories function
-- Task 6: Backend endpoint handler
-- Task 7: Write tests
-- Task 8: End-to-end manual test
-- Task 9: Commit and push
+- Task 3: API Routes — CRUD Operations
+- Task 4: API Route — Reorder Endpoint
+- Task 5: Admin Page & Layout
+- Task 6: HubLinkForm Component
+- Task 7: HubLinkCard Component
+- Task 8: HubLinksEditor Component
+- Task 9: HubLinksPreview Component
+- Task 10: Update DashboardSidebar
+- Task 11: Update Hub Maker Page
+- Task 12: Verify Admin Access Control
+- Task 13: Integration Test

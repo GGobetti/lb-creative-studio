@@ -5,11 +5,12 @@ import { verifyAdminAccess } from "@/lib/auth"
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await verifyAdminAccess()
 
+    const { id } = await params
     const body = await req.json()
     const validated = UpdateHubLinkSchema.parse(body)
 
@@ -17,7 +18,7 @@ export async function PUT(
     const { data, error } = await supabase
       .from("hub_theme_links")
       .update(validated)
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single()
 
@@ -46,16 +47,17 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await verifyAdminAccess()
 
+    const { id } = await params
     const supabase = getSupabaseServer()
     const { error } = await supabase
       .from("hub_theme_links")
       .delete()
-      .eq("id", params.id)
+      .eq("id", id)
 
     if (error) {
       if (error.code === "PGRST116") {
