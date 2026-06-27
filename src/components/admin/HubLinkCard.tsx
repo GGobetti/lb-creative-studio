@@ -21,17 +21,17 @@ export function HubLinkCard({
 }: HubLinkCardProps) {
   return (
     <div
-      className={`bg-card border border-border rounded-xl p-4 transition-all ${
+      className={`bg-card border border-border rounded-xl p-4 transition-all overflow-hidden ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
       }`}
     >
-      <div className="flex gap-3">
-        <div className="text-muted-foreground mt-1 cursor-grab active:cursor-grabbing">
+      <div className="flex gap-3 min-w-0">
+        <div className="text-muted-foreground mt-1 cursor-grab active:cursor-grabbing flex-shrink-0">
           <GripVertical size={20} />
         </div>
 
-        <div className="flex-1">
-          <h3 className="font-semibold text-foreground">{link.title}</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-foreground truncate">{link.title}</h3>
           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{link.description}</p>
           <p className="text-xs text-muted-foreground/70 mt-2 truncate">{link.url}</p>
         </div>
