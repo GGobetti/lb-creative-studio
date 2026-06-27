@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { PlayCircle, Download, Users } from "lucide-react"
 import { HubLink } from "@/types/hub-links"
+import { getSupabaseBrowser } from "@/lib/supabase"
 
 export default function HubPage() {
   const [links, setLinks] = useState<HubLink[]>([])
@@ -11,10 +12,14 @@ export default function HubPage() {
   useEffect(() => {
     const fetchLinks = async () => {
       try {
-        const res = await fetch("/api/admin/hub-links")
+        const { data: { session } } = await getSupabaseBrowser().auth.getSession()
+        const token = session?.access_token ?? ""
+        const res = await fetch("/api/hub-links", {
+          headers: { "Authorization": `Bearer ${token}` },
+        })
         if (!res.ok) throw new Error("Failed to fetch hub links")
         const { data } = await res.json()
-        setLinks(data.filter((l: HubLink) => l.is_active))
+        setLinks(data)
       } catch (err) {
         console.error("Error fetching hub links:", err)
       } finally {
