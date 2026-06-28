@@ -117,7 +117,9 @@ function cleanTitle(raw: string): string {
   // ── 3. Remoções gerais ────────────────────────────────────────────────────
   text = text.replace(/_?@[\w]+/g, '')
   text = text.replace(/_\d{8}_\d+_[a-z0-9]{4,}/gi, '')
-  text = text.replace(/[a-f0-9]{14,}/gi, '')
+  // Hashes hexadecimais 8+ chars (ex: 34c17d6abc, beacb6daa9bc7baf5648)
+  // Lookahead garante ≥1 letra a-f (diferencia de número puro tipo 2024, 12345678)
+  text = text.replace(/(?=.*[a-f])[a-f0-9]{8,}/gi, '')
 
   for (const re of CREATOR_PREFIXES) text = text.replace(re, '')
   for (const re of CREATOR_SUFFIXES) text = text.replace(re, ' ')
