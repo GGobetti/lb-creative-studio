@@ -256,7 +256,7 @@ async function createModelInDatabase(
     file_name: `${dex}-${sanitizeName(name)}.3mf`,
     file_size_bytes: 0,
     tags: ['pokemon', sanitizeName(name).toLowerCase(), `#${dex}`],
-    r2_object_key: r2Keys.length === 1 ? r2Keys[0] : null,
+    r2_object_key: r2Keys[0], // fallback: usa primeiro arquivo da variante (parent é container)
   }
 
   if (DRY_RUN) {
