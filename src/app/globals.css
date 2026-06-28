@@ -208,6 +208,10 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
 }
 @utility animate-marquee { animation: marquee 30s linear infinite; }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee { animation: none; }
+}
+
 /* ── Animations ────────────────────────────────────────────────── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
