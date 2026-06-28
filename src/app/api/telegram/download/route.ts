@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSupabaseUserClient, getSupabaseAdmin } from '@/lib/supabase'
 import { isR2Configured, getR2DownloadUrl } from '@/lib/r2'
 
-const DEFAULT_COST = 1
+const DEFAULT_COST = 3
 
 export async function POST(request: Request) {
   try {
@@ -51,10 +51,12 @@ export async function POST(request: Request) {
         .select('cost_free, cost_pro, cost_max')
         .eq('feature_key', 'download_stl')
         .maybeSingle()
-      if (fc) {
-        const plan = profile?.plan || 'free'
-        cost = plan === 'max' ? fc.cost_max : plan === 'pro' ? fc.cost_pro : fc.cost_free
+      if (!fc) {
+        console.error('[Telegram Download] feature_costs entry "download_stl" not found')
+        return NextResponse.json({ error: 'Configuração de custo não encontrada.' }, { status: 500 })
       }
+      const plan = profile?.plan || 'free'
+      cost = plan === 'max' ? fc.cost_max : plan === 'pro' ? fc.cost_pro : fc.cost_free
       // Verificar saldo ANTES de entregar (sem debitar ainda)
       if ((profile?.credits ?? 0) < cost) {
         return NextResponse.json({ error: 'INSUFFICIENT_CREDITS' }, { status: 402 })

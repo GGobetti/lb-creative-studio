@@ -9,7 +9,7 @@ function getAdmin() {
   )
 }
 
-/** Adiciona créditos atomicamente (RPC), com fallback seguro. */
+/** Adiciona créditos atomicamente via RPC. Lança se falhar — idempotência garantida pela tabela transactions. */
 async function addCredits(
   supabaseAdmin: ReturnType<typeof getAdmin>,
   userId: string,
@@ -20,15 +20,7 @@ async function addCredits(
     uid: userId,
     p_amount: amount,
   })
-  if (error) {
-    // Fallback read-then-update (a idempotência já é garantida pela tabela transactions)
-    const { data: p } = await supabaseAdmin
-      .from('profiles').select('credits').eq('id', userId).single()
-    if (p) {
-      await supabaseAdmin.from('profiles')
-        .update({ credits: (p.credits || 0) + amount }).eq('id', userId)
-    }
-  }
+  if (error) throw error
 }
 
 export async function POST(req: Request) {

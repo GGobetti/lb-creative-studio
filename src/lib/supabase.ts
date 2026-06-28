@@ -31,14 +31,21 @@ export function getSupabaseBrowser() {
   return browserClient
 }
 
-/** Lightweight server client — call from Server Components / Route Handlers */
-export function getSupabaseServer() {
+/**
+ * Service-role server client — bypasses RLS entirely.
+ * Use only in Server Components where you need data not filtered by auth
+ * (e.g. public landing page showcase). Never expose to the browser.
+ */
+export function getSupabaseServiceRole() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321'
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'
   return createClient(url, key, {
     auth: { persistSession: false },
   })
 }
+
+/** @deprecated Use getSupabaseServiceRole() */
+export const getSupabaseServer = getSupabaseServiceRole
 
 /** Server client acting on behalf of a specific authenticated user (respects RLS) */
 export function getSupabaseUserClient(token: string) {

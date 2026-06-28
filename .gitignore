@@ -50,3 +50,9 @@ run_migration.js
 
 # PM2 logs
 logs/
+
+# Debug artifacts — traces e screenshots de sessões de desenvolvimento
+stl-search-trace*.json
+stl-search-screenshot*.png
+*.trace.json
+HASH_CLEANUP_*.md

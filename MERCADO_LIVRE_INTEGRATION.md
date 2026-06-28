@@ -130,10 +130,12 @@ Aba no admin que integra:
 **.env.local (ou Vercel Settings)**
 
 ```
-MERCADO_LIVRE_CLIENT_ID=3881066887815775
-MERCADO_LIVRE_CLIENT_SECRET=mMhI5XROmSq1SIWktTKBZrqrL6OtuMLJ
+MERCADO_LIVRE_CLIENT_ID=<seu_app_id_do_mercado_livre>
+MERCADO_LIVRE_CLIENT_SECRET=<seu_secret_do_mercado_livre>
 MERCADO_LIVRE_REDIRECT_URI=https://lb-creative-studio-iota.vercel.app/api/auth/mercado-livre
 ```
+
+> ⚠️ Os valores reais ficam **somente** no `.env.local` (local) e nas env vars do Vercel (produção). Nunca commitar.
 
 **No Mercado Livre DevCenter:**
 - Registrar redirect_uri exatamente como acima

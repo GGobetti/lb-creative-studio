@@ -25,8 +25,8 @@
 - ✅ Créditos avulsos (Pacote 50/200/500) via Stripe
 - ✅ Assinaturas Pro (R$29,90/mês = 100cr) e Max (R$79,90/mês = 250cr) via Stripe
 - ✅ Stripe Webhook em produção (checkout.session.completed + invoice.paid)
-- ✅ Afiliados de filamentos — módulo implementado
-- [ ] Resgatar créditos em filamentos/produtos afiliados — pendente
+- ✅ Afiliados de filamentos — módulo implementado (vitrine + tracking de clique)
+- ✅ Resgate de XP em créditos (via `/dashboard/profile?tab=xp`)
 
 ### Métricas P0
 - DAU (Daily Active Users)
@@ -112,8 +112,7 @@
 | Referral (novo user) | +50 | 1x por user |
 | Daily streak (5+ dias) | +2x multiplier | automático |
 | Badge unlock | bonus points | 1x |
-| Download de STL | -[TBD] créditos | ao usar |
-| Resgate em filamento | -[TBD] créditos | ao comprar |
+| Download de STL | -1 a -5 créditos (por plano, via feature_costs) | ao usar |
 
 **Nota**: crédito pode ser:
 - Resgável em filamentos (afiliado)

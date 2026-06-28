@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { getSupabaseServer } from '@/lib/supabase'
+import { getSupabaseServiceRole } from '@/lib/supabase'
 
 interface ShowcaseItem {
   id: string
@@ -9,7 +9,7 @@ interface ShowcaseItem {
 }
 
 async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
-  const supabase = getSupabaseServer()
+  const supabase = getSupabaseServiceRole()
 
   const [byDownloads, byFavorites] = await Promise.all([
     supabase

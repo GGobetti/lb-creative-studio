@@ -12,8 +12,8 @@ Plano: [`docs/superpowers/plans/2026-06-21-ecosystem-cleanup-and-fixes.md`](docs
 
 - ✅ **Fase 0** (limpeza), **1A** (entrega R2), **1B** (Stripe), **1C** (custo dinâmico), **1D** (moderação por tamanho) — mergeadas.
 - ✅ **Studio em produção no Vercel** (23/06/2026) — URL: `lb-creative-studio-iota.vercel.app`. Auto-deploy em push na `main`.
-- ✅ **R2 credenciais no Vercel**: `R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` corretos. ⚠️ `R2_ACCESS_KEY_ID` ainda aguarda correção manual pelo dono (valor correto: `2949b59797c86fd4f6bc71b5f19ea767`).
-- ✅ **Stripe Webhook criado** (23/06/2026): endpoint `we_1TlbEsCPLNDCqX27nXnaVhmN` → prod. ⚠️ `STRIPE_WEBHOOK_SECRET=whsec_QN9wlRM7lfLEqz6oXKCtpSdZ9Y13ebLp` precisa ser setado no Vercel.
+- ✅ **R2 credenciais no Vercel**: `R2_ACCOUNT_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` corretos. `R2_ACCESS_KEY_ID` configurado. ⚠️ Se precisar rotacionar, gere novo token em Cloudflare → R2 → Manage API Tokens.
+- ✅ **Stripe Webhook criado** (23/06/2026): endpoint configurado → prod. ⚠️ `STRIPE_WEBHOOK_SECRET` deve estar setado nas env vars do Vercel (nunca commitar o valor).
 - ✅ **Bugs pós-produção corrigidos** (23/06): créditos Stripe, admin tickets, liquid glass nos modais, select dropdown, email no modal cliente, Telegram direto, PhotoMatch label, RLS avatars bucket, nome do grupo oculto para não-admin, refetch após ban.
 - ✅ **Dedup de fotos completado** (24/06/2026):
   - 135 grupos de fotos iguais detectados (por perceptual hash)
@@ -22,7 +22,7 @@ Plano: [`docs/superpowers/plans/2026-06-21-ecosystem-cleanup-and-fixes.md`](docs
   - Backup automático + log detalhado em JSON
   - Script restore (`npm run dedup:restore`) para reverter se necessário
 - ⏳ **Pendente**: Fase 2 (consolidar monitor), Fase 3 (imagens no R2). Backfill em andamento.
-- ⚠️ **Bloqueios restantes**: usuário corrigir `R2_ACCESS_KEY_ID` e `STRIPE_WEBHOOK_SECRET` no Vercel + redeploy.
+- ✅ Variáveis de ambiente no Vercel configuradas (R2 + Stripe). Rotacionar chaves se necessário via dashboards respectivos.
 
 ---
 
@@ -265,7 +265,7 @@ O studio (`api/telegram/download`) e a moderação (`api/telegram/jobs`) foram e
 - **Segredos reais em arquivos locais** (não versionados — `.gitignore` cobre `.env*`, bom): `SUPABASE_SERVICE_ROLE_KEY`, chaves Stripe de teste, `TELEGRAM_BOT_TOKEN`, e principalmente o **`TELEGRAM_SESSION`** (login completo da conta pessoal do dono — se vazar, é sequestro de conta). `.mcp.json` tem `sb_secret_…` e está no `.gitignore`.
 - **Recomendação:** rotacionar a `SUPABASE_SERVICE_ROLE_KEY` e a `TELEGRAM_SESSION` por precaução, já que foram copiadas entre repositórios e expostas em vários `.env`. Nunca commitar; considerar um gerenciador de segredos.
 - ✅ **Metadados Stripe reconciliados** (23/06): `checkout/route.ts` envia `{userId, planId, credits, kind, planTier}`; `webhooks/stripe/route.ts` consome `{userId, credits, kind, planTier}`. Bug original resolvido.
-- ✅ **Webhook endpoint criado** (23/06): `we_1TlbEsCPLNDCqX27nXnaVhmN` → produção Vercel. Secret: `STRIPE_WEBHOOK_SECRET=whsec_QN9wlRM7lfLEqz6oXKCtpSdZ9Y13ebLp` (adicionar no Vercel).
+- ✅ **Webhook endpoint criado** (23/06): configurado no Stripe Dashboard → produção Vercel. `STRIPE_WEBHOOK_SECRET` deve estar nas env vars do Vercel (nunca no código ou docs).
 - ⚠️ O bloco de fallback em `addCreditsAtomic` ainda tem `update` sem `.eq()` — código morto, remover num refactor.
 
 ---
