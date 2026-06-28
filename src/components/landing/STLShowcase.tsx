@@ -11,24 +11,18 @@ interface ShowcaseItem {
 async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
   const supabase = getSupabaseServer()
 
-  const allItems = await supabase
-    .from('telegram_indexed_stls')
-    .select('id, title, thumbnail_url, download_count, favorites_count')
-    .limit(100)
-
-  const byDownloads = {
-    data: allItems.data
-      ?.sort((a, b) => (b.download_count || 0) - (a.download_count || 0))
-      .slice(0, 5),
-    error: allItems.error,
-  }
-
-  const byFavorites = {
-    data: allItems.data
-      ?.sort((a, b) => (b.favorites_count || 0) - (a.favorites_count || 0))
-      .slice(0, 5),
-    error: allItems.error,
-  }
+  const [byDownloads, byFavorites] = await Promise.all([
+    supabase
+      .from('telegram_indexed_stls')
+      .select('id, title, thumbnail_url, download_count')
+      .order('download_count', { ascending: false })
+      .limit(5),
+    supabase
+      .from('telegram_indexed_stls')
+      .select('id, title, thumbnail_url, favorites_count')
+      .order('favorites_count', { ascending: false })
+      .limit(5),
+  ])
 
   const seen = new Set<string>()
   const items: ShowcaseItem[] = []
