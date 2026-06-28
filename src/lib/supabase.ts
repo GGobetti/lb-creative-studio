@@ -34,7 +34,7 @@ export function getSupabaseBrowser() {
 /** Lightweight server client — call from Server Components / Route Handlers */
 export function getSupabaseServer() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321'
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy_key'
   return createClient(url, key, {
     auth: { persistSession: false },
   })
