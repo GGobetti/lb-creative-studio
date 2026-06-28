@@ -56,9 +56,13 @@ async function getFileSizeFromR2(objectKey: string): Promise<number> {
       Key: objectKey,
     })
     const response = await r2Client.send(command)
-    return response.ContentLength || 0
-  } catch (error) {
-    console.error(`  ⚠️  Erro ao buscar tamanho de ${objectKey}:`, error)
+    const size = response.ContentLength || 0
+    if (size > 0) {
+      console.log(`    R2 size: ${(size / 1024 / 1024).toFixed(2)} MB`)
+    }
+    return size
+  } catch (error: any) {
+    console.error(`    ✗ R2 error: ${error.name} - ${error.message}`)
     return 0
   }
 }
