@@ -869,7 +869,7 @@ export default function StlSearchPage() {
                 )}
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {(showAllCategories ? STL_CATEGORIES : STL_CATEGORIES.slice(0, 6)).map((cat) => (
+                {(showAllCategories ? STL_CATEGORIES : ['Personagens & Figuras', 'Desenhos & Anime', 'Pokémon', 'Mario', 'Sonic', 'Esportes']).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
