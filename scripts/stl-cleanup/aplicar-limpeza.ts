@@ -195,22 +195,27 @@ async function main() {
   }
   console.log(`✅ ${allStls.length} STLs carregados`)
 
+  const isMeaningless = (t: string) =>
+    !t.trim() || /^[\d\s\-_.#()/\\]+$/.test(t.trim()) || t.trim().length < 2
+
   const changes: { id: string; before: string; after: string }[] = []
-  const skipped: { id: string; title: string }[] = []
+  const tbdList: { id: string; title: string; after: string }[] = []
   for (const stl of allStls) {
-    const after = cleanTitle(stl.title ?? '')
+    let after = cleanTitle(stl.title ?? '')
+    if (isMeaningless(after)) {
+      after = 'TBD'
+    }
     if (after === stl.title) continue
-    if (!after.trim()) {
-      skipped.push({ id: stl.id, title: stl.title })
-      continue
+    if (after === 'TBD') {
+      tbdList.push({ id: stl.id, title: stl.title, after })
     }
     changes.push({ id: stl.id, before: stl.title, after })
   }
 
   console.log(`📝 ${changes.length} títulos com alteração`)
-  if (skipped.length > 0) {
-    console.log(`⚠️  ${skipped.length} ignorados (resultado ficaria vazio):`)
-    skipped.forEach(({ title }) => console.log(`   → "${title}"`))
+  if (tbdList.length > 0) {
+    console.log(`🔖 ${tbdList.length} virarão "TBD" (título ficaria vazio ou sem sentido):`)
+    tbdList.forEach(({ title }) => console.log(`   → "${title}"`))
   }
   console.log()
 
