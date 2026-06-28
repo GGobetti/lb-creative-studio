@@ -85,6 +85,9 @@ export default function StlSearchPage() {
   const [deleteSelection, setDeleteSelection] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Category expand
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
   const isAdmin = profile?.role === "sysadmin";
   const [favoriteItems, setFavoriteItems] = useState<StlItem[]>([]);
 
@@ -848,74 +851,92 @@ export default function StlSearchPage() {
       {activeSearchTab === "explore" ? (
         /* Results Section */
         <div className="py-2">
-          {/* Category Filter */}
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Categorias</span>
-              {categoryFilter && (
+          {/* ── Filtros ─────────────────────────────────────── */}
+          <div className="space-y-3 mb-6 p-4 bg-muted/30 border border-border/60 rounded-2xl">
+
+            {/* Categorias */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Categoria</span>
+                {categoryFilter && (
+                  <button
+                    onClick={() => setCategoryFilter(null)}
+                    className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <XIcon className="w-3 h-3" /> Limpar
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(showAllCategories ? STL_CATEGORIES : STL_CATEGORIES.slice(0, 6)).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all border whitespace-nowrap ${
+                      categoryFilter === cat
+                        ? "bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-600/30"
+                        : "bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
                 <button
-                  onClick={() => setCategoryFilter(null)}
-                  className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowAllCategories((v) => !v)}
+                  className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-all"
                 >
-                  <XIcon className="w-3 h-3" /> Limpar filtro
+                  {showAllCategories ? "Ver menos ↑" : `+${STL_CATEGORIES.length - 6} mais`}
                 </button>
-              )}
+              </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {STL_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
-                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap ${
-                    categoryFilter === cat
-                      ? "bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-600/30"
-                      : "bg-muted text-muted-foreground border-border hover:bg-muted/80 hover:text-foreground"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+
+            {/* Impressora + Fotos na mesma linha */}
+            <div className="flex flex-wrap items-center gap-4 pt-1 border-t border-border/40">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Impressora</span>
+                <div className="flex gap-1">
+                  {(["all", "fdm", "resin"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setPrinterFilter(v)}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                        printerFilter === v
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:bg-muted"
+                      }`}
+                    >
+                      {v === "all" ? "Todos" : v === "fdm" ? "FDM" : "Resina"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fotos</span>
+                <div className="flex gap-1">
+                  {(["all", "with_photo", "without_photo"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setPhotoFilter(v)}
+                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${
+                        photoFilter === v
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:bg-muted"
+                      }`}
+                    >
+                      {v === "all" ? "Todas" : v === "with_photo" ? "Com foto" : "Sem foto"}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Printer Type Filter */}
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setPrinterFilter("all")}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                printerFilter === "all"
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setPrinterFilter("fdm")}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                printerFilter === "fdm" 
-                  ? "bg-primary text-primary-foreground border-primary" 
-                  : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-              }`}
-            >
-              FDM
-            </button>
-            <button
-              onClick={() => setPrinterFilter("resin")}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                printerFilter === "resin" 
-                  ? "bg-primary text-primary-foreground border-primary" 
-                  : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-              }`}
-            >
-              Resina
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+          {/* ── Cabeçalho de resultados ──────────────────────── */}
+          <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-foreground">
+              <h2 className="text-base font-bold text-foreground">
                 {mergeMode
                   ? `Selecione os arquivos para mesclar (${mergeSelection.length} selecionados)`
                   : showOnlyFavorites
@@ -927,124 +948,83 @@ export default function StlSearchPage() {
                         : "Modelos Recentes"}
               </h2>
               {!mergeMode && (
-                <span className="text-xs text-muted-foreground font-semibold bg-muted border border-border px-3 py-1 rounded-full">
-                  {displayedItems.length} encontrados
+                <span className="text-xs text-muted-foreground font-semibold bg-muted border border-border px-2.5 py-0.5 rounded-full">
+                  {displayedItems.length}
                 </span>
               )}
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Favorites Filter Toggle */}
               {profile && !mergeMode && (
                 <button
                   onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     showOnlyFavorites
                       ? "bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20"
                       : "bg-muted border-border text-muted-foreground hover:text-foreground hover:bg-muted/80"
                   }`}
                 >
-                  <Heart className={`w-4 h-4 ${showOnlyFavorites ? "fill-current text-red-500" : ""}`} />
-                  <span>{showOnlyFavorites ? "Ver Todos" : "Apenas Favoritos"}</span>
+                  <Heart className={`w-3.5 h-3.5 ${showOnlyFavorites ? "fill-current text-red-500" : ""}`} />
+                  <span>{showOnlyFavorites ? "Ver Todos" : "Favoritos"}</span>
                 </button>
               )}
 
-              {/* Merge Mode (Admin only) */}
               {isAdmin && !mergeMode && !deleteMode && (
-                <button
-                  onClick={() => { setMergeMode(true); setMergeSelection([]); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-primary/30 bg-primary/8 text-primary hover:bg-primary/15 transition-all cursor-pointer"
-                >
-                  <GitMerge className="w-4 h-4" />
-                  <span>Mesclar Partes</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => { setMergeMode(true); setMergeSelection([]); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-primary/30 bg-primary/8 text-primary hover:bg-primary/15 transition-all cursor-pointer"
+                  >
+                    <GitMerge className="w-3.5 h-3.5" />
+                    Mesclar
+                  </button>
+                  <button
+                    onClick={() => { setDeleteMode(true); setDeleteSelection([]); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-rose-500/30 bg-rose-500/8 text-rose-500 hover:bg-rose-500/15 transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Deletar
+                  </button>
+                </>
               )}
 
-              {/* Delete Mode (Admin only) */}
-              {isAdmin && !mergeMode && !deleteMode && (
-                <button
-                  onClick={() => { setDeleteMode(true); setDeleteSelection([]); }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-rose-500/30 bg-rose-500/8 text-rose-500 hover:bg-rose-500/15 transition-all cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Deletar em Massa</span>
-                </button>
-              )}
-
-              {/* Merge mode actions */}
               {isAdmin && mergeMode && (
                 <>
                   <button
                     onClick={() => { setMergeMode(false); setMergeSelection([]); }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   >
-                    <XIcon className="w-4 h-4" />
-                    Cancelar
+                    <XIcon className="w-3.5 h-3.5" /> Cancelar
                   </button>
                   <button
                     disabled={mergeSelection.length < 2}
                     onClick={() => setIsMergeModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-primary/20"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-primary/20"
                   >
-                    <GitMerge className="w-4 h-4" />
+                    <GitMerge className="w-3.5 h-3.5" />
                     Mesclar ({mergeSelection.length})
                   </button>
                 </>
               )}
 
-              {/* Delete mode actions */}
               {isAdmin && deleteMode && (
                 <>
                   <button
                     onClick={() => { setDeleteMode(false); setDeleteSelection([]); }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   >
-                    <XIcon className="w-4 h-4" />
-                    Cancelar
+                    <XIcon className="w-3.5 h-3.5" /> Cancelar
                   </button>
                   <button
                     disabled={deleteSelection.length === 0 || isDeleting}
                     onClick={handleDeleteSelected}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border border-rose-600 bg-rose-600 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-rose-600/20"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-rose-600 bg-rose-600 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-rose-600/20"
                   >
-                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     Deletar ({deleteSelection.length})
                   </button>
                 </>
               )}
-            </div>
-            
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setPhotoFilter("all")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                  photoFilter === "all" 
-                    ? "bg-primary text-primary-foreground border-primary" 
-                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-                }`}
-              >
-                Todas
-              </button>
-              <button
-                onClick={() => setPhotoFilter("with_photo")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                  photoFilter === "with_photo" 
-                    ? "bg-primary text-primary-foreground border-primary" 
-                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-                }`}
-              >
-                Com Foto
-              </button>
-              <button
-                onClick={() => setPhotoFilter("without_photo")}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                  photoFilter === "without_photo" 
-                    ? "bg-primary text-primary-foreground border-primary" 
-                    : "bg-muted text-muted-foreground border-border hover:bg-muted/80"
-                }`}
-              >
-                Sem Foto
-              </button>
             </div>
           </div>
 
