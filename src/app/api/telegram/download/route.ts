@@ -120,22 +120,6 @@ export async function POST(request: Request) {
       { error: 'Este arquivo ainda não está disponível para download. Tente novamente em breve.' },
       { status: 503 }
     )
-
-    // Entrega garantida → debitar
-    try {
-      await debit()
-    } catch {
-      return NextResponse.json({ error: 'INSUFFICIENT_CREDITS' }, { status: 402 })
-    }
-    await bumpCounters()
-
-    return new Response(downloadBody as any, {
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
-        'Content-Length': contentLength,
-      },
-    })
   } catch (error: any) {
     console.error('[Telegram Download API] Erro inesperado:', error)
     return NextResponse.json(
