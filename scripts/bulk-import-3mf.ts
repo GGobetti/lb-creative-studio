@@ -206,7 +206,7 @@ async function upload3mfToR2(
   filePath: string,
   dex: string,
   name: string
-): Promise<string> {
+): Promise<{ objectKey: string; fileSizeBytes: number }> {
   const fileName = path.basename(filePath)
   const sanitized = sanitizeName(name)
 
@@ -218,9 +218,12 @@ async function upload3mfToR2(
 
   const objectKey = `stl/pokemon/${dex}-${sanitized}-${variant}.3mf`
 
+  // Read file size before upload
+  const fileSizeBytes = fs.statSync(filePath).size
+
   if (DRY_RUN) {
     console.log(`  [DRY] Upload .3mf: ${objectKey}`)
-    return objectKey
+    return { objectKey, fileSizeBytes }
   }
 
   try {
@@ -232,7 +235,7 @@ async function upload3mfToR2(
     })
     await getR2Client().send(command)
     console.log(`  ✓ .3mf uploaded: ${fileName}`)
-    return objectKey
+    return { objectKey, fileSizeBytes }
   } catch (error) {
     console.error(`  ✗ Failed to upload .3mf ${fileName}:`, error)
     throw error
@@ -243,7 +246,8 @@ async function createModelInDatabase(
   dex: string,
   name: string,
   photoUrls: string[],
-  r2Keys: string[]
+  r2Keys: string[],
+  r2Sizes: number[] = []
 ): Promise<string> {
   const parentData = {
     title: name,
@@ -254,7 +258,7 @@ async function createModelInDatabase(
     telegram_group_name: 'LB Creative Studio CENTRAL',
     telegram_message_id: 0,
     file_name: `${dex}-${sanitizeName(name)}.3mf`,
-    file_size_bytes: 0,
+    file_size_bytes: r2Sizes[0] || 0, // Use tamanho do primeiro arquivo
     tags: ['pokemon', sanitizeName(name).toLowerCase(), `#${dex}`],
     r2_object_key: r2Keys[0], // fallback: usa primeiro arquivo da variante (parent é container)
   }
@@ -285,7 +289,7 @@ async function createModelInDatabase(
       telegram_group_name: 'LB Creative Studio CENTRAL',
       telegram_message_id: 0,
       file_name: path.basename(key),
-      file_size_bytes: 0,
+      file_size_bytes: r2Sizes[idx] || 0, // Use tamanho específico de cada variante
       tags: ['pokemon', sanitizeName(name).toLowerCase(), `#${dex}`, `variant-${idx + 1}`],
       parent_id: parent.id,
       r2_object_key: key,
@@ -328,16 +332,19 @@ async function importModel(model: ModelInfo): Promise<ImportResult> {
     }
 
     // Upload .3mf files
-    const r2Keys = await Promise.all(
+    const r2Uploads = await Promise.all(
       model.files3mf.map((file) => upload3mfToR2(file, model.dexNumber, model.pokemonName))
     )
+    const r2Keys = r2Uploads.map((u) => u.objectKey)
+    const r2Sizes = r2Uploads.map((u) => u.fileSizeBytes)
 
     // Create records in database
     const parentId = await createModelInDatabase(
       model.dexNumber,
       model.pokemonName,
       photoUrls,
-      r2Keys
+      r2Keys,
+      r2Sizes
     )
 
     return {
