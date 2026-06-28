@@ -74,11 +74,12 @@ async function main() {
     console.log('🔒 DRY RUN MODE - nenhuma alteração será feita\n')
   }
 
-  // Buscar todos os STLs com r2_object_key
+  // Buscar todos os STLs com r2_object_key E file_size_bytes = 0
   const { data: stls, error } = await supabase
     .from('telegram_indexed_stls')
     .select('id, title, r2_object_key, file_size_bytes')
     .not('r2_object_key', 'is', null)
+    .eq('file_size_bytes', 0)
     .order('created_at', { ascending: true })
 
   if (error) {
