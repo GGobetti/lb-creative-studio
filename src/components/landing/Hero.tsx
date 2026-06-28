@@ -2,13 +2,13 @@
 
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { ArrowRight, Zap, Search, Calculator, Layers } from "lucide-react"
+import { ArrowRight, Zap, Search, Calculator, Boxes } from "lucide-react"
 import { RetroGrid } from "@/components/ui/RetroGrid"
 
 const floatingCards = [
   { icon: Search, label: "Busca STL", sub: "12.847 modelos", color: "from-indigo-500/20 to-primary/20", delay: 0 },
   { icon: Calculator, label: "Calculadora", sub: "Precificação real", color: "from-violet-500/20 to-purple-500/20", delay: 0.15 },
-  { icon: Layers, label: "Configurador 3D", sub: "Export STL", color: "from-fuchsia-500/20 to-pink-500/20", delay: 0.3 },
+  { icon: Boxes, label: "Portfólio & Vendas", sub: "Catálogo integrado", color: "from-fuchsia-500/20 to-pink-500/20", delay: 0.3 },
 ]
 
 export function Hero() {
@@ -42,10 +42,9 @@ export function Hero() {
             </motion.div>
 
             <h1 className="text-display text-[clamp(2.4rem,5vw,4.2rem)] text-foreground mb-6">
-              Do bit ao{" "}
-              <span className="gradient-text">átomo.</span>
+              Encontre, imprima, venda.{" "}
               <br />
-              Crie. Precifique. Venda.
+              <span className="gradient-text">O seu garimpo de STLs preferido é aqui.</span>
             </h1>
 
             <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-lg">
