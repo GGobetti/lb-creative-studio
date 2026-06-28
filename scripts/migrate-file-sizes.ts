@@ -7,10 +7,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3'
-import path from 'path'
-import * as dotenv from 'dotenv'
-
-dotenv.config({ path: path.join(process.cwd(), '.env.local') })
 
 const DRY_RUN = process.argv.includes('--dry-run')
 
