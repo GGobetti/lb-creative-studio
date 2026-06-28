@@ -74,97 +74,100 @@ const CREATOR_SUFFIXES = [
 ]
 
 // ---------------------------------------------------------------------------
-// Limpeza do título (não mexe em NO AMS nem Multiparts — ficam no nome)
+// Limpeza do título
 // ---------------------------------------------------------------------------
 function cleanTitle(raw: string): string {
   let text = raw
 
-  // 1. Remover @canal (com ou sem _ antes)
+  // ── 1. Extrair flags antes de limpar ──────────────────────────────────────
+  const hasMultipartes = /multi[\s_-]?p(art(e?s?|i[eè]ces?)|artes?)|multipieces?/i.test(text)
+  const hasNoAms = /no[\s_-]?ams|sem[\s_-]?ams|noams/i.test(text)
+
+  // ── 2. Remover variantes de Multipartes e NO-AMS do texto ─────────────────
+  text = text.replace(/[-_\s]*multi[\s_-]?p(art(e?s?|i[eè]ces?)|artes?)[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*multipieces?[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*MULTI[\s_-]PART[-_\s]*/g, ' ')
+  text = text.replace(/[-_\s]*no[\s_-]?ams[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*sem[\s_-]?ams[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*noams[-_\s]*/gi, ' ')
+
+  // ── 3. Remoções gerais ────────────────────────────────────────────────────
   text = text.replace(/_?@[\w]+/g, '')
-
-  // 2. Remover hashes de upload: _YYYYMMDD_N_XXXXXX
   text = text.replace(/_\d{8}_\d+_[a-z0-9]{4,}/gi, '')
-
-  // 3. Remover hashes hexadecimais longos (≥14 chars contíguos)
   text = text.replace(/[a-f0-9]{14,}/gi, '')
 
-  // 4. Remover prefixos de criadores
-  for (const re of CREATOR_PREFIXES) {
-    text = text.replace(re, '')
-  }
+  for (const re of CREATOR_PREFIXES) text = text.replace(re, '')
+  for (const re of CREATOR_SUFFIXES) text = text.replace(re, ' ')
 
-  // 5. Remover sufixos de criadores
-  for (const re of CREATOR_SUFFIXES) {
-    text = text.replace(re, ' ')
-  }
-
-  // 6. Remover sufixo _stls ou " stls" (redundante)
-  text = text.replace(/[-_\s]+stls\b/gi, '')
-
-  // 6b. Remover referências de impressoras e slicers
+  text = text.replace(/\bLABA1\b/gi, '')
   text = text.replace(/\bBambu\s*Lab\b/gi, '')
   text = text.replace(/\bBambulab\b/gi, '')
   text = text.replace(/\bBambu\s*Studio\b/gi, '')
   text = text.replace(/\bBambustudio\b/gi, '')
   text = text.replace(/\bBambulabprinter\b/gi, '')
+  text = text.replace(/\bBambu\s*Laba?\d*\b/gi, '')
   text = text.replace(/\bBambu\b/gi, '')
   text = text.replace(/\bChitubox\b/gi, '')
   text = text.replace(/\bA1\s*Mini\b/gi, '')
-  text = text.replace(/\bBambu\s*Laba?\d*\b/gi, '')
 
-  // Remover prefixo T.me (link de canal Telegram)
+  text = text.replace(/[-_\s]+stls\b/gi, '')
+  text = text.replace(/\bmultiparts3mf\b/gi, '')
+  text = text.replace(/\b3mf\d*\b/gi, '')
+  text = text.replace(/\bFan\s*Art\b/gi, '')
+  text = text.replace(/\bFinal\b/gi, '')
+  text = text.replace(/\bPLA\s*[en]\s*PA\b/gi, '')
+  text = text.replace(/\bPLA\b/gi, '')
+
   text = text.replace(/^T\.me\s*/i, '')
+  text = text.replace(/\bT\.me\b/gi, '')
 
-  // Limpar parênteses/colchetes vazios que ficaram após remoções
-  text = text.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '')
+  // Hashes de upload com data e fragmentos órfãos
+  text = text.replace(/\b\d{8}\s+\d+\s+[a-z0-9]{4,}\b/gi, '')
+  text = text.replace(/\b\d{1,6}\s+(?=[a-z]*\d[a-z0-9]*\b)[a-z0-9]{3,10}\b/gi, '')
+  text = text.replace(/20\d{6}/g, '')
 
-  // 7. Remover "multiparts3mf" embutido sem espaço (ex: no_ams_multiparts3mf_Silent)
-  //    Mantém "Multiparts" ou "Multi Parts" com espaço — esses ficam
-  text = text.replace(/multiparts3mf/gi, 'Multiparts')
-
-  // 7b. Separar CamelCase/PascalCase (ex: CrazedCarrotContainer → Crazed Carrot Container)
+  // ── 4. CamelCase ─────────────────────────────────────────────────────────
   text = text.replace(/\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g, (word) =>
     word.replace(/([a-z])([A-Z])/g, '$1 $2')
   )
 
-  // 8. Substituir + por espaço
+  // ── 5. Normalizar separadores e espaços ──────────────────────────────────
   text = text.replace(/\+/g, ' ')
-
-  // 9. Substituir _ por espaço
   text = text.replace(/_/g, ' ')
-
-  // 10. Remover numeração (1), (2)... no final
   text = text.replace(/\s*\(\d+\)\s*$/, '')
-
-  // 11. Remover extensões embutidas no meio do nome (não extensão final real)
   text = text.replace(/\.(3mf|stl)\b/gi, '')
-
-  // 12. Colapsar múltiplos espaços e normalizar hífens
+  text = text.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '')
+  text = text.replace(/(?<!\w)[.,;:]+(?!\w)/g, '')
   text = text.replace(/\s{2,}/g, ' ')
   text = text.replace(/\s*[-–—]\s*/g, ' - ')
   text = text.replace(/(\s+-\s+)+/g, ' - ')
+  text = text.replace(/^[\s\-–—.,]+|[\s\-–—.,]+$/g, '').trim()
 
-  // 13. Title Case suave
+  // ── 6. Title Case suave ───────────────────────────────────────────────────
   const LOWERCASE_WORDS = new Set([
     'de', 'do', 'da', 'dos', 'das', 'e', 'a', 'o', 'os', 'as',
     'the', 'of', 'and', 'in', 'for', 'no', 'na',
   ])
-  // Preservar siglas/acrônimos em maiúsculo (AMS, SRT, PS4, etc.)
   text = text
-    .trim()
     .split(' ')
     .map((word, i) => {
       if (!word) return word
-      // Siglas: 2-4 letras maiúsculas (ex: AMS, FDM, SRT, PS4, XBOX)
       if (/^[A-Z0-9]{2,5}$/.test(word)) return word
       const lower = word.toLowerCase()
       if (i > 0 && LOWERCASE_WORDS.has(lower)) return lower
       return lower.charAt(0).toUpperCase() + lower.slice(1)
     })
     .join(' ')
+    .trim()
 
-  // 14. Limpar traços/espaços isolados no início/fim
-  text = text.replace(/^[\s\-–—]+|[\s\-–—]+$/g, '').trim()
+  // ── 7. Sufixo padronizado ─────────────────────────────────────────────────
+  if (hasMultipartes || hasNoAms) {
+    const parts = [
+      hasMultipartes ? 'Multipartes' : null,
+      hasNoAms ? 'NO-AMS' : null,
+    ].filter(Boolean).join(' - ')
+    text = `${text} - (${parts})`
+  }
 
   return text
 }

@@ -67,6 +67,24 @@ const CREATOR_SUFFIXES = [
 function cleanTitle(raw: string): string {
   let text = raw
 
+  // ── 1. Extrair flags antes de limpar ──────────────────────────────────────
+  // Detectar variantes de Multipartes
+  const hasMultipartes = /multi[\s_-]?p(art(e?s?|i[eè]ces?)|artes?)|multipieces?/i.test(text)
+  // Detectar variantes de NO-AMS
+  const hasNoAms = /no[\s_-]?ams|sem[\s_-]?ams|noams/i.test(text)
+
+  // ── 2. Remover todas as variantes do texto ────────────────────────────────
+  // Multipartes (todas as formas)
+  text = text.replace(/[-_\s]*multi[\s_-]?p(art(e?s?|i[eè]ces?)|artes?)[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*multipieces?[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*MULTI[\s_-]PART[-_\s]*/g, ' ')
+
+  // NO-AMS (todas as formas)
+  text = text.replace(/[-_\s]*no[\s_-]?ams[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*sem[\s_-]?ams[-_\s]*/gi, ' ')
+  text = text.replace(/[-_\s]*noams[-_\s]*/gi, ' ')
+
+  // ── 3. Remoções gerais ────────────────────────────────────────────────────
   text = text.replace(/_?@[\w]+/g, '')
   text = text.replace(/_\d{8}_\d+_[a-z0-9]{4,}/gi, '')
   text = text.replace(/[a-f0-9]{14,}/gi, '')
@@ -74,45 +92,63 @@ function cleanTitle(raw: string): string {
   for (const re of CREATOR_PREFIXES) text = text.replace(re, '')
   for (const re of CREATOR_SUFFIXES) text = text.replace(re, ' ')
 
-  text = text.replace(/[-_\s]+stls\b/gi, '')
-  text = text.replace(/multiparts3mf/gi, 'Multiparts')
-
-  // Remover referências de impressoras e slicers
+  // Impressoras e slicers
+  text = text.replace(/\bLABA1\b/gi, '')
   text = text.replace(/\bBambu\s*Lab\b/gi, '')
   text = text.replace(/\bBambulab\b/gi, '')
   text = text.replace(/\bBambu\s*Studio\b/gi, '')
   text = text.replace(/\bBambustudio\b/gi, '')
   text = text.replace(/\bBambulabprinter\b/gi, '')
+  text = text.replace(/\bBambu\s*Laba?\d*\b/gi, '')
   text = text.replace(/\bBambu\b/gi, '')
   text = text.replace(/\bChitubox\b/gi, '')
   text = text.replace(/\bA1\s*Mini\b/gi, '')
-  text = text.replace(/\bBambu\s*Laba?\d*\b/gi, '')
 
-  // Remover prefixo T.me (link de canal Telegram)
+  // Termos genéricos de metadado
+  text = text.replace(/[-_\s]+stls\b/gi, '')
+  text = text.replace(/\bmultiparts3mf\b/gi, '')
+  text = text.replace(/\b3mf\d*\b/gi, '')           // 3mf, 3mf20260619, etc
+  text = text.replace(/\bFan\s*Art\b/gi, '')
+  text = text.replace(/\bFinal\b/gi, '')
+  text = text.replace(/\bPLA\s*[en]\s*PA\b/gi, '')
+  text = text.replace(/\bPLA\b/gi, '')
+
+  // Hashes de upload com data (ex: 20260619 1 7xaf44 ou 3mf20260619 1 7xaf44)
+  text = text.replace(/\b\d{8}\s+\d+\s+[a-z0-9]{4,}\b/gi, '')
+  // Fragmentos órfãos tipo hash: número + string com dígitos misturados (ex: "1 7xaf44", "16099 N6968m")
+  // Lookahead garante que a string seguinte contenha ao menos 1 dígito (diferencia de palavra real)
+  text = text.replace(/\b\d{1,6}\s+(?=[a-z]*\d[a-z0-9]*\b)[a-z0-9]{3,10}\b/gi, '')
+  // Data de 8 dígitos — isolada ou colada em palavra (ex: Komba20260616 → Komba)
+  text = text.replace(/20\d{6}/g, '')
+
+  // Links de canal
   text = text.replace(/^T\.me\s*/i, '')
+  text = text.replace(/\bT\.me\b/gi, '')
 
-  // Limpar parênteses/colchetes vazios que ficaram após remoções
-  text = text.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '') // BambuLab, Bambu Laba1, etc
-
-  // Separar CamelCase/PascalCase (ex: CrazedCarrotContainer → Crazed Carrot Container)
+  // ── 4. CamelCase ─────────────────────────────────────────────────────────
   text = text.replace(/\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g, (word) =>
     word.replace(/([a-z])([A-Z])/g, '$1 $2')
   )
 
+  // ── 5. Normalizar separadores e espaços ──────────────────────────────────
   text = text.replace(/\+/g, ' ')
   text = text.replace(/_/g, ' ')
   text = text.replace(/\s*\(\d+\)\s*$/, '')
   text = text.replace(/\.(3mf|stl)\b/gi, '')
+  text = text.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '')
+  // Remover pontuação solta (ponto, vírgula, dois-pontos no início/fim ou sozinhos)
+  text = text.replace(/(?<!\w)[.,;:]+(?!\w)/g, '')
   text = text.replace(/\s{2,}/g, ' ')
   text = text.replace(/\s*[-–—]\s*/g, ' - ')
   text = text.replace(/(\s+-\s+)+/g, ' - ')
+  text = text.replace(/^[\s\-–—.,]+|[\s\-–—.,]+$/g, '').trim()
 
+  // ── 6. Title Case suave ───────────────────────────────────────────────────
   const LOWERCASE_WORDS = new Set([
     'de', 'do', 'da', 'dos', 'das', 'e', 'a', 'o', 'os', 'as',
     'the', 'of', 'and', 'in', 'for', 'no', 'na',
   ])
   text = text
-    .trim()
     .split(' ')
     .map((word, i) => {
       if (!word) return word
@@ -122,8 +158,17 @@ function cleanTitle(raw: string): string {
       return lower.charAt(0).toUpperCase() + lower.slice(1)
     })
     .join(' ')
+    .trim()
 
-  text = text.replace(/^[\s\-–—]+|[\s\-–—]+$/g, '').trim()
+  // ── 7. Adicionar sufixo padronizado ──────────────────────────────────────
+  if (hasMultipartes || hasNoAms) {
+    const parts = [
+      hasMultipartes ? 'Multipartes' : null,
+      hasNoAms ? 'NO-AMS' : null,
+    ].filter(Boolean).join(' - ')
+    text = `${text} - (${parts})`
+  }
+
   return text
 }
 
@@ -151,14 +196,23 @@ async function main() {
   console.log(`✅ ${allStls.length} STLs carregados`)
 
   const changes: { id: string; before: string; after: string }[] = []
+  const skipped: { id: string; title: string }[] = []
   for (const stl of allStls) {
     const after = cleanTitle(stl.title ?? '')
-    if (after !== stl.title) {
-      changes.push({ id: stl.id, before: stl.title, after })
+    if (after === stl.title) continue
+    if (!after.trim()) {
+      skipped.push({ id: stl.id, title: stl.title })
+      continue
     }
+    changes.push({ id: stl.id, before: stl.title, after })
   }
 
-  console.log(`📝 ${changes.length} títulos com alteração\n`)
+  console.log(`📝 ${changes.length} títulos com alteração`)
+  if (skipped.length > 0) {
+    console.log(`⚠️  ${skipped.length} ignorados (resultado ficaria vazio):`)
+    skipped.forEach(({ title }) => console.log(`   → "${title}"`))
+  }
+  console.log()
 
   if (DRY_RUN) {
     const preview = changes.slice(0, 20)
