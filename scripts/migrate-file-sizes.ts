@@ -92,17 +92,18 @@ async function main() {
   let alreadyOk = 0
 
   for (const stl of stls) {
-    if (stl.file_size_bytes && stl.file_size_bytes > 0) {
-      // Já tem tamanho
-      alreadyOk++
-      continue
-    }
-
     console.log(`📦 ${stl.title}`)
     const fileSize = await getFileSizeFromR2(stl.r2_object_key)
 
     if (fileSize === 0) {
       console.log(`  ⚠️  Arquivo não encontrado em R2 ou tamanho 0`)
+      continue
+    }
+
+    // Se já tem o tamanho correto, pula
+    if (stl.file_size_bytes === fileSize) {
+      console.log(`  ✓ Já tem tamanho correto (${(fileSize / 1024 / 1024).toFixed(2)} MB)`)
+      alreadyOk++
       continue
     }
 
