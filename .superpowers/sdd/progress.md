@@ -1,19 +1,15 @@
-# Bulk STL Categorization — Progress Ledger
+# Landing Page Refresh — Progress Ledger
+
+MERGE_BASE: d8a57ed
 
 ## Completed Tasks
 
-- **Task 1:** Load existing categories on mount — COMPLETE (commit d4c8341, review clean)
-- **Task 2:** Render category badges — COMPLETE (commit 23df0ce, review clean)
-- **Task 3:** Create PhotoCuratorCategoryTab component — COMPLETE (commits 7331c11 + 7331c11 fix, review clean)
-
 ## In Progress
-
-- **Task 4:** Extend bulk-actions menu with tabs (dispatching)
 
 ## Remaining
 
-- Task 5: Implement bulkApplyCategories function
-- Task 6: Backend endpoint handler
-- Task 7: Write tests
-- Task 8: End-to-end manual test
-- Task 9: Commit and push
+- Task 1: Metadata + tema escuro
+- Task 2: Título da aba da landing + rodapé
+- Task 3: Novo slogan + card Hero
+- Task 4: STLShowcase carrossel
+- Task 5: Push + PR
