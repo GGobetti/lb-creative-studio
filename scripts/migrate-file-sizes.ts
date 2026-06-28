@@ -7,6 +7,23 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3'
+import fs from 'fs'
+import path from 'path'
+
+// Load .env.local manually
+function loadEnv() {
+  const envPath = path.join(process.cwd(), '.env.local')
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf-8')
+    envContent.split('\n').forEach((line) => {
+      const [key, ...valueParts] = line.split('=')
+      if (key && !key.startsWith('#')) {
+        process.env[key.trim()] = valueParts.join('=').trim()
+      }
+    })
+  }
+}
+loadEnv()
 
 const DRY_RUN = process.argv.includes('--dry-run')
 
