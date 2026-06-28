@@ -97,6 +97,7 @@ export const STL_CATEGORIES = [
   'Educação',
   'Joalheria & Acessórios',
   'Outros',
+  'Multipartes/NO AMS',
   // Categorias Especiais - Franquias & Personagens
   'Sonic',
   'Mario',
