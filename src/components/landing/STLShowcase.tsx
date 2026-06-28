@@ -14,12 +14,12 @@ async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
   const [byDownloads, byFavorites] = await Promise.all([
     supabase
       .from('telegram_indexed_stls')
-      .select('id, title, photos')
+      .select('id, title, thumbnail_url')
       .order('download_count', { ascending: false })
       .limit(5),
     supabase
       .from('telegram_indexed_stls')
-      .select('id, title, photos')
+      .select('id, title, thumbnail_url')
       .order('favorites_count', { ascending: false })
       .limit(5),
   ])
@@ -29,7 +29,7 @@ async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
 
   for (const item of [...(byDownloads.data ?? []), ...(byFavorites.data ?? [])]) {
     if (seen.has(item.id)) continue
-    const cover = Array.isArray(item.photos) ? item.photos[0] : null
+    const cover = item.thumbnail_url
     if (!cover) continue
     seen.add(item.id)
     items.push({ id: item.id, title: item.title, cover })
