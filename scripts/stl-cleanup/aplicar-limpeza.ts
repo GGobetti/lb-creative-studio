@@ -44,14 +44,20 @@ const supabase = createClient(
 const CREATOR_PREFIXES = [
   /^Whale3D[-–\s]*Studio\s*/i,
   /^Whale3D[-–\s]*/i,
-  /^STLflix\s*[-–]\s*/i,
-  /^3DXM\s*[-–]\s*/i,
+  /^STLflix\s*[-–\s]*/i,
+  /^3DXM\s*[-–\s]*/i,
   /^YoshStudios\s*/i,
   /^DecorMaster\s*/i,
-  /^GeekSculpt3D\s*[-–]?\s*/i,
-  /^Hex3D\s*[-–]?\s*/i,
-  /^O3dlab\s*[-–]?\s*/i,
-  /^@?o3dlab\s*[-–]?\s*/i,
+  /^GeekSculpt3D\s*[-–\s]*/i,
+  /^Hex3D\s*[-–\s]*/i,
+  /^[Оo]3dlab\s*[-–\s]*/i,  // Cirílico О + latin o
+  /^@?o3dlab\s*[-–\s]*/i,
+  /^Aslan3D\s*[-–\s]*/i,
+  /^Allstlbrasill\s*[-–\s]*/i,
+  /^@allstlbrasill\s*[-–\s]*/i,
+  /^@avante3d\s*[-–\s]*/i,
+  /^Print3DWorld\s*[-–\s]*/i,
+  /^@?stl3dbrasil\s*[-–\s]*/i,
 ]
 
 const CREATOR_SUFFIXES = [
