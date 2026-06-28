@@ -202,6 +202,12 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
 @utility animate-blob-2 { animation: blob-2 15s ease-in-out infinite alternate; }
 @utility animate-blob-3 { animation: blob-3 18s ease-in-out infinite alternate; }
 
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@utility animate-marquee { animation: marquee 30s linear infinite; }
+
 /* ── Animations ────────────────────────────────────────────────── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }

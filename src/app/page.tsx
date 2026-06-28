@@ -5,6 +5,7 @@ import { Hero } from '@/components/landing/Hero'
 import { Features } from '@/components/landing/Features'
 import { AffiliateCarousel } from '@/components/landing/AffiliateCarousel'
 import { fetchAffiliateProducts } from '@/lib/api/affiliate'
+import { STLShowcase } from '@/components/landing/STLShowcase'
 
 export const metadata: Metadata = {
   title: 'LB Creative Studio — Garimpo de STLs para Makers 3D',
@@ -60,6 +61,10 @@ export default async function LandingPage() {
 
       <main className="flex-1 relative z-10">
         <Hero />
+
+        <Suspense fallback={null}>
+          <STLShowcase />
+        </Suspense>
 
         <Features />
 
