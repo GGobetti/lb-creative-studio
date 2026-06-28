@@ -114,42 +114,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ url, fileName: item.file_name })
     }
 
-    // ── CAMINHO LEGADO/FALLBACK: proxy do Telegram (ou placeholder em dev) ──
-    // Mantido para não regredir enquanto a migração para R2 não estiver completa.
-    const proxyUrl = process.env.TELEGRAM_PROXY_URL
-    let downloadBody: ReadableStream | Uint8Array
-    let contentLength: string
-    const fileName = item.file_name
-
-    if (proxyUrl) {
-      const downloadRes = await fetch(
-        `${proxyUrl}/download?message_id=${item.telegram_message_id}`,
-        { headers: { 'X-API-Key': process.env.TELEGRAM_PROXY_API_KEY || '' } }
-      )
-      if (!downloadRes.ok) {
-        console.error('[Telegram Download] Proxy retornou:', downloadRes.status)
-        return NextResponse.json(
-          { error: 'Falha ao conectar com o serviço do Telegram. Tente novamente mais tarde.' },
-          { status: 502 }
-        )
-      }
-      downloadBody = downloadRes.body!
-      contentLength = downloadRes.headers.get('Content-Length') || item.file_size_bytes.toString()
-    } else {
-      // Fallback de desenvolvimento — STL placeholder
-      const mockStlContent = `solid LB_Creative_Studio_Placeholder
-  facet normal 0 0 0
-    outer loop
-      vertex 0 0 0
-      vertex 0 10 0
-      vertex 10 0 0
-    endloop
-  endfacet
-endsolid LB_Creative_Studio_Placeholder`
-      const bytes = new TextEncoder().encode(mockStlContent)
-      downloadBody = bytes
-      contentLength = bytes.length.toString()
-    }
+    // ── Arquivo sem R2 e sem proxy: erro honesto ──
+    // O arquivo ainda não foi migrado para R2 ou upado. Retorna 503 temporário.
+    return NextResponse.json(
+      { error: 'Este arquivo ainda não está disponível para download. Tente novamente em breve.' },
+      { status: 503 }
+    )
 
     // Entrega garantida → debitar
     try {
