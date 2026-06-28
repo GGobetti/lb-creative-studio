@@ -40,7 +40,15 @@ async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
 
 export async function STLShowcase() {
   const items = await fetchShowcaseItems()
-  if (items.length === 0) return null
+  if (items.length === 0) {
+    return (
+      <section className="py-16 bg-muted/10 border-y border-border">
+        <div className="container mx-auto px-6 text-center">
+          <p className="text-sm text-muted-foreground">STLs não disponíveis no momento</p>
+        </div>
+      </section>
+    )
+  }
 
   // Duplicate for seamless loop
   const loop = [...items, ...items]
