@@ -115,16 +115,27 @@ O scraper lê grupos do Telegram → baixa os arquivos → sobe para o **Cloudfl
 
 ## Documentação
 
+### 🚀 Para Novo Dev Começar
+- **[`docs/ONBOARDING.md`](docs/ONBOARDING.md)** — Setup, rodar local, entender o projeto (comece aqui!)
+- **[`docs/CODE_STYLE.md`](docs/CODE_STYLE.md)** — Convenções de código (TypeScript, React, naming)
+
+### 🛠️ Técnica & Operações
 | Documento | Descrição |
 |-----------|-----------|
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Arquitetura completa, decisões técnicas, estado atual |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Arquitetura completa, decisões técnicas, estado atual (fonte de verdade) |
+| [`docs/WORKFLOW.md`](docs/WORKFLOW.md) | Fluxo de git obrigatório (branch → PR → merge) |
+| [`docs/CREDENTIALS.md`](docs/CREDENTIALS.md) | Gestão de chaves, rotação, segurança |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | FAQ — downloads erram? credits não debitam? começa aqui |
+
+### 🎮 Features & Integração
+| Documento | Descrição |
+|-----------|-----------|
 | [`ROADMAP.md`](ROADMAP.md) | Roadmap de features P0→P3 |
-| [`docs/WORKFLOW.md`](docs/WORKFLOW.md) | Fluxo de git (branch → PR → merge) |
-| [`docs/R2_SETUP.md`](docs/R2_SETUP.md) | Como configurar o Cloudflare R2 |
+| [`docs/R2_SETUP.md`](docs/R2_SETUP.md) | Como configurar Cloudflare R2 |
 | [`docs/SUBSCRIPTIONS_IMPLEMENTATION.md`](docs/SUBSCRIPTIONS_IMPLEMENTATION.md) | Fluxo de assinaturas Stripe |
 | [`docs/minigames-ux-spec.md`](docs/minigames-ux-spec.md) | Spec UX dos minigames |
-| [`MERCADO_LIVRE_INTEGRATION.md`](MERCADO_LIVRE_INTEGRATION.md) | Integração de afiliados Mercado Livre |
-| [`docs/archive/`](docs/archive/) | Documentos históricos (não mais em uso ativo) |
+| [`MERCADO_LIVRE_INTEGRATION.md`](MERCADO_LIVRE_INTEGRATION.md) | Integração de afiliados |
+| [`docs/archive/`](docs/archive/) | Documentos históricos |
 
 ---
 
