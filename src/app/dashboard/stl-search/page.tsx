@@ -86,6 +86,7 @@ export default function StlSearchPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isAdmin = profile?.role === "sysadmin";
+  const [favoriteItems, setFavoriteItems] = useState<StlItem[]>([]);
 
   // Debounce input search query (300ms)
   useEffect(() => {
@@ -152,6 +153,62 @@ export default function StlSearchPage() {
     setPage(0);
     setItems([]);
   }, [debouncedQuery, printerFilter, photoFilter, categoryFilter]);
+
+  // Fetch all favorited STLs when "showOnlyFavorites" is activated
+  useEffect(() => {
+    if (!showOnlyFavorites || !profile) {
+      setFavoriteItems([]);
+      return;
+    }
+
+    const fetchFavoritedStls = async () => {
+      try {
+        setIsLoading(true);
+        const supabase = getSupabaseBrowser();
+
+        // Get all favorited STL IDs
+        const { data: favData, error: favError } = await supabase
+          .from("telegram_user_favorites")
+          .select("stl_id")
+          .eq("user_id", profile.id);
+
+        if (favError) throw favError;
+        if (!favData || favData.length === 0) {
+          setFavoriteItems([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const favStlIds = favData.map((fav: any) => fav.stl_id);
+
+        // Fetch STL details for all favorites
+        const { data: stlData, error: stlError } = await supabase
+          .from("telegram_indexed_stls")
+          .select("id, title, download_count, favorites_count, thumbnail_url")
+          .in("id", favStlIds);
+
+        if (stlError) throw stlError;
+
+        const formattedItems: StlItem[] = (stlData || []).map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          downloadCount: item.download_count || 0,
+          favoritesCount: item.favorites_count || 0,
+          thumbnail: item.thumbnail_url || "",
+        }));
+
+        setFavoriteItems(formattedItems);
+        setPage(0);
+      } catch (err) {
+        console.error("Error fetching favorited STLs:", err);
+        setFavoriteItems([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFavoritedStls();
+  }, [showOnlyFavorites, profile]);
 
   // Fetch real STL files from Supabase telegram_indexed_stls (paginated)
   useEffect(() => {
@@ -240,7 +297,11 @@ export default function StlSearchPage() {
             }));
 
           setItems(mapped);
-          setHasMore(!categoryFilter && data.length === pageSize);
+          if (showOnlyFavorites) {
+            setHasMore((page + 1) * pageSize < favoriteItems.length);
+          } else {
+            setHasMore(!categoryFilter && data.length === pageSize);
+          }
         }
       } catch (err) {
         console.error("Error fetching telegram stls:", err);
@@ -336,13 +397,16 @@ export default function StlSearchPage() {
         ? 1 
         : 0);
 
-  // Filter items client-side if "only favorites" is active
+  // Filter items client-side if "only favorites" is active, with pagination
   const displayedItems = useMemo(() => {
     if (showOnlyFavorites) {
-      return items.filter((item) => favorites.includes(item.id));
+      // Apply pagination for favorites
+      const start = page * pageSize;
+      const end = start + pageSize;
+      return favoriteItems.slice(start, end);
     }
     return items;
-  }, [items, favorites, showOnlyFavorites]);
+  }, [items, favoriteItems, showOnlyFavorites, page]);
 
   const handleToggleFavorite = async (id: string) => {
     if (!profile) {
@@ -999,7 +1063,7 @@ export default function StlSearchPage() {
             deleteSelection={deleteSelection}
           />
 
-          {!showOnlyFavorites && !categoryFilter && (
+          {!categoryFilter && (
             <div className="flex justify-center items-center gap-4 mt-8">
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
