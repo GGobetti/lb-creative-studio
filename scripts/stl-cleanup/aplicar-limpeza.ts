@@ -64,8 +64,32 @@ const CREATOR_SUFFIXES = [
   /[-_.,\s]+model[-_\s]*files?\b/gi,
 ]
 
+// ---------------------------------------------------------------------------
+// Traduções manuais de títulos em CJK (chinês/japonês/coreano)
+// ---------------------------------------------------------------------------
+const CJK_TRANSLATIONS: Record<string, string> = {
+  '栗宝宝': 'Castanha Baby',
+  '巨无霸汉堡mw': 'Caixa de Lenços/Papeleira Big Mac Hamburguer',
+  '新炭治郎25厘米高拆件 无多色打印': 'Tanjiro 25cm - (Multipartes - NO-AMS)',
+  '冰淇淋玩具': 'Sorvete Brinquedo',
+  '三层收纳盘': 'Organizador 3 Níveis',
+  'USB C清洁器': 'Limpador USB',
+  '仿真手铐': 'Algemas Realistas',
+  '双色无牙仔手机支架': 'Suporte Celular Dragão',
+  '标准18.2cm Bowser1.3': 'Bowser 18.2cm',
+  '收纳盒土王': 'Organizador Rei da Terra',
+}
+
 function cleanTitle(raw: string): string {
   let text = raw
+
+  // ── 0. Tradução CJK ───────────────────────────────────────────────────────
+  if (/[一-鿿぀-ヿ가-힯]/.test(text)) {
+    // Busca tradução exata primeiro
+    if (CJK_TRANSLATIONS[text.trim()]) return CJK_TRANSLATIONS[text.trim()]
+    // Se não tem tradução exata, remove os caracteres CJK e continua a limpeza
+    text = text.replace(/[一-鿿぀-ヿ가-힯]+/g, ' ')
+  }
 
   // ── 1. Extrair flags antes de limpar ──────────────────────────────────────
   // Detectar variantes de Multipartes
@@ -124,6 +148,9 @@ function cleanTitle(raw: string): string {
   // Links de canal
   text = text.replace(/^T\.me\s*/i, '')
   text = text.replace(/\bT\.me\b/gi, '')
+
+  // Versão decimal colada em nome (ex: Bowser1.3 → Bowser). Só remove se houver ponto (X.Y).
+  text = text.replace(/\b([A-Za-z]{3,})\d+\.\d+\b/g, '$1')
 
   // ── 4. CamelCase ─────────────────────────────────────────────────────────
   text = text.replace(/\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g, (word) =>
