@@ -3,8 +3,6 @@ import { Suspense } from 'react'
 import { Navbar } from '@/components/Navbar'
 import { Hero } from '@/components/landing/Hero'
 import { Features } from '@/components/landing/Features'
-import { AffiliateCarousel } from '@/components/landing/AffiliateCarousel'
-import { fetchAffiliateProducts } from '@/lib/api/affiliate'
 import { STLShowcase } from '@/components/landing/STLShowcase'
 
 export const metadata: Metadata = {
@@ -13,29 +11,6 @@ export const metadata: Metadata = {
 }
 
 export const dynamic = 'force-dynamic'
-
-// Loading fallback for carousel
-function CarouselFallback() {
-  return (
-    <section className="py-16 bg-slate-900 flex items-center justify-center min-h-96">
-      <div className="text-center">
-        <div className="animate-spin w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-slate-400">Loading products...</p>
-      </div>
-    </section>
-  )
-}
-
-// Carousel server component
-async function CarouselSection() {
-  try {
-    const products = await fetchAffiliateProducts('mercado_livre')
-    return <AffiliateCarousel products={products} />
-  } catch (err) {
-    console.error('Failed to load carousel:', err)
-    return null // Silently fail - carousel is optional
-  }
-}
 
 export default async function LandingPage() {
   return (
@@ -67,11 +42,6 @@ export default async function LandingPage() {
         </Suspense>
 
         <Features />
-
-        {/* New: Affiliate products carousel */}
-        <Suspense fallback={<CarouselFallback />}>
-          <CarouselSection />
-        </Suspense>
 
         {/* CTA — solid brand color in light, glass in dark */}
         <section className="py-24 relative overflow-hidden
