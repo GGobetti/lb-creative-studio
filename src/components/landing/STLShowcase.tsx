@@ -63,24 +63,24 @@ export async function STLShowcase() {
         </h2>
       </div>
 
-      <div className="relative">
+      <div className="relative group/carousel">
         {/* Fade edges */}
         <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-background to-transparent pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-background to-transparent pointer-events-none" />
 
-        <div className="flex gap-4 animate-marquee w-max">
+        <div className="flex gap-4 animate-marquee w-max group-hover/carousel:[animation-play-state:paused]">
           {loop.map((item, i) => (
             <Link
               key={`${item.id}-${i}`}
               href="/login"
               className="group flex-shrink-0 w-48 rounded-2xl overflow-hidden border border-border bg-card hover:border-primary/40 transition-colors"
             >
-              <div className="relative w-48 h-48">
+              <div className="relative w-48 h-48 overflow-hidden">
                 <Image
                   src={item.cover}
                   alt={item.title}
                   fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="object-cover group-hover:scale-125 transition-transform duration-300"
                   unoptimized
                 />
               </div>
