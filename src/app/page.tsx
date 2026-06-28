@@ -7,8 +7,8 @@ import { AffiliateCarousel } from '@/components/landing/AffiliateCarousel'
 import { fetchAffiliateProducts } from '@/lib/api/affiliate'
 
 export const metadata: Metadata = {
-  title: 'LB Creative Studio — Dashboard',
-  description: 'Sistema completo de busca, precificação e orçamentos para Impressão 3D.',
+  title: 'LB Creative Studio — Garimpo de STLs para Makers 3D',
+  description: 'Encontre, imprima e venda. O seu garimpo de STLs preferido é aqui.',
 }
 
 export const dynamic = 'force-dynamic'
@@ -105,7 +105,7 @@ export default async function LandingPage() {
               <span className="font-bold text-foreground text-lg">LB Creative Studio</span>
             </div>
             <p className="text-muted-foreground max-w-sm leading-relaxed">
-              Simplificando o design 3D para quem ama criar. Do bit ao átomo, estamos com você.
+              Feito por makers, para makers. A plataforma completa para quem leva a impressão 3D a sério.
             </p>
           </div>
           <div>
