@@ -48,8 +48,7 @@ export function Hero() {
             </h1>
 
             <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-lg">
-              Calculadora de custos, CRM de clientes, portfólio personalizado, cotações em PDF
-              e busca inteligente de arquivos STL do Telegram — tudo integrado para seu negócio 3D crescer.
+              Garimpo de STLs, Calculadora de custos, CRM de clientes, portfólio personalizado, cotações em PDF — tudo integrado para seu negócio 3D crescer.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
