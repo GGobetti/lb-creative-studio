@@ -675,10 +675,12 @@ export default function StlSearchPage() {
   const handleDownload = async (id: string) => {
     if (downloadingIds.includes(id)) return;
 
-    const item = items.find((i) => i.id === id) || 
-                 topDownloads.find((i) => i.id === id) || 
+    const item = items.find((i) => i.id === id) ||
+                 topDownloads.find((i) => i.id === id) ||
                  topFavorites.find((i) => i.id === id);
-    if (!item) return;
+
+    // Se for uma variante (child), item pode ser null — usar fallback
+    if (!item && !selectedItem) return;
 
     if (!profile) {
       toast("Por favor, faça login para baixar arquivos STL.", "warning");
@@ -723,13 +725,15 @@ export default function StlSearchPage() {
       }
 
       const contentType = res.headers.get("Content-Type") || "";
+      const fallbackItem = item || selectedItem;
+      const fallbackTitle = fallbackItem?.title || "download";
 
       if (contentType.includes("application/json")) {
         // Caminho R2: a API devolve uma presigned URL; baixamos direto do R2
         const { url: r2Url, fileName: r2Name } = await res.json();
         const a = document.createElement("a");
         a.href = r2Url;
-        a.download = r2Name || `${item.title.replace(/\s+/g, "_")}.stl`;
+        a.download = r2Name || `${fallbackTitle.replace(/\s+/g, "_")}.stl`;
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -741,7 +745,7 @@ export default function StlSearchPage() {
         a.href = url;
 
         const contentDisposition = res.headers.get("Content-Disposition");
-        let filename = `${item.title.replace(/\s+/g, "_")}.stl`;
+        let filename = `${fallbackTitle.replace(/\s+/g, "_")}.stl`;
         if (contentDisposition) {
           const filenameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
           if (filenameMatch && filenameMatch[1]) {
@@ -794,7 +798,7 @@ export default function StlSearchPage() {
         }
       }
 
-      toast(`Download de "${item.title}" iniciado!`, "success");
+      toast(`Download de "${fallbackTitle}" iniciado!`, "success");
     } catch (err: any) {
       console.error(err);
       toast(err.message || "Falha ao processar download.", "error");
