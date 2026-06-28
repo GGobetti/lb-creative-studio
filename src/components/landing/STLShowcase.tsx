@@ -15,11 +15,13 @@ async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
     supabase
       .from('telegram_indexed_stls')
       .select('id, title, thumbnail_url')
+      .not('thumbnail_url', 'is', null)
       .order('download_count', { ascending: false })
       .limit(5),
     supabase
       .from('telegram_indexed_stls')
       .select('id, title, thumbnail_url')
+      .not('thumbnail_url', 'is', null)
       .order('favorites_count', { ascending: false })
       .limit(5),
   ])
@@ -34,7 +36,6 @@ async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
     seen.add(item.id)
     items.push({ id: item.id, title: item.title, cover })
   }
-
   return items.slice(0, 10)
 }
 
