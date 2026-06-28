@@ -311,8 +311,21 @@ async function importModel(model: ModelInfo): Promise<ImportResult> {
   console.log(`   Photos: ${model.photos.length} | .3mf files: ${model.files3mf.length}`)
 
   try {
-    // Upload photos
-    const photoUrls = await uploadPhotosToSupabase(model.photos, model.dexNumber, model.pokemonName)
+    // Verificar se já existe no banco e reutilizar fotos
+    let photoUrls: string[] = []
+    const existing = await supabase
+      .from('telegram_indexed_stls')
+      .select('photos')
+      .eq('title', model.pokemonName)
+      .maybeSingle()
+
+    if (existing.data?.photos && Array.isArray(existing.data.photos) && existing.data.photos.length > 0) {
+      photoUrls = existing.data.photos
+      console.log(`  ♻️  Reutilizando ${photoUrls.length} fotos existentes`)
+    } else {
+      // Upload fotos novas
+      photoUrls = await uploadPhotosToSupabase(model.photos, model.dexNumber, model.pokemonName)
+    }
 
     // Upload .3mf files
     const r2Keys = await Promise.all(
