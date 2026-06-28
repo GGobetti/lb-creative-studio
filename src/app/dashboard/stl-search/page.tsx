@@ -502,7 +502,7 @@ export default function StlSearchPage() {
 
       const { data: parts } = await supabase
         .from("telegram_indexed_stls")
-        .select("id, title, file_name, file_size_bytes, photos")
+        .select("id, title, file_name, file_size_bytes, photos, r2_object_key")
         .eq("parent_id", item.id)
         .order("created_at", { ascending: true });
 
@@ -520,6 +520,7 @@ export default function StlSearchPage() {
           fileSize: formatBytes(p.file_size_bytes),
           fileSizeBytes: p.file_size_bytes,
           photos: p.photos || [],
+          r2_object_key: p.r2_object_key,
         })),
       };
       setSelectedItem(itemWithParts);
