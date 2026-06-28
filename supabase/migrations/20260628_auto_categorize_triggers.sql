@@ -3,6 +3,7 @@
 --
 -- INSERT: novo STL é categorizado automaticamente baseado em nome/arquivo
 -- UPDATE: se título ou file_name mudam, re-categoriza (preserva categorias existentes)
+-- UPDATE (v2): detecta nomes específicos de Pokémon (Lugia, Gyarados, etc)
 
 CREATE OR REPLACE FUNCTION auto_categorize_stl(stl_id UUID, stl_title TEXT, stl_file_name TEXT, stl_tags TEXT)
 RETURNS TEXT[] AS $$
@@ -13,86 +14,102 @@ BEGIN
   SELECT categories INTO cats FROM telegram_indexed_stls WHERE id = stl_id;
   IF cats IS NULL THEN cats := '{}'; END IF;
 
-  -- Franquias → Personagens & Figuras
-  IF (stl_title ~* 'marvel|dc comics|star wars|disney|harry potter|pokémon|sonic|mario|dragon ball|one piece|ghibli' OR
-      stl_file_name ~* 'marvel|dc comics|star wars|disney|harry potter|pokemon|sonic|mario|dragon ball|one piece|ghibli') THEN
-    new_cats := array_append(ARRAY['Personagens & Figuras'], 'Personagens & Figuras');
+  -- Pokémon (palavra-chave + nomes específicos de Pokémon)
+  IF (stl_title ~* 'pokemon|pokémon|pikachu|charizard|blastoise|venusaur|alakazam|machamp|golem|arcanine|lapras|snorlax|articuno|zapdos|moltres|dragonite|mewtwo|mew|chikorita|bayleef|meganium|cyndaquil|quilava|typhlosion|totodile|croconaw|feraligatr|sentret|furret|hoothoot|noctowl|ledyba|ledian|spinarak|girafarig|chinchou|lanturn|togepy|togetic|azurill|marill|azumarill|sudowoodo|politoed|hoppip|skiploom|jumpluff|aipom|sunkern|sunflora|yanma|wooper|quagsire|espeon|umbreon|murkrow|slowking|misdreavus|unown|wobbuffet|girafarig|pineco|forretress|dunsparce|gligar|stealth|scizor|shuckle|heracross|sneasel|teddiursa|ursaring|slugma|magcargo|swinub|piloswine|corsola|remoraid|octillery|mantine|skarmory|houndour|houndoom|kingdra|phanpy|donphan|porygon2|steelix|scyther|electabuzz|magby|magmortar|flareon|jolteon|vaporeon|gyarados|lugia|ho-oh|ho oh|raikou|entei|suicune|nidoking|nidoqueen|pidgeot|butterfree|beedrill|pidgeotto|rattata|raticate|spearow|fearow|ekans|arbok|pichu|clefairy|clefable|vulpix|ninetales|jigglypuff|wigglytuff|zubat|golbat|oddish|gloom|vileplume|paras|parasect|venonat|venomoth|diglett|dugtrio|meowth|persian|psyduck|golduck|mankey|primeape|growlithe|poliwag|poliwrath|abra|kadabra|graveler|gengar|onix|drowzee|hypno|krabby|kingler|voltorb|electrode|exeggcute|exeggutor|cubone|marowak|hitmonlee|hitmonchan|lickitung|weezing|rhyhorn|rhydon|chansey|kangaskhan|horsea|seadra|goldeen|seaking|staryu|starmie|mr mime|mr. mime|jynx|electabuzz|magnemite|magneton|magneton|farfetchd|doduo|dodrio|seel|dewgong|shellder|cloyster|gastly|haunter|weedle|kakuna|beedrill|tauros|magikarp|omanyte|omastar|kabuto|kabutops|aerodactyl|snorlax|ditto|eevee|porygon|celadon|cerulean|cinnabar|fuchsia|pewter|saffron|viridian|lavender|vermilion' OR
+      stl_file_name ~* 'pokemon|pokémon|pikachu|charizard|blastoise|venusaur|alakazam|machamp|golem|arcanine|lapras|snorlax|articuno|zapdos|moltres|dragonite|mewtwo|mew|gyarados|lugia|ho-oh|nidoking|nidoqueen' OR
+      stl_tags::text ~* 'pokemon|pokémon|pikachu|charizard|lapras|mewtwo|gyarados|lugia') THEN
+    new_cats := array_append(ARRAY['Pokémon', 'Personagens & Figuras', 'Desenhos & Anime'], 'Pokémon');
   END IF;
 
-  -- Keywords: bust/figure/herói → Personagens & Figuras
-  IF (stl_title ~* 'bust|figure|figurine|chibi|boneco|heroi|hero|personagem|mascote|estatua|statue' OR
-      stl_file_name ~* 'bust|figure|figurine|chibi|boneco|heroi|hero|personagem|mascote|estatua') THEN
+  -- Outras franquias
+  IF (stl_title ~* 'marvel|dc comics|star wars|disney|harry potter|sonic|mario|dragon ball|one piece|naruto|ghibli|fortnite|league of legends' OR
+      stl_file_name ~* 'marvel|dc comics|star wars|disney|harry potter|sonic|mario|dragon ball|one piece|naruto|ghibli|fortnite|league') THEN
     new_cats := array_append(new_cats, 'Personagens & Figuras');
   END IF;
 
-  -- Keywords: sculpture/art → Esculturas & Arte
-  IF (stl_title ~* 'escultura|sculpture|retrato|portrait|diorama|relief|arte|art' OR
-      stl_file_name ~* 'escultura|sculpture|retrato|portrait|diorama|relief|arte') THEN
-    new_cats := array_append(new_cats, 'Esculturas & Arte');
+  IF (stl_title ~* 'dragon ball|one piece|naruto|ghibli' OR
+      stl_file_name ~* 'dragon ball|one piece|naruto|ghibli') THEN
+    new_cats := array_append(new_cats, 'Desenhos & Anime');
   END IF;
 
-  -- Keywords: multipart/NO AMS → Multipartes/NO AMS
+  -- Keywords: bust/figure/sculpture/art
+  IF (stl_title ~* 'bust|figure|figurine|chibi|boneco|heroi|hero|personagem|mascote|estatua|statue|escultura|sculpture|retrato|portrait|diorama|relief|arte|art' OR
+      stl_file_name ~* 'bust|figure|figurine|chibi|boneco|heroi|hero|personagem|mascote|estatua|escultura|sculpture|retrato|portrait|diorama|relief') THEN
+    IF stl_title ~* 'escultura|sculpture|retrato|portrait|diorama|relief|arte|art|bust' THEN
+      new_cats := array_append(new_cats, 'Esculturas & Arte');
+    END IF;
+    IF stl_title ~* 'bust|figure|figurine|chibi|boneco|heroi|hero|personagem|mascote|estatua|statue' THEN
+      new_cats := array_append(new_cats, 'Personagens & Figuras');
+    END IF;
+  END IF;
+
+  -- Keywords: multipart/NO AMS
   IF (stl_title ~* 'multipart|multi.part|no.ams|no-ams|no ams' OR
       stl_file_name ~* 'multipart|multi.part|no.ams|no-ams|no ams' OR
       stl_tags ~* 'multipart|multi.part|no.ams|no-ams|no ams') THEN
     new_cats := array_append(new_cats, 'Multipartes/NO AMS');
   END IF;
 
-  -- Keywords: toy/fidget → Brinquedos
+  -- Keywords: toy/fidget
   IF (stl_title ~* 'brinquedo|toy|fidget|spinner|lego|jogo|game' OR
       stl_file_name ~* 'brinquedo|toy|fidget|spinner|lego') THEN
     new_cats := array_append(new_cats, 'Brinquedos');
   END IF;
 
-  -- Keywords: vehicles → Veículos
+  -- Keywords: vehicles
   IF (stl_title ~* 'carro|truck|moto|motorcycle|aviao|airplane|nave|navio|rocket|foguete|tanque|helicopter|veiculo|vehicle|bicicleta|bike' OR
       stl_file_name ~* 'carro|truck|moto|motorcycle|aviao|navio|rocket|foguete|tanque|helicopter|veiculo|vehicle|bicicleta|bike') THEN
     new_cats := array_append(new_cats, 'Veículos');
   END IF;
 
-  -- Keywords: animals/nature → Natureza & Animais
+  -- Keywords: animals/nature
   IF (stl_title ~* 'animal|flor|flower|planta|plant|arvore|tree|passaro|bird|cachorro|dog|gato|cat|peixe|fish|dinossauro|dino' OR
       stl_file_name ~* 'animal|flor|flower|planta|plant|arvore|tree|passaro|bird|cachorro|dog|gato|cat|peixe|fish|dinossauro|dino') THEN
     new_cats := array_append(new_cats, 'Natureza & Animais');
   END IF;
 
-  -- Keywords: sports → Esportes
+  -- Keywords: sports
   IF (stl_title ~* 'esporte|sport|futebol|soccer|basquete|basketball|tenis|tennis|volei' OR
       stl_file_name ~* 'esporte|sport|futebol|soccer|basquete|basketball|tenis|tennis|volei') THEN
     new_cats := array_append(new_cats, 'Esportes');
   END IF;
 
-  -- Keywords: kitchen/home → Casa & Cozinha
+  -- Keywords: kitchen/home
   IF (stl_title ~* 'cozinha|kitchen|caneca|cup|colher|prato|plate|banheiro|bathroom' OR
       stl_file_name ~* 'cozinha|kitchen|caneca|cup|colher|prato|plate|banheiro|bathroom') THEN
     new_cats := array_append(new_cats, 'Casa & Cozinha');
   END IF;
 
-  -- Keywords: education/science → Educação
+  -- Keywords: education/science
   IF (stl_title ~* 'educacao|education|escola|school|ciencia|science|anatomia|biology|quimica|chemistry|math' OR
       stl_file_name ~* 'educacao|education|escola|school|ciencia|science|anatomia|biology|quimica|math') THEN
     new_cats := array_append(new_cats, 'Educação');
   END IF;
 
-  -- Keywords: decoration → Decoração
+  -- Keywords: decoration
   IF (stl_title ~* 'decor|vaso|vase|luminaria|lamp|prateleira|shelf|ornamento|espelho|mirror|relógio|clock' OR
       stl_file_name ~* 'decor|vaso|vase|luminaria|lamp|prateleira|shelf|ornamento|espelho|relógio|clock') THEN
     new_cats := array_append(new_cats, 'Decoração');
   END IF;
 
-  -- Keywords: utilities → Utilidades
+  -- Keywords: utilities
   IF (stl_title ~* 'suporte|holder|organizador|organizer|gancho|hook|caixa|box|case|adaptador|adapter|cabo|cable' OR
       stl_file_name ~* 'suporte|holder|organizador|organizer|gancho|hook|caixa|box|case|adaptador|adapter|cabo|cable') THEN
     new_cats := array_append(new_cats, 'Utilidades');
   END IF;
 
-  -- Keywords: miniatures/RPG → Miniaturas & RPG
+  -- Keywords: miniatures/RPG
   IF (stl_title ~* 'miniatura|tabletop|diorama|warhammer|rpg|dnd|lord of the rings' OR
       stl_file_name ~* 'miniatura|tabletop|diorama|warhammer|rpg|dnd') THEN
     new_cats := array_append(new_cats, 'Miniaturas & RPG');
   END IF;
 
-  -- Merge com categorias existentes, remove duplicatas, mantém ordem
+  -- Se nenhuma regra passou, marca como "Outros"
+  IF array_length(new_cats, 1) IS NULL OR array_length(new_cats, 1) = 0 THEN
+    new_cats := ARRAY['Outros'];
+  END IF;
+
+  -- Merge com categorias existentes, remove duplicatas
   RETURN array(SELECT DISTINCT unnest(cats || new_cats) ORDER BY 1);
 END;
 $$ LANGUAGE plpgsql;
