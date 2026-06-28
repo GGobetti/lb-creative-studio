@@ -48,12 +48,20 @@ const CREATOR_PREFIXES = [
   /^3DXM\s*[-–]\s*/i,
   /^YoshStudios\s*/i,
   /^DecorMaster\s*/i,
+  /^GeekSculpt3D\s*[-–]?\s*/i,
+  /^Hex3D\s*[-–]?\s*/i,
+  /^O3dlab\s*[-–]?\s*/i,
+  /^@?o3dlab\s*[-–]?\s*/i,
 ]
 
 const CREATOR_SUFFIXES = [
   /\s*\(Aslan3D\)\s*/gi,
   /[-_\s]+rtprops\b/gi,
   /[-_\s]+DecorMaster\b/gi,
+  /[-_\s]+GeekSculpt3D\b/gi,
+  /[-_\s]+Hex3D\b/gi,
+  /[-_\s]+O3dlab\b/gi,
+  /[-_.,\s]+model[-_\s]*files?\b/gi,
 ]
 
 function cleanTitle(raw: string): string {
@@ -68,6 +76,29 @@ function cleanTitle(raw: string): string {
 
   text = text.replace(/[-_\s]+stls\b/gi, '')
   text = text.replace(/multiparts3mf/gi, 'Multiparts')
+
+  // Remover referências de impressoras e slicers
+  text = text.replace(/\bBambu\s*Lab\b/gi, '')
+  text = text.replace(/\bBambulab\b/gi, '')
+  text = text.replace(/\bBambu\s*Studio\b/gi, '')
+  text = text.replace(/\bBambustudio\b/gi, '')
+  text = text.replace(/\bBambulabprinter\b/gi, '')
+  text = text.replace(/\bBambu\b/gi, '')
+  text = text.replace(/\bChitubox\b/gi, '')
+  text = text.replace(/\bA1\s*Mini\b/gi, '')
+  text = text.replace(/\bBambu\s*Laba?\d*\b/gi, '')
+
+  // Remover prefixo T.me (link de canal Telegram)
+  text = text.replace(/^T\.me\s*/i, '')
+
+  // Limpar parênteses/colchetes vazios que ficaram após remoções
+  text = text.replace(/\(\s*\)/g, '').replace(/\[\s*\]/g, '') // BambuLab, Bambu Laba1, etc
+
+  // Separar CamelCase/PascalCase (ex: CrazedCarrotContainer → Crazed Carrot Container)
+  text = text.replace(/\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b/g, (word) =>
+    word.replace(/([a-z])([A-Z])/g, '$1 $2')
+  )
+
   text = text.replace(/\+/g, ' ')
   text = text.replace(/_/g, ' ')
   text = text.replace(/\s*\(\d+\)\s*$/, '')
