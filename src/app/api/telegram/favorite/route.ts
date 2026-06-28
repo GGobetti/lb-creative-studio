@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseUserClient(token)
 
     // 1. Validar a sessão do usuário
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Sessão inválida ou expirada.' }, { status: 401 })
     }
@@ -58,7 +58,7 @@ export async function DELETE(request: Request) {
     const supabase = getSupabaseUserClient(token)
 
     // 1. Validar a sessão do usuário
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Sessão inválida ou expirada.' }, { status: 401 })
     }
