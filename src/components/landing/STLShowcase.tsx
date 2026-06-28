@@ -16,12 +16,12 @@ async function fetchShowcaseItems(): Promise<ShowcaseItem[]> {
       .from('telegram_indexed_stls')
       .select('id, title, thumbnail_url, download_count')
       .order('download_count', { ascending: false })
-      .limit(5),
+      .limit(8),
     supabase
       .from('telegram_indexed_stls')
       .select('id, title, thumbnail_url, favorites_count')
       .order('favorites_count', { ascending: false })
-      .limit(5),
+      .limit(8),
   ])
 
   const seen = new Set<string>()
