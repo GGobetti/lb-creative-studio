@@ -19,13 +19,12 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'LB Creative Studio — Gerador 3D Paramétrico',
-  description:
-    'Gere arquivos STL perfeitos para impressão FDM. Placas personalizadas, cortadores de biscoito, chaveiros e muito mais.',
-  keywords: ['STL', '3D printing', 'FDM', 'parametric', 'cookie cutter', 'keychain', 'Bambu Studio'],
+  title: 'LB Creative Studio — Garimpo de STLs para Makers 3D',
+  description: 'Encontre, imprima e venda. O maior garimpo de STLs do Brasil — busca inteligente, calculadora de custos, CRM e portfólio integrados.',
+  keywords: ['STL', 'impressão 3D', 'FDM', 'garimpo STL', 'maker', 'vender impressão 3D', 'busca STL'],
   openGraph: {
-    title: 'LB Creative Studio',
-    description: 'Gerador 3D Paramétrico e Conversor Image-to-STL',
+    title: 'LB Creative Studio — Garimpo de STLs para Makers 3D',
+    description: 'Encontre, imprima e venda. O seu garimpo de STLs preferido é aqui.',
     type: 'website',
   },
 }
@@ -43,7 +42,7 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
