@@ -62,7 +62,9 @@ CREATE POLICY "user_acquired_stls: admin all"
 -- ─── 4. VIEW — portfólio completo com metadados do STL ───────
 
 DROP VIEW IF EXISTS public.vw_user_stl_portfolio CASCADE;
-CREATE VIEW public.vw_user_stl_portfolio AS
+CREATE VIEW public.vw_user_stl_portfolio
+WITH (security_invoker = true)
+AS
 SELECT
   uas.id              AS acquisition_id,
   uas.user_id,
@@ -83,13 +85,12 @@ SELECT
 FROM public.user_acquired_stls uas
 JOIN public.telegram_indexed_stls s ON s.id = uas.stl_id;
 
--- ─── 4b. RLS explícita na view ───────────────────────────────
--- Embora SECURITY INVOKER herde a policy da tabela base,
--- adicionar policy própria na view garante conformidade com spec.
-DROP POLICY IF EXISTS "vw_user_stl_portfolio: own view" ON public.vw_user_stl_portfolio;
-CREATE POLICY "vw_user_stl_portfolio: own view"
-  ON public.vw_user_stl_portfolio FOR SELECT
-  USING (auth.uid() = user_id);
+-- ─── 4b. RLS na view ─────────────────────────────────────────
+-- A view usa security_invoker=true, portanto herda as policies da tabela
+-- base (user_acquired_stls) aplicadas ao usuário que consulta.
+-- Nenhuma policy separada na view é necessária.
+
+GRANT SELECT ON public.vw_user_stl_portfolio TO authenticated;
 
 -- ─── 5. Função: get_stl_group(stl_id) ────────────────────────
 -- Retorna o pai (se existir) + todos os filhos diretos de um STL.
