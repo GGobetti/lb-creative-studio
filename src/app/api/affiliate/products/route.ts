@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchMLProductData } from '@/lib/mercado-livre';
+import { fetchMLProductData, extractTargetItemId } from '@/lib/mercado-livre';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,14 +24,33 @@ function extractMLProductId(affiliateLink: string): string | null {
 async function getFreshMLPrice(
   productId: string,
   fallbackPrice: number,
-  accessToken?: string
+  accessToken?: string,
+  targetItemId?: string
 ): Promise<number> {
   try {
+    // If we have a specific item ID from the affiliate link, fetch that item directly
+    if (targetItemId) {
+      const headers: Record<string, string> = { accept: 'application/json' };
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+      const itemResp = await fetch(
+        `https://api.mercadolibre.com/items/${targetItemId}`,
+        { headers }
+      );
+      if (itemResp.ok) {
+        const itemData = await itemResp.json();
+        const price = itemData.sale_price || itemData.price;
+        console.log('[Fresh Price] Found target item', targetItemId, '- price:', price);
+        return price ? parseFloat(String(price)) : fallbackPrice;
+      }
+    }
+
+    // Otherwise fetch via product ID (catalog or regular)
     const mlData = await fetchMLProductData(productId, accessToken);
     const price = (mlData as any)?.sale_price || (mlData as any)?.price;
     return price ? parseFloat(String(price)) : fallbackPrice;
   } catch (err) {
-    console.warn('[Fresh Price] Failed for', productId, '- using fallback:', fallbackPrice);
+    console.warn('[Fresh Price] Failed for', productId, targetItemId ? `(target item: ${targetItemId})` : '', '- using fallback:', fallbackPrice);
     return fallbackPrice;
   }
 }
@@ -99,10 +118,14 @@ async function enrichProductsWithFreshPrices(
         const mlId = extractMLProductId(product.affiliate_link);
         if (!mlId) return;
 
+        // Extract the specific item ID that the affiliate link points to
+        const targetItemId = extractTargetItemId(product.affiliate_link);
+
         const freshPrice = await getFreshMLPrice(
           mlId,
           product.details?.price || 0,
-          accessToken
+          accessToken,
+          targetItemId || undefined
         );
 
         if (results[idx]?.details) {

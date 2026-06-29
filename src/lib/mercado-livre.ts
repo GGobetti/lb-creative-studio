@@ -19,6 +19,22 @@ export function generateMLAuthorizationUrl(): string {
 }
 
 /**
+ * Extract the specific item ID from affiliate link (what the link actually points to)
+ * Links have pdp_filters=item_id%3AMLB... or wid=MLB... parameters
+ */
+export function extractTargetItemId(affiliateLink: string): string | null {
+  // Try pdp_filters=item_id%3AMLB... format
+  const pdpMatch = affiliateLink.match(/pdp_filters=item_id%3A(MLB\d+)/);
+  if (pdpMatch) return pdpMatch[1];
+
+  // Try wid=MLB... format (widget ID, the specific item being recommended)
+  const widMatch = affiliateLink.match(/[&?]wid=(MLB\d+)/);
+  if (widMatch) return widMatch[1];
+
+  return null;
+}
+
+/**
  * Fetch product data from Mercado Livre API using access token
  */
 export async function fetchMLProductData(
@@ -108,31 +124,23 @@ export async function fetchMLProductData(
         }
       }
 
-      // Strategy 2: search for items linked to this catalog product (up to 10 to find best price)
+      // Strategy 2: search for items linked to this catalog product
       try {
         const itemsResponse = await fetch(
-          `https://api.mercadolibre.com/products/${usedProductId}/items?limit=10`,
+          `https://api.mercadolibre.com/products/${usedProductId}/items?limit=1`,
           { headers }
         );
         if (itemsResponse.ok) {
           const itemsData = await itemsResponse.json();
-          const items = itemsData.results || itemsData;
-
-          // Find the item with the best (lowest) price
-          let bestItem = items[0];
-          if (items.length > 1) {
-            const bestPrice = Math.min(...items.map((item: any) => item.price || item.sale_price || Infinity));
-            bestItem = items.find((item: any) => (item.sale_price || item.price) === bestPrice) || items[0];
-          }
-
-          console.log('[ML API] /products/items result (best price):', JSON.stringify(bestItem)?.substring(0, 200));
-          if (bestItem?.price) {
+          const firstItem = itemsData.results?.[0] || itemsData[0];
+          console.log('[ML API] /products/items result:', JSON.stringify(firstItem)?.substring(0, 200));
+          if (firstItem?.price) {
             return {
               ...data,
               _source: 'products',
-              price: bestItem.sale_price || bestItem.price,
-              available_quantity: bestItem.available_quantity > 0 ? bestItem.available_quantity : 1,
-              sold_quantity: bestItem.sold_quantity || 0,
+              price: firstItem.sale_price || firstItem.price,
+              available_quantity: firstItem.available_quantity > 0 ? firstItem.available_quantity : 1,
+              sold_quantity: firstItem.sold_quantity || 0,
             };
           }
         }
