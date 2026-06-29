@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon, Calendar } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
 import { useAppStore } from "@/store/store";
+import { AcquiredBadge } from "@/components/stl/AcquiredBadge";
 
 /**
  * Format date to Portuguese locale (pt-BR)
@@ -23,6 +24,7 @@ interface StlCardProps {
   onToggleFavorite: (id: string) => void;
   cost?: number;
   isDownloading?: boolean;
+  hasAccess?: boolean;
 }
 
 export function StlCard({
@@ -33,6 +35,7 @@ export function StlCard({
   onToggleFavorite,
   cost = 0,
   isDownloading = false,
+  hasAccess = false,
 }: StlCardProps) {
   const photos = item.photos && item.photos.length > 0 ? item.photos : [item.imageUrl].filter(Boolean);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
@@ -149,16 +152,21 @@ export function StlCard({
           {item.title}
         </h3>
 
-        {/* Download Count & Upload Date */}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3 flex-wrap">
-          <div className="flex items-center gap-1">
-            <Download className="w-3.5 h-3.5 text-emerald-500/70" />
-            <span className="font-semibold">{item.downloadCount || 0}</span>
+        {/* Download Count & Upload Date + Unlocked Badge */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3 flex-wrap justify-between">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1">
+              <Download className="w-3.5 h-3.5 text-emerald-500/70" />
+              <span className="font-semibold">{item.downloadCount || 0}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
+              <span className="font-semibold">{formatDate(item.addedAt)}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
-            <span className="font-semibold">{formatDate(item.addedAt)}</span>
-          </div>
+          {hasAccess && (
+            <span className="text-green-600 font-semibold text-[10px] uppercase tracking-wider">Desbloqueado</span>
+          )}
         </div>
 
         {/* Source info — visível apenas para admins */}
@@ -177,6 +185,13 @@ export function StlCard({
           </div>
         ) : null}
 
+        {/* Acquired Badge */}
+        {hasAccess && (
+          <div className="mb-3">
+            <AcquiredBadge hasAccess={hasAccess} />
+          </div>
+        )}
+
         {/* Action Button */}
         <button
           onClick={(e) => {
@@ -185,7 +200,11 @@ export function StlCard({
           }}
           disabled={isDownloading}
           className={`w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer ${
-            isDownloading
+            hasAccess
+              ? isDownloading
+                ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
+                : "bg-green-600 border-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md"
+              : isDownloading
               ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
               : "bg-primary border-primary hover:bg-transparent text-primary-foreground hover:text-primary shadow-sm"
           }`}
@@ -195,10 +214,14 @@ export function StlCard({
               <div className="w-3.5 h-3.5 border-2 border-muted-foreground border-t-foreground rounded-full animate-spin" />
               <span>Baixando...</span>
             </>
-          ) : (
+          ) : hasAccess ? (
             <>
               <Download className="w-3.5 h-3.5" />
-              {cost > 0 ? `Download (${cost} crd)` : "Grátis"}
+              <span>Baixar</span>
+            </>
+          ) : (
+            <>
+              {cost > 0 ? `Comprar ${cost} créditos` : "Grátis"}
             </>
           )}
         </button>
