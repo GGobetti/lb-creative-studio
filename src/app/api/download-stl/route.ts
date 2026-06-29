@@ -83,8 +83,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     } = await userClient.auth.getUser(token)
 
     if (authError || !user) {
+      console.error('[download-stl] Auth error:', { authError, hasUser: !!user })
       return NextResponse.json({ error: 'Sessão inválida ou expirada.' }, { status: 401 })
     }
+
+    console.log('[download-stl] User authenticated:', { userId: user.id, email: user.email })
 
     // ── 2. Parse body ──────────────────────────────────────────────────────────
     let body: DownloadStlRequest
