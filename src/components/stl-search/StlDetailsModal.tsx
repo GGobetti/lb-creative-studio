@@ -16,6 +16,7 @@ interface StlDetailsModalProps {
   cost: number;
   isDownloading?: boolean;
   hasAccess?: boolean;
+  acquiredStlIds?: string[];
   onTagClick?: (tag: string) => void;
   onDeleteSuccess?: (id: string) => void;
   onPhotosUpdate?: (id: string, updatedPhotos: string[], updatedThumbnailUrl: string) => void;
@@ -32,6 +33,7 @@ export function StlDetailsModal({
   cost,
   isDownloading = false,
   hasAccess = false,
+  acquiredStlIds = [],
   onTagClick,
   onDeleteSuccess,
   onPhotosUpdate,
@@ -325,6 +327,8 @@ export function StlDetailsModal({
 
         {/* Modal Content Container */}
         <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-[90vw] max-w-4xl translate-x-[-50%] translate-y-[-50%] rounded-3xl border border-border bg-card shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] duration-200 p-0 flex flex-col md:flex-row max-h-[90vh]">
+          {/* Accessibility: Dialog Title (hidden) */}
+          <Dialog.Title className="sr-only">{item.title}</Dialog.Title>
 
           {/* Close Button */}
           <Dialog.Close asChild>
@@ -613,12 +617,26 @@ export function StlDetailsModal({
                             </div>
                             <motion.button
                               onClick={() => handleDownloadPart(part.id)}
+                              disabled={acquiredStlIds.includes(part.id)}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="shrink-0 flex items-center gap-1 py-1.5 px-3 rounded-full text-[9px] font-bold uppercase tracking-wider bg-muted border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 text-muted-foreground transition-all cursor-pointer"
+                              className={`shrink-0 flex items-center gap-1 py-1.5 px-3 rounded-full text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                acquiredStlIds.includes(part.id)
+                                  ? "bg-green-900/40 border-green-500/50 text-green-200 cursor-default"
+                                  : "bg-muted border border-border hover:border-primary/40 hover:text-primary hover:bg-primary/5 text-muted-foreground"
+                              }`}
                             >
-                              <Download className="w-3 h-3" />
-                              Baixar
+                              {acquiredStlIds.includes(part.id) ? (
+                                <>
+                                  <Check className="w-3 h-3" />
+                                  Desbloqueado
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3 h-3" />
+                                  Baixar
+                                </>
+                              )}
                             </motion.button>
                           </motion.div>
                         ))}

@@ -1205,6 +1205,7 @@ export default function StlSearchPage() {
           cost={cost}
           isDownloading={downloadingIds.includes(selectedItem.id)}
           hasAccess={acquiredStlIds.has(selectedItem.id)}
+          acquiredStlIds={Array.from(acquiredStlIds)}
           onTagClick={(tag) => setSearchQuery(`#${tag}`)}
           onDeleteSuccess={(deletedId) => {
             setItems((prev) => prev.filter((i) => i.id !== deletedId));
