@@ -1082,7 +1082,7 @@ export default function StlSearchPage() {
             mergeSelection={mergeSelection}
             deleteMode={deleteMode}
             deleteSelection={deleteSelection}
-            acquiredStlIds={acquiredStlIds}
+            acquiredStlIds={Array.from(acquiredStlIds)}
           />
 
           {!categoryFilter && (
