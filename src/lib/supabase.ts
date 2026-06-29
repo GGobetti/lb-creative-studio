@@ -221,4 +221,72 @@ export interface FeatureFlag {
   updated_at: string
 }
 
+// ─── STL Bundling Types ──────────────────────────────────────
+
+/** Source of a STL acquisition */
+export type StlAcquisitionSource = 'direct' | 'bundle_child' | 'gift' | 'import'
+
+/**
+ * Row in `user_acquired_stls`.
+ * Represents a single STL file that a user has acquired.
+ * UNIQUE on (user_id, stl_id) — idempotent inserts via ON CONFLICT DO NOTHING.
+ */
+export interface UserAcquiredStl {
+  id: string
+  user_id: string
+  stl_id: string
+  source: StlAcquisitionSource
+  acquired_at: string
+}
+
+/**
+ * Row returned by the view `vw_user_stl_portfolio`.
+ * JOIN of `user_acquired_stls` + `telegram_indexed_stls`.
+ */
+export interface UserStlPortfolio {
+  // acquisition fields
+  acquisition_id: string
+  user_id: string
+  source: StlAcquisitionSource
+  acquired_at: string
+  // stl metadata
+  stl_id: string
+  title: string
+  description: string | null
+  thumbnail_url: string | null
+  file_name: string
+  file_size_bytes: number
+  tags: string[]
+  categories: string[] | null
+  parent_id: string | null
+  parts_count: number
+  telegram_group_name: string
+  stl_created_at: string
+}
+
+/**
+ * Response from the RPC `acquire_stl_bundle(stl_id, source)`.
+ * Returns how many STL entries were added to the user's portfolio
+ * (0 if already owned, ≥1 on success — includes bundle children).
+ */
+export interface AcquireStlBundleResult {
+  ok: boolean
+  stl_id: string
+  user_id: string
+  source: StlAcquisitionSource
+  /** Number of new rows inserted (0 = already owned, ≥1 = newly acquired) */
+  acquired: number
+}
+
+/**
+ * Row returned by the function `get_stl_group(stl_id)`.
+ * Describes the role of each STL in its bundle group.
+ */
+export interface StlGroupMember {
+  id: string
+  parent_id: string | null
+  /** 'self' = the queried STL, 'parent' = its parent, 'child' = sibling/child */
+  role: 'self' | 'parent' | 'child'
+}
+
 
