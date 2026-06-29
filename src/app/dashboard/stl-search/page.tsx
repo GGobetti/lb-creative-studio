@@ -705,7 +705,7 @@ export default function StlSearchPage() {
       }
 
       // Download file and deduct credits in backend
-      const res = await fetch("/api/telegram/download", {
+      const res = await fetch("/api/download-stl", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
