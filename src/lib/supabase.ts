@@ -260,12 +260,12 @@ export interface UserStlPortfolio {
   categories: string[] | null
   parent_id: string | null
   parts_count: number
-  telegram_group_name: string
+  telegram_group_id: string
   stl_created_at: string
 }
 
 /**
- * Response from the RPC `acquire_stl_bundle(stl_id, source)`.
+ * Response from the RPC `acquire_stl_bundle(stl_id, source, credit_cost)`.
  * Returns how many STL entries were added to the user's portfolio
  * (0 if already owned, ≥1 on success — includes bundle children).
  */
@@ -276,6 +276,8 @@ export interface AcquireStlBundleResult {
   source: StlAcquisitionSource
   /** Number of new rows inserted (0 = already owned, ≥1 = newly acquired) */
   acquired: number
+  /** Credits deducted from the user's balance (0 = free acquisition) */
+  credits_used: number
 }
 
 /**

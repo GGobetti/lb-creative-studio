@@ -7,7 +7,7 @@
 --             DROP VIEW IF EXISTS public.vw_user_stl_portfolio CASCADE;
 --             DROP FUNCTION IF EXISTS public.get_stl_group(UUID) CASCADE;
 --             DROP FUNCTION IF EXISTS public.insert_stl_bundle(UUID, UUID, TEXT) CASCADE;
---             DROP FUNCTION IF EXISTS public.acquire_stl_bundle(UUID, TEXT) CASCADE;
+--             DROP FUNCTION IF EXISTS public.acquire_stl_bundle(UUID, TEXT, INT) CASCADE;
 -- ============================================================
 
 -- ─── 1. Tabela principal ─────────────────────────────────────
@@ -78,13 +78,18 @@ SELECT
   s.categories,
   s.parent_id,
   s.parts_count,
-  s.telegram_group_name,
+  s.telegram_group_id,
   s.created_at        AS stl_created_at
 FROM public.user_acquired_stls uas
 JOIN public.telegram_indexed_stls s ON s.id = uas.stl_id;
 
--- RLS na view é herdada via SECURITY INVOKER (padrão do Postgres):
--- auth.uid() = user_id é aplicado via política da tabela base.
+-- ─── 4b. RLS explícita na view ───────────────────────────────
+-- Embora SECURITY INVOKER herde a policy da tabela base,
+-- adicionar policy própria na view garante conformidade com spec.
+DROP POLICY IF EXISTS "vw_user_stl_portfolio: own view" ON public.vw_user_stl_portfolio;
+CREATE POLICY "vw_user_stl_portfolio: own view"
+  ON public.vw_user_stl_portfolio FOR SELECT
+  USING (auth.uid() = user_id);
 
 -- ─── 5. Função: get_stl_group(stl_id) ────────────────────────
 -- Retorna o pai (se existir) + todos os filhos diretos de um STL.
@@ -155,9 +160,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_inserted INT := 0;
-  v_row      RECORD;
-  v_src      TEXT;
+  v_inserted  INT := 0;
+  v_row_count INT := 0;
+  v_row       RECORD;
+  v_src       TEXT;
 BEGIN
   -- Itera sobre todo o grupo (pai + filhos)
   FOR v_row IN
@@ -175,7 +181,8 @@ BEGIN
     VALUES (p_user_id, v_row.id, v_src)
     ON CONFLICT (user_id, stl_id) DO NOTHING;
 
-    GET DIAGNOSTICS v_inserted = v_inserted + ROW_COUNT;
+    GET DIAGNOSTICS v_row_count = ROW_COUNT;
+    v_inserted := v_inserted + v_row_count;
   END LOOP;
 
   RETURN v_inserted;
@@ -210,14 +217,24 @@ CREATE TRIGGER trg_auto_bundle
   FOR EACH ROW
   EXECUTE FUNCTION public.trg_fn_auto_bundle();
 
--- ─── 8. RPC pública: acquire_stl_bundle(stl_id, source) ──────
--- Chamada atômica pelo cliente: insere bundle para o usuário logado.
--- Retorna o nº de STLs adicionados ao portfólio.
+-- ─── 8. RPC pública: acquire_stl_bundle(stl_id, source, credit_cost) ──
+-- Chamada atômica pelo cliente: debita créditos, insere bundle e
+-- registra transação. Retorna JSON com resultado da operação.
+--
+-- Fluxo:
+--   1. Valida autenticação
+--   2. Valida source
+--   3. Valida créditos suficientes (se p_credit_cost > 0)
+--   4. Debita créditos em profiles (FOR UPDATE — evita race condition)
+--   5. Insere o bundle em user_acquired_stls (idempotente)
+--   6. Registra log em transactions (credits_added negativo = débito)
 
+DROP FUNCTION IF EXISTS public.acquire_stl_bundle(UUID, TEXT, INT) CASCADE;
 DROP FUNCTION IF EXISTS public.acquire_stl_bundle(UUID, TEXT) CASCADE;
 CREATE OR REPLACE FUNCTION public.acquire_stl_bundle(
-  p_stl_id UUID,
-  p_source  TEXT DEFAULT 'direct'
+  p_stl_id      UUID,
+  p_source      TEXT DEFAULT 'direct',
+  p_credit_cost INT  DEFAULT 0
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -225,32 +242,63 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_user_id UUID;
-  v_count   INT;
+  v_user_id       UUID;
+  v_count         INT;
+  v_credits_atual INT;
 BEGIN
-  -- Resolve o usuário autenticado
+  -- 1. Resolve o usuário autenticado
   v_user_id := auth.uid();
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Not authenticated' USING ERRCODE = '42501';
   END IF;
 
-  -- Valida source
+  -- 2. Valida source
   IF p_source NOT IN ('direct', 'bundle_child', 'gift', 'import') THEN
     RAISE EXCEPTION 'Invalid source: %', p_source USING ERRCODE = '22023';
   END IF;
 
-  -- Insere o bundle (idempotente)
+  -- 3 & 4. Valida e debita créditos (somente quando há custo)
+  IF p_credit_cost > 0 THEN
+    -- FOR UPDATE trava a linha para evitar race condition de saldo negativo
+    SELECT credits INTO v_credits_atual
+      FROM public.profiles
+     WHERE id = v_user_id
+       FOR UPDATE;
+
+    IF v_credits_atual IS NULL OR v_credits_atual < p_credit_cost THEN
+      RAISE EXCEPTION 'Insufficient credits: have %, need %',
+        coalesce(v_credits_atual, 0), p_credit_cost
+        USING ERRCODE = '42501';
+    END IF;
+
+    UPDATE public.profiles
+       SET credits    = credits - p_credit_cost,
+           updated_at = now()
+     WHERE id = v_user_id;
+
+    -- 6. Registra débito em transactions
+    INSERT INTO public.transactions (user_id, credits_added, description, item_id)
+    VALUES (
+      v_user_id,
+      -p_credit_cost,
+      'Download STL: ' || p_stl_id::text,
+      p_stl_id
+    );
+  END IF;
+
+  -- 5. Insere o bundle (idempotente via ON CONFLICT DO NOTHING)
   v_count := public.insert_stl_bundle(v_user_id, p_stl_id, p_source);
 
   RETURN json_build_object(
-    'ok',        true,
-    'stl_id',    p_stl_id,
-    'user_id',   v_user_id,
-    'source',    p_source,
-    'acquired',  v_count
+    'ok',           true,
+    'stl_id',       p_stl_id,
+    'user_id',      v_user_id,
+    'source',       p_source,
+    'acquired',     v_count,
+    'credits_used', p_credit_cost
   );
 END;
 $$;
 
 -- Permite que usuários autenticados chamem o RPC via anon key
-GRANT EXECUTE ON FUNCTION public.acquire_stl_bundle(UUID, TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.acquire_stl_bundle(UUID, TEXT, INT) TO authenticated;
