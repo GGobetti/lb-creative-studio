@@ -278,12 +278,11 @@ BEGIN
      WHERE id = v_user_id;
 
     -- 6. Registra débito em transactions
-    INSERT INTO public.transactions (user_id, credits_added, description, item_id)
+    INSERT INTO public.transactions (user_id, credits_added, description)
     VALUES (
       v_user_id,
       -p_credit_cost,
-      'Download STL: ' || p_stl_id::text,
-      p_stl_id
+      'Download STL: ' || p_stl_id::text
     );
   END IF;
 
