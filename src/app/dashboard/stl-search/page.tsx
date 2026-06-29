@@ -223,10 +223,18 @@ export default function StlSearchPage() {
         // Fetch STL details for all favorites
         const { data: stlData, error: stlError } = await supabase
           .from("telegram_indexed_stls")
-          .select("id, title, thumbnail_url, telegram_group_id, telegram_group_name, telegram_message_id, file_size, file_size_bytes, created_at, tags, categories, parent_id, parts_count, printer_type, file_name, download_count, favorites_count")
+          .select("id, title, thumbnail_url, telegram_group_id, telegram_group_name, telegram_message_id, file_size_bytes, created_at, tags, categories, parent_id, parts_count, printer_type, file_name, download_count, favorites_count, photos")
           .in("id", favStlIds);
 
         if (stlError) throw stlError;
+
+        const formatBytes = (bytes: number | null | undefined) => {
+          if (!bytes || bytes === 0) return "0 B";
+          const k = 1024;
+          const sizes = ["B", "KB", "MB", "GB"];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+        };
 
         const formattedItems: StlItem[] = (stlData || []).map((item: any) => ({
           id: item.id,
@@ -235,10 +243,10 @@ export default function StlSearchPage() {
           telegramGroupId: item.telegram_group_id || "",
           telegramGroupName: item.telegram_group_name || "",
           telegramMessageId: item.telegram_message_id || 0,
-          fileSize: item.file_size || "0 B",
+          fileSize: formatBytes(item.file_size_bytes),
           fileSizeBytes: item.file_size_bytes || 0,
           addedAt: item.created_at || new Date().toISOString(),
-          photos: item.thumbnail_url ? [item.thumbnail_url] : [],
+          photos: item.photos && item.photos.length > 0 ? item.photos : (item.thumbnail_url ? [item.thumbnail_url] : []),
           downloadCount: item.download_count || 0,
           favoritesCount: item.favorites_count || 0,
           tags: item.tags || [],
