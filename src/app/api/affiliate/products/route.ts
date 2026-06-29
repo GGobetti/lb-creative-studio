@@ -41,15 +41,49 @@ async function enrichProductsWithFreshPrices(
   products: any[],
   adminId: string
 ): Promise<any[]> {
-  // Get OAuth token if available
-  const { data: credentials } = await supabase
+  // Get OAuth token and refresh if expired
+  let { data: credentials, error: credError } = await supabase
     .from('marketplace_credentials')
-    .select('access_token')
+    .select('access_token, refresh_token, expires_at')
     .eq('admin_id', adminId)
     .eq('marketplace', 'mercado_livre')
     .single();
 
-  const accessToken = credentials?.access_token;
+  if (credError || !credentials) {
+    console.warn('[Fresh Prices] No ML credentials found');
+    return products; // Return with cached prices
+  }
+
+  let accessToken = credentials.access_token;
+  const expiresAt = new Date(credentials.expires_at);
+
+  // Refresh token if expired
+  if (expiresAt < new Date()) {
+    try {
+      const { refreshMLAccessToken } = await import('@/lib/mercado-livre');
+      const refreshed = await refreshMLAccessToken(
+        credentials.refresh_token,
+        process.env.MERCADO_LIVRE_CLIENT_SECRET!
+      );
+
+      // Update credentials in DB
+      await supabase
+        .from('marketplace_credentials')
+        .update({
+          access_token: refreshed.access_token,
+          refresh_token: refreshed.refresh_token,
+          expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+        })
+        .eq('admin_id', adminId)
+        .eq('marketplace', 'mercado_livre');
+
+      accessToken = refreshed.access_token;
+      console.log('[Fresh Prices] Token refreshed successfully');
+    } catch (err) {
+      console.warn('[Fresh Prices] Token refresh failed - using cached prices:', err);
+      return products;
+    }
+  }
 
   // Fetch prices in parallel with max concurrency of 3
   const concurrency = 3;
