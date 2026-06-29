@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Heart, Download, MessageSquare, Calendar, HardDrive, FileText, ChevronLeft, ChevronRight, Trash2, Send, Plus, Upload, Loader2, Layers, Unlink, Package, Star, ImageIcon } from "lucide-react";
+import { X, Heart, Download, MessageSquare, Calendar, HardDrive, FileText, ChevronLeft, ChevronRight, Trash2, Send, Plus, Upload, Loader2, Layers, Unlink, Package, Star, ImageIcon, Check } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
 import { useAppStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
@@ -15,6 +15,7 @@ interface StlDetailsModalProps {
   onToggleFavorite: (id: string) => void;
   cost: number;
   isDownloading?: boolean;
+  hasAccess?: boolean;
   onTagClick?: (tag: string) => void;
   onDeleteSuccess?: (id: string) => void;
   onPhotosUpdate?: (id: string, updatedPhotos: string[], updatedThumbnailUrl: string) => void;
@@ -30,6 +31,7 @@ export function StlDetailsModal({
   onToggleFavorite,
   cost,
   isDownloading = false,
+  hasAccess = false,
   onTagClick,
   onDeleteSuccess,
   onPhotosUpdate,
@@ -728,8 +730,10 @@ export function StlDetailsModal({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-sm border ${
-                    isDownloading || isDownloadingAll
-                      ? "bg-muted text-muted-foreground cursor-not-allowed border-border/80"
+                    isDownloading || isDownloadingAll || hasAccess
+                      ? hasAccess
+                        ? "bg-green-900/40 border-green-500/50 text-green-200 cursor-default"
+                        : "bg-muted text-muted-foreground cursor-not-allowed border-border/80"
                       : "bg-primary border-primary hover:bg-transparent text-primary-foreground hover:text-primary"
                   }`}
                 >
@@ -737,6 +741,11 @@ export function StlDetailsModal({
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                       <span>{t("stlSearch.downloading", "Baixando...")}</span>
+                    </>
+                  ) : hasAccess ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Desbloqueado</span>
                     </>
                   ) : hasParts ? (
                     <>

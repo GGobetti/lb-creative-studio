@@ -20,6 +20,8 @@ interface StlGridProps {
   deleteMode?: boolean;
   /** IDs dos itens atualmente selecionados para delete */
   deleteSelection?: string[];
+  /** Set de STL IDs que o usuário já tem desbloqueados (bundling) */
+  acquiredStlIds?: Set<string>;
 }
 
 export function StlGrid({
@@ -35,6 +37,7 @@ export function StlGrid({
   mergeSelection = [],
   deleteMode = false,
   deleteSelection = [],
+  acquiredStlIds = new Set(),
 }: StlGridProps) {
   if (isLoading) {
     return (
@@ -75,6 +78,7 @@ export function StlGrid({
               onToggleFavorite={onToggleFavorite}
               cost={cost}
               isDownloading={downloadingIds.includes(item.id)}
+              hasAccess={acquiredStlIds.has(item.id)}
             />
             {/* Overlay de seleção no modo merge */}
             {mergeMode && (

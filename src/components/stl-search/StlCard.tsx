@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon, Calendar } from "lucide-react";
+import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon, Calendar, Check } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
 import { useAppStore } from "@/store/store";
 
@@ -23,6 +23,7 @@ interface StlCardProps {
   onToggleFavorite: (id: string) => void;
   cost?: number;
   isDownloading?: boolean;
+  hasAccess?: boolean;
 }
 
 export function StlCard({
@@ -33,6 +34,7 @@ export function StlCard({
   onToggleFavorite,
   cost = 0,
   isDownloading = false,
+  hasAccess = false,
 }: StlCardProps) {
   const photos = item.photos && item.photos.length > 0 ? item.photos : [item.imageUrl].filter(Boolean);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
@@ -99,11 +101,19 @@ export function StlCard({
           </div>
         )}
 
+        {/* Unlocked Badge */}
+        {hasAccess && (
+          <div className="absolute top-3 left-3 bg-green-900/40 border border-green-500/50 text-green-200 text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 backdrop-blur-sm">
+            <Check className="w-3 h-3" />
+            Desbloqueado
+          </div>
+        )}
+
         {/* Printer Type Badge */}
         {item.printer_type && item.printer_type !== "all" && (
           <div className={`absolute bottom-3 left-3 z-10 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border backdrop-blur-md shadow-sm ${
-            item.printer_type === "resin" 
-              ? "bg-purple-500/80 text-white border-purple-500/50 shadow-purple-500/20" 
+            item.printer_type === "resin"
+              ? "bg-purple-500/80 text-white border-purple-500/50 shadow-purple-500/20"
               : "bg-blue-500/80 text-white border-blue-500/50 shadow-blue-500/20"
           }`}>
             {item.printer_type === "resin" ? "Resina" : "FDM"}
@@ -183,10 +193,12 @@ export function StlCard({
             e.stopPropagation();
             onDownload(item.id);
           }}
-          disabled={isDownloading}
+          disabled={isDownloading || hasAccess}
           className={`w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer ${
             isDownloading
               ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
+              : hasAccess
+              ? "bg-green-900/40 border-green-500/50 text-green-200 cursor-default hover:bg-green-900/40"
               : "bg-primary border-primary hover:bg-transparent text-primary-foreground hover:text-primary shadow-sm"
           }`}
         >
@@ -194,6 +206,11 @@ export function StlCard({
             <>
               <div className="w-3.5 h-3.5 border-2 border-muted-foreground border-t-foreground rounded-full animate-spin" />
               <span>Baixando...</span>
+            </>
+          ) : hasAccess ? (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              <span>Desbloqueado</span>
             </>
           ) : (
             <>

@@ -91,6 +91,9 @@ export default function StlSearchPage() {
   const isAdmin = profile?.role === "sysadmin";
   const [favoriteItems, setFavoriteItems] = useState<StlItem[]>([]);
 
+  // Track user's acquired STLs (for showing "Desbloqueado" badge)
+  const [acquiredStlIds, setAcquiredStlIds] = useState<Set<string>>(new Set());
+
   // Debounce input search query (300ms)
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -149,6 +152,39 @@ export default function StlSearchPage() {
       }
     };
     fetchFavorites();
+  }, [profile]);
+
+  // Fetch user's acquired STLs (for bundling badges)
+  useEffect(() => {
+    if (!profile) return;
+    const fetchAcquiredStls = async () => {
+      try {
+        const supabase = getSupabaseBrowser();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const res = await fetch("/api/portfolio", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+
+        const portfolio = await res.json();
+        const allStlIds = new Set<string>();
+
+        // Collect all STL IDs from both sources
+        if (portfolio.makerworld) {
+          portfolio.makerworld.forEach((item: any) => allStlIds.add(item.stl_id));
+        }
+        if (portfolio.stlSearch) {
+          portfolio.stlSearch.forEach((item: any) => allStlIds.add(item.stl_id));
+        }
+
+        setAcquiredStlIds(allStlIds);
+      } catch (err) {
+        console.error("Error fetching user acquired STLs:", err);
+      }
+    };
+    fetchAcquiredStls();
   }, [profile]);
 
   // Reset para a primeira página sempre que filtros mudarem
@@ -1046,6 +1082,7 @@ export default function StlSearchPage() {
             mergeSelection={mergeSelection}
             deleteMode={deleteMode}
             deleteSelection={deleteSelection}
+            acquiredStlIds={acquiredStlIds}
           />
 
           {!categoryFilter && (
@@ -1167,6 +1204,7 @@ export default function StlSearchPage() {
           onToggleFavorite={handleToggleFavorite}
           cost={cost}
           isDownloading={downloadingIds.includes(selectedItem.id)}
+          hasAccess={acquiredStlIds.has(selectedItem.id)}
           onTagClick={(tag) => setSearchQuery(`#${tag}`)}
           onDeleteSuccess={(deletedId) => {
             setItems((prev) => prev.filter((i) => i.id !== deletedId));
