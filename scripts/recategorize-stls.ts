@@ -45,6 +45,13 @@ interface RecategorizationRule {
 }
 
 const rules: RecategorizationRule[] = [
+  // Religiosos
+  {
+    name: 'Religiosos',
+    whereCondition: (title) =>
+      /jesus|christ|maria|mary|cruz|cross|crucifix|angel|anjo|sagrado|holy|bible|biblia|saint|santo|church|igreja|pope|papa|altar|religiou|spiritual|deus|god|madonna|nativity|virgin mary|arcanjo|archangel michael/i.test(title),
+    categoriesToAdd: ['Religiosos'],
+  },
   // Articulados: flexi, articulated, etc
   {
     name: 'Articulados',

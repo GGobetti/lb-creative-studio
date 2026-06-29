@@ -95,6 +95,7 @@ export const STL_CATEGORIES = [
   'Casa & Cozinha',
   'Natureza & Animais',
   'Educação',
+  'Religiosos',
   'Joalheria & Acessórios',
   'Chaveiros',
   'Multipartes/NO AMS',
