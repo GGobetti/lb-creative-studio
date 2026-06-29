@@ -108,23 +108,31 @@ export async function fetchMLProductData(
         }
       }
 
-      // Strategy 2: search for items linked to this catalog product
+      // Strategy 2: search for items linked to this catalog product (up to 10 to find best price)
       try {
         const itemsResponse = await fetch(
-          `https://api.mercadolibre.com/products/${usedProductId}/items?limit=1`,
+          `https://api.mercadolibre.com/products/${usedProductId}/items?limit=10`,
           { headers }
         );
         if (itemsResponse.ok) {
           const itemsData = await itemsResponse.json();
-          const firstItem = itemsData.results?.[0] || itemsData[0];
-          console.log('[ML API] /products/items result:', JSON.stringify(firstItem)?.substring(0, 200));
-          if (firstItem?.price) {
+          const items = itemsData.results || itemsData;
+
+          // Find the item with the best (lowest) price
+          let bestItem = items[0];
+          if (items.length > 1) {
+            const bestPrice = Math.min(...items.map((item: any) => item.price || item.sale_price || Infinity));
+            bestItem = items.find((item: any) => (item.sale_price || item.price) === bestPrice) || items[0];
+          }
+
+          console.log('[ML API] /products/items result (best price):', JSON.stringify(bestItem)?.substring(0, 200));
+          if (bestItem?.price) {
             return {
               ...data,
               _source: 'products',
-              price: firstItem.sale_price || firstItem.price,
-              available_quantity: firstItem.available_quantity > 0 ? firstItem.available_quantity : 1,
-              sold_quantity: firstItem.sold_quantity || 0,
+              price: bestItem.sale_price || bestItem.price,
+              available_quantity: bestItem.available_quantity > 0 ? bestItem.available_quantity : 1,
+              sold_quantity: bestItem.sold_quantity || 0,
             };
           }
         }
