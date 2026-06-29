@@ -180,7 +180,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         })
 
       if (rpcError) {
-        console.error('[download-stl] acquire_stl_bundle error:', rpcError.message)
+        console.error('[download-stl] acquire_stl_bundle error:', {
+          message: rpcError.message,
+          code: rpcError.code,
+          details: rpcError.details,
+          hint: rpcError.hint,
+        })
 
         if (
           rpcError.message.includes('Insufficient credits') ||
@@ -190,7 +195,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
 
         return NextResponse.json(
-          { error: 'Erro ao processar aquisição do arquivo.' },
+          { error: `Erro ao processar aquisição: ${rpcError.message}` },
           { status: 500 }
         )
       }
