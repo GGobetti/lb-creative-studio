@@ -223,7 +223,7 @@ export default function StlSearchPage() {
         // Fetch STL details for all favorites
         const { data: stlData, error: stlError } = await supabase
           .from("telegram_indexed_stls")
-          .select("id, title, download_count, favorites_count, thumbnail_url")
+          .select("id, title, thumbnail_url, telegram_group_id, telegram_group_name, telegram_message_id, file_size, file_size_bytes, created_at, tags, categories, parent_id, parts_count, printer_type, file_name, download_count, favorites_count")
           .in("id", favStlIds);
 
         if (stlError) throw stlError;
@@ -231,9 +231,22 @@ export default function StlSearchPage() {
         const formattedItems: StlItem[] = (stlData || []).map((item: any) => ({
           id: item.id,
           title: item.title,
+          imageUrl: item.thumbnail_url || "",
+          telegramGroupId: item.telegram_group_id || "",
+          telegramGroupName: item.telegram_group_name || "",
+          telegramMessageId: item.telegram_message_id || 0,
+          fileSize: item.file_size || "0 B",
+          fileSizeBytes: item.file_size_bytes || 0,
+          addedAt: item.created_at || new Date().toISOString(),
+          photos: item.thumbnail_url ? [item.thumbnail_url] : [],
           downloadCount: item.download_count || 0,
           favoritesCount: item.favorites_count || 0,
-          thumbnail: item.thumbnail_url || "",
+          tags: item.tags || [],
+          categories: item.categories || [],
+          fileName: item.file_name || "",
+          parent_id: item.parent_id,
+          parts_count: item.parts_count || 0,
+          printer_type: item.printer_type,
         }));
 
         setFavoriteItems(formattedItems);
