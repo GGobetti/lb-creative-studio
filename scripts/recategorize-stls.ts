@@ -45,6 +45,28 @@ interface RecategorizationRule {
 }
 
 const rules: RecategorizationRule[] = [
+  // Articulados: flexi, articulated, etc
+  {
+    name: 'Articulados',
+    whereCondition: (title) =>
+      /articul|flexi|flexibl|spring|print.in.place|moving|poseable/i.test(title),
+    categoriesToAdd: ['Articulados'],
+    categoriesToRemove: ['NO-AMS'], // Articulados usam AMS, não NO-AMS
+  },
+  // Chaveiros
+  {
+    name: 'Chaveiros',
+    whereCondition: (title) =>
+      /chaveiro|keychain|key.chain|key.ring|portacha/i.test(title),
+    categoriesToAdd: ['Chaveiros'],
+  },
+  // Multipiece/Multicolor → Multipartes/NO-AMS
+  {
+    name: 'Multipiece/Multicolor → Multipartes/NO-AMS',
+    whereCondition: (title) =>
+      /multi.piece|multipiece|multi.color|multicolor/i.test(title),
+    categoriesToAdd: ['Multipartes/NO AMS'],
+  },
   // Esportes: Mascotes e jogadores
   {
     name: 'Mascotes esportivos',

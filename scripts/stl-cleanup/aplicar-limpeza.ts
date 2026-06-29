@@ -195,13 +195,30 @@ function cleanTitle(raw: string): string {
     .join(' ')
     .trim()
 
-  // ── 7. Adicionar sufixo padronizado ──────────────────────────────────────
+  // ── 7. Adicionar sufixos padronizados ────────────────────────────────────
+  const suffixes: string[] = []
+
+  // Multipartes / NO-AMS
   if (hasMultipartes || hasNoAms) {
     const parts = [
       hasMultipartes ? 'Multipartes' : null,
       hasNoAms ? 'NO-AMS' : null,
     ].filter(Boolean).join(' - ')
-    text = `${text} - (${parts})`
+    suffixes.push(`(${parts})`)
+  }
+
+  // Articulados
+  if (/articul|flexi|flexibl|spring|print.in.place|moving|poseable/i.test(raw)) {
+    suffixes.push('(Articulado)')
+  }
+
+  // Chaveiro
+  if (/chaveiro|keychain|key.chain|key.ring|portacha/i.test(raw)) {
+    suffixes.push('(Chaveiro)')
+  }
+
+  if (suffixes.length > 0) {
+    text = `${text} - ${suffixes.join(' ')}`
   }
 
   return text
