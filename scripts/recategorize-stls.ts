@@ -45,12 +45,16 @@ interface RecategorizationRule {
 }
 
 const rules: RecategorizationRule[] = [
-  // Religiosos (mais específico para evitar false positives)
+  // Religiosos (MUITO específico - só itens genuinamente religiosos)
   {
     name: 'Religiosos',
-    whereCondition: (title) =>
-      /jesus|maria|mary|cruz sagrada|crucifix|angel|anjo|sagrado|bible|biblia|saint|santo(?!s)|church|igreja|pope|papa|altar|religious|spiritual|madonna|nativity|virgin mary|arcanjo|archangel michael|espírito santo|pomba da paz/i.test(title) &&
-      !/godzilla|kratos|god of war|crossbow|michellangelo|luffy|godfather/i.test(title),
+    whereCondition: (title) => {
+      // Padrões genuinamente religiosos
+      const isReligious = /jesus|maria\s|maria$|cruz\s|cruz$|virgin\s|virgin$|arcanjo|archangel michael|espírito santo|pomba da paz|sagrada|holy\s|holy$|crucifix|cristo/i.test(title)
+      // Excluir false positives
+      const isFalsePositive = /saint\s+seiya|knight.*zodiac|godzilla|kratos|god\s+of\s+war|crossbow|michelangelo|tartaruga|luffy|godfather|mario|luigi|santos\s+(orca|jes)/i.test(title)
+      return isReligious && !isFalsePositive
+    },
     categoriesToAdd: ['Religiosos'],
   },
   // Articulados: flexi, articulated, etc
