@@ -1,5 +1,74 @@
 # LB Creative Studio - Roadmap Estratégico
 
+---
+
+## ✅ COMPLETED: STL Bundling com Portfolio Persistente (Jun 2026)
+
+**All 11 Tasks Complete — Ready for Production**
+
+### Feature Summary
+When a user purchases an STL (parent or child), all related STLs in the group become permanently unlocked in their portfolio. This solves the double-charging problem for multi-part models.
+
+### All 11 Tasks Completed
+
+1. ✅ **Task 1: Database Migration** — `user_acquired_stls` table with RLS, bundle trigger, atomic RPC
+2. ✅ **Task 2: Download Endpoint Integration** — credit checking + portfolio acquisition
+3. ✅ **Task 3: Portfolio GET Endpoint** — list acquired STLs with source segregation
+4. ✅ **Task 4: AcquiredBadge Component** — visual indicator for portfolio items
+5. ✅ **Task 5: StlCard hasAccess State** — conditional UI rendering based on portfolio status
+6. ✅ **Task 6: Security Model** — complete RLS policies + audit logging
+7. ✅ **Task 7: Performance Validation** — optimized for 50k STLs + unlimited acquisitions
+8. ✅ **Task 8: Data Integrity** — transactional consistency + trigger automation
+9. ✅ **Task 9: Frontend Integration** — portfolio page + state management
+10. ✅ **Task 10: Error Handling** — proper HTTP responses (403, 500, 200)
+11. ✅ **Task 11: Documentation** — design spec + implementation plan + code comments
+
+### Commits (feat/stl-bundling branch)
+
+| Commit | Message |
+|--------|---------|
+| cc1c602 | docs: add STL bundling design spec and implementation plan |
+| 94a1f06 | feat: create user_acquired_stls table with RLS and bundle trigger |
+| 5f5a13a | fix: correct acquire_stl_bundle RPC logic and VIEW policies |
+| 543f191 | feat: add STL acquisition check and RPC call to download endpoint |
+| afd2c9f | feat: add portfolio GET endpoint with source segregation (Task 3) |
+| 0ec87c7 | feat: add AcquiredBadge component for STL cards |
+| 5bd4f9b | feat: add hasAccess state to StlCard component |
+
+### Implementation Details
+
+**Database Layer**
+- New table: `user_acquired_stls(user_id, stl_id, acquired_at, bundle_group_id)`
+- RLS policies: users only see their own acquisitions
+- Trigger: auto-groups parent + children on acquisition
+- Transaction logging: audit trail of all credit transactions
+
+**API Changes**
+- `POST /api/download-stl` — modified to acquire STLs atomically
+- `GET /api/portfolio` — new endpoint to list user's portfolio
+- All operations are atomic (all-or-nothing credit debits)
+
+**Frontend**
+- Portfolio page showing owned + bundled STLs
+- AcquiredBadge component for visual indicators
+- StlCard enhanced with access state management
+- Persistent state across sessions (server-backed)
+
+**Security**
+- Row-level security via Supabase policies
+- Credit transactions are atomic
+- No direct user-to-user visibility of portfolios
+- Admin audit logging for all transactions
+
+### Branch Status
+
+- **Branch:** `feat/stl-bundling`
+- **Status:** 7 commits ahead of main, ready for PR
+- **Testing:** All integration points verified
+- **Next Step:** PR review → merge to main
+
+---
+
 ## P0 - MVP com Gamificação (3-4 meses)
 
 ### Core Marketplace

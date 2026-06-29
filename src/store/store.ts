@@ -6,7 +6,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { immer } from 'zustand/middleware/immer'
 import type { User } from '@supabase/supabase-js'
-import type { Profile } from '@/lib/supabase'
+import type { Profile, UserStlPortfolio } from '@/lib/supabase'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import type { XpSummary } from '@/types/xp'
 
@@ -102,9 +102,18 @@ interface XpSlice {
   refreshXpSummary: () => Promise<void>
 }
 
+// ─── Portfolio Slice ─────────────────────────────────────────────
+
+interface PortfolioSlice {
+  portfolioItems: UserStlPortfolio[]
+  isLoadingPortfolio: boolean
+  fetchPortfolio: () => Promise<void>
+  clearPortfolio: () => void
+}
+
 // ─── Combined Store ──────────────────────────────────────────────
 
-type Store = AuthSlice & UiSlice & PricingSlice & FeatureFlagsSlice & XpSlice
+type Store = AuthSlice & UiSlice & PricingSlice & FeatureFlagsSlice & XpSlice & PortfolioSlice
 
 export const useAppStore = create<Store>()(
   persist(
@@ -229,6 +238,38 @@ export const useAppStore = create<Store>()(
       setPricingSettings: (settings) =>
         set((s) => {
           s.pricingSettings = { ...s.pricingSettings, ...settings }
+        }),
+
+      // ── Portfolio ────────────────────────────────────────────────
+      portfolioItems: [],
+      isLoadingPortfolio: false,
+      fetchPortfolio: async () => {
+        set((s) => {
+          s.isLoadingPortfolio = true
+        })
+        try {
+          const res = await fetch('/api/portfolio')
+          if (!res.ok) {
+            throw new Error(`Portfolio API error: ${res.status}`)
+          }
+          const data = await res.json()
+          set((s) => {
+            s.portfolioItems = [
+              ...(data.makerworld || []),
+              ...(data.stlSearch || [])
+            ]
+            s.isLoadingPortfolio = false
+          })
+        } catch (err) {
+          console.error('Failed to fetch portfolio:', err)
+          set((s) => {
+            s.isLoadingPortfolio = false
+          })
+        }
+      },
+      clearPortfolio: () =>
+        set((s) => {
+          s.portfolioItems = []
         }),
     })),
     {
