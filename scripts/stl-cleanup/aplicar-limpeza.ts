@@ -58,6 +58,7 @@ const CREATOR_PREFIXES = [
   /^@avante3d\s*[-–\s]*/i,
   /^Print3DWorld\s*[-–\s]*/i,
   /^@?stl3dbrasil\s*[-–\s]*/i,
+  /^Boxi3d\s*[-–\s]*/i,
 ]
 
 const CREATOR_SUFFIXES = [
