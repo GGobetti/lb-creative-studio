@@ -205,8 +205,12 @@ export function STLViewer() {
 
       console.log('🎯 Raycast intersects:', intersects.length, intersects.length > 0 ? intersects[0] : 'none');
 
-      if (intersects.length > 0 && intersects[0].face) {
-        const faceIndex = intersects[0].face.a;
+      // IMPORTANT: use faceIndex (the actual triangle index), not face.a —
+      // face.a/b/c are VERTEX indices into the position buffer. For this
+      // non-indexed geometry, face.a equals faceIndex*3, so using it directly
+      // as a "face index" silently broke every downstream index calculation.
+      if (intersects.length > 0 && intersects[0].face && intersects[0].faceIndex !== undefined) {
+        const faceIndex = intersects[0].faceIndex!;
         console.log('🖌️ Face detected:', faceIndex, 'Brush size:', currentPainting.brushSize);
 
         const selectedFaces = expandBrushSelection(

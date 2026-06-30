@@ -9,9 +9,9 @@ export function pickFaceAtRaycast(
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObject(mesh);
 
-  if (intersects.length === 0 || !intersects[0].face) return null;
+  if (intersects.length === 0 || intersects[0].faceIndex === undefined) return null;
 
-  return intersects[0].face.a;
+  return intersects[0].faceIndex;
 }
 
 export function expandBrushSelection(

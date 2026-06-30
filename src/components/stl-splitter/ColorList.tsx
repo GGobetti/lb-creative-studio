@@ -23,7 +23,10 @@ export function ColorList() {
       {Array.from(colors.values()).map((color) => (
         <div
           key={color.id}
-          onClick={() => selectColor(color.id)}
+          onClick={() => {
+            console.log('🎯 Color selected:', color.id, color.name);
+            selectColor(color.id);
+          }}
           className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${
             selectedColorId === color.id
               ? 'bg-blue-100 dark:bg-blue-900 border-2 border-blue-500'
