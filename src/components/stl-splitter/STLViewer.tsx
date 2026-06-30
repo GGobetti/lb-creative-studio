@@ -6,15 +6,13 @@ import {
   PerspectiveCamera,
   WebGLRenderer,
   Mesh,
-  MeshPhongMaterial,
+  MeshStandardMaterial,
   Raycaster,
   Vector2,
   Color,
   Vector3,
-  PointLight,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { EdgesGeometry, LineSegments, LineBasicMaterial } from 'three';
 import * as THREE from 'three';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { expandBrushSelection } from '@/lib/stl-splitter/geometry-utils';
@@ -65,12 +63,24 @@ export function STLViewer() {
       bounds: model.boundingBox,
     });
 
-    const material = new MeshPhongMaterial({
-      color: 0x555555,
-      emissive: 0x111111,
-      shininess: 50,
-      flatShading: false,
-      wireframe: false,
+    // Ensure normals exist so lighting can reveal curvature/contours
+    if (!model.geometry.attributes.normal) {
+      model.geometry.computeVertexNormals();
+    }
+
+    // Initialize a vertex color attribute (normalized 0-1 floats, avoids
+    // the un-normalized Uint8 bug that previously blew out / hid the mesh)
+    if (!model.geometry.attributes.color) {
+      const positionCount = model.geometry.attributes.position.count;
+      const initialColors = new Float32Array(positionCount * 3).fill(0.55);
+      model.geometry.setAttribute('color', new THREE.BufferAttribute(initialColors, 3));
+    }
+
+    const material = new MeshStandardMaterial({
+      color: 0xffffff,
+      vertexColors: true,
+      roughness: 0.6,
+      metalness: 0.05,
       side: THREE.DoubleSide,
     });
     const mesh = new Mesh(model.geometry, material);
@@ -78,30 +88,22 @@ export function STLViewer() {
     scene.add(mesh);
     console.log('✅ Mesh added to scene');
 
-    // Add edge visualization for better geometry visibility
-    const edges = new EdgesGeometry(model.geometry, 15);
-    const edgesMaterial = new LineBasicMaterial({
-      color: 0xaaaaaa,
-      linewidth: 2,
-      fog: false,
-    });
-    const edgesMesh = new LineSegments(edges, edgesMaterial);
-    scene.add(edgesMesh);
-    console.log('✨ Edges added for better visibility');
+    // Lighting tuned to reveal surface curvature on smooth/organic models
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.1);
+    scene.add(hemiLight);
 
-    // Add multiple lights for better illumination
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-    console.log('🌟 Ambient light added');
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(1, 1.5, 2);
+    scene.add(keyLight);
 
-    const light1 = new PointLight(0xffffff, 0.8);
-    light1.position.set(100, 100, 100);
-    scene.add(light1);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    fillLight.position.set(-2, -1, -1);
+    scene.add(fillLight);
 
-    const light2 = new PointLight(0xffffff, 0.5);
-    light2.position.set(-100, -100, 100);
-    scene.add(light2);
-    console.log('💡 Point lights added');
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    rimLight.position.set(0, 2, -2);
+    scene.add(rimLight);
+    console.log('💡 Lighting rig added (hemisphere + 3 directional)');
 
     // Setup axes helper in separate corner viewer
     if (axesCanvasRef.current && !axesRendererRef.current) {
@@ -131,25 +133,40 @@ export function STLViewer() {
       console.log('🧭 Axes helper corner added');
     }
 
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
     if (model.boundingBox) {
       const size = model.boundingBox.getSize(new Vector3());
       const center = model.boundingBox.getCenter(new Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
       const fov = camera.fov * (Math.PI / 180);
       let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
-      cameraZ *= 1.25;
+      cameraZ *= 1.5;
+
+      // Scale near/far clip planes to the model so it isn't clipped or z-fighting
+      camera.near = Math.max(maxDim / 1000, 0.01);
+      camera.far = maxDim * 50;
+      camera.updateProjectionMatrix();
+
       camera.position.set(center.x, center.y, center.z + cameraZ);
       camera.lookAt(center);
+
+      // Orbit around the model's actual center, not world origin
+      controls.target.copy(center);
+      controls.minDistance = maxDim * 0.1;
+      controls.maxDistance = maxDim * 10;
+      controls.update();
+
       console.log('📷 Camera positioned:', {
         size,
         center,
         cameraPos: camera.position,
+        near: camera.near,
+        far: camera.far,
       });
     }
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
 
     const raycaster = new Raycaster();
     const mouse = new Vector2();
@@ -233,27 +250,21 @@ export function STLViewer() {
 
   useEffect(() => {
     if (!meshRef.current || !model || !model.geometry) return;
+    if (!model.geometry.attributes.color) return;
 
-    const positionCount = model.geometry.attributes.position.count;
-
-    if (!model.geometry.attributes.color) {
-      const colors = new Uint8Array(positionCount * 3);
-      colors.fill(200);
-      model.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-      (meshRef.current.material as any).vertexColors = true;
-    }
-
-    const colors = model.geometry.attributes.color.array as Uint8Array;
-    colors.fill(200);
+    // Float32, normalized 0-1 range — avoids the un-normalized Uint8 bug
+    // that previously washed out / hid the mesh entirely.
+    const colors = model.geometry.attributes.color.array as Float32Array;
+    colors.fill(0.55);
 
     painting.colorMap.forEach((colorId, faceIndex) => {
       const color = painting.colors.get(colorId);
       if (!color) return;
 
       const hex = color.hex.replace('#', '');
-      const r = parseInt(hex.substring(0, 2), 16);
-      const g = parseInt(hex.substring(2, 4), 16);
-      const b = parseInt(hex.substring(4, 6), 16);
+      const r = parseInt(hex.substring(0, 2), 16) / 255;
+      const g = parseInt(hex.substring(2, 4), 16) / 255;
+      const b = parseInt(hex.substring(4, 6), 16) / 255;
 
       for (let i = 0; i < 3; i++) {
         const vertexIndex = faceIndex * 3 + i;
