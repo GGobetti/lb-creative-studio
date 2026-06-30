@@ -29,7 +29,7 @@ export function STLViewer() {
   const paintFaces = useSTLSplitterStore((state) => state.paintFaces);
 
   useEffect(() => {
-    if (!containerRef.current || !model.geometry) return;
+    if (typeof window === 'undefined' || !containerRef.current || !model.geometry) return;
 
     const scene = new Scene();
     scene.background = new Color(0xf5f5f5);
