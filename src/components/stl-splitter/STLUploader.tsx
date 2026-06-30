@@ -23,7 +23,7 @@ export function STLUploader() {
       setLoading(true);
       setError(null);
       const result = await parseSTL(file);
-      setGeometry(result.geometry, file);
+      setGeometry(result.geometry, file.name);
       setLoading(false);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to parse STL');

@@ -18,7 +18,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
-    if (!model.geometry || painting.colors.size === 0) {
+    if (!model || !model.geometry || painting.colors.size === 0) {
       alert('No model or colors to export');
       return;
     }
@@ -67,8 +67,8 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
           <p className="text-sm font-medium mb-2">Export Summary</p>
           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
             <li>📦 Parts: {painting.colors.size}</li>
-            <li>📐 Vertices: {model.vertexCount.toLocaleString()}</li>
-            <li>🔺 Faces: {model.faceCount.toLocaleString()}</li>
+            <li>📐 Vertices: {model?.vertexCount?.toLocaleString() || '0'}</li>
+            <li>🔺 Faces: {model?.faceCount?.toLocaleString() || '0'}</li>
           </ul>
         </div>
 

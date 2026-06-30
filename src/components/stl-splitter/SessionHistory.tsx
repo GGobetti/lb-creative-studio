@@ -5,7 +5,7 @@ import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { RotateCcw, Trash2, ChevronDown } from 'lucide-react';
 
 export function SessionHistory() {
-  const sessions = useSTLSplitterStore((state) => state.history.sessions);
+  const sessions = useSTLSplitterStore((state) => state.sessions);
   const deleteSession = useSTLSplitterStore((state) => state.deleteSession);
   const loadSession = useSTLSplitterStore((state) => state.loadSession);
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -41,7 +41,7 @@ export function SessionHistory() {
                   })}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {session.metadata.partCount} parts • {session.metadata.faceCount.toLocaleString()} faces
+                  {session.metadata.colorGroupCount} parts • {session.metadata.faceCount.toLocaleString()} faces
                 </p>
               </div>
 

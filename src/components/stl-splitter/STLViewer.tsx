@@ -29,7 +29,7 @@ export function STLViewer() {
   const paintFaces = useSTLSplitterStore((state) => state.paintFaces);
 
   useEffect(() => {
-    if (!containerRef.current || !model.geometry) return;
+    if (!containerRef.current || !model || !model.geometry) return;
 
     const scene = new Scene();
     scene.background = new Color(0xf5f5f5);
@@ -45,7 +45,7 @@ export function STLViewer() {
 
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.pixelRatio = window.devicePixelRatio;
+    renderer.setPixelRatio(window.devicePixelRatio);
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -131,10 +131,10 @@ export function STLViewer() {
         containerRef.current.removeChild(renderer.domElement);
       }
     };
-  }, [model.geometry, model.boundingBox]);
+  }, [model?.geometry, model?.boundingBox]);
 
   useEffect(() => {
-    if (!meshRef.current || !model.geometry) return;
+    if (!meshRef.current || !model || !model.geometry) return;
 
     const positionCount = model.geometry.attributes.position.count;
 
@@ -168,7 +168,7 @@ export function STLViewer() {
     });
 
     model.geometry.attributes.color.needsUpdate = true;
-  }, [painting.colorMap, painting.colors, model.geometry]);
+  }, [painting.colorMap, painting.colors, model?.geometry]);
 
   return (
     <div
