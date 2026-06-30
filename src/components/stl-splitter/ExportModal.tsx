@@ -28,7 +28,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       setExportProgress(0);
 
       setExportProgress(50);
-      const blob = export3MF(model.geometry, painting.colorMap, painting.colors);
+      const blob = export3MF(model.geometry!, painting.colorMap, painting.colors);
 
       setExportProgress(75);
       const url = URL.createObjectURL(blob);
