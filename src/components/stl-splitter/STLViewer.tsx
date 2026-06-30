@@ -21,9 +21,13 @@ import { expandBrushSelection } from '@/lib/stl-splitter/geometry-utils';
 
 export function STLViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const axesCanvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
+  const axesRendererRef = useRef<WebGLRenderer | null>(null);
   const sceneRef = useRef<Scene | null>(null);
+  const axesSceneRef = useRef<Scene | null>(null);
   const meshRef = useRef<Mesh | null>(null);
+  const axesCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
 
   const model = useSTLSplitterStore((state) => state.model);
   const painting = useSTLSplitterStore((state) => state.painting);
@@ -38,7 +42,7 @@ export function STLViewer() {
 
     console.log('🎨 Creating Three.js scene...');
     const scene = new Scene();
-    scene.background = new Color(0xf5f5f5);
+    scene.background = new Color(0x2a2a2a);
     sceneRef.current = scene;
 
     const camera = new PerspectiveCamera(
@@ -62,11 +66,12 @@ export function STLViewer() {
     });
 
     const material = new MeshPhongMaterial({
-      color: 0x888888,
-      emissive: 0x000000,
-      shininess: 100,
+      color: 0x555555,
+      emissive: 0x111111,
+      shininess: 50,
       flatShading: false,
       wireframe: false,
+      side: THREE.DoubleSide,
     });
     const mesh = new Mesh(model.geometry, material);
     meshRef.current = mesh;
@@ -74,8 +79,12 @@ export function STLViewer() {
     console.log('✅ Mesh added to scene');
 
     // Add edge visualization for better geometry visibility
-    const edges = new EdgesGeometry(model.geometry, 20);
-    const edgesMaterial = new LineBasicMaterial({ color: 0x444444, linewidth: 1 });
+    const edges = new EdgesGeometry(model.geometry, 15);
+    const edgesMaterial = new LineBasicMaterial({
+      color: 0xaaaaaa,
+      linewidth: 2,
+      fog: false,
+    });
     const edgesMesh = new LineSegments(edges, edgesMaterial);
     scene.add(edgesMesh);
     console.log('✨ Edges added for better visibility');
@@ -94,12 +103,33 @@ export function STLViewer() {
     scene.add(light2);
     console.log('💡 Point lights added');
 
-    // Add axes helper for orientation
-    const axesHelper = new THREE.AxesHelper(Math.max(model.boundingBox.max.x - model.boundingBox.min.x,
-                                                       model.boundingBox.max.y - model.boundingBox.min.y,
-                                                       model.boundingBox.max.z - model.boundingBox.min.z) * 0.3);
-    scene.add(axesHelper);
-    console.log('🧭 Axes helper added');
+    // Setup axes helper in separate corner viewer
+    if (axesCanvasRef.current && !axesRendererRef.current) {
+      const axesRenderer = new WebGLRenderer({ canvas: axesCanvasRef.current, antialias: true, alpha: true });
+      axesRenderer.setSize(120, 120);
+      axesRenderer.setPixelRatio(window.devicePixelRatio);
+      axesRendererRef.current = axesRenderer;
+
+      const axesScene = new Scene();
+      axesScene.background = null;
+      axesSceneRef.current = axesScene;
+
+      const axesCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+      axesCamera.position.set(50, 50, 50);
+      axesCamera.lookAt(0, 0, 0);
+      axesCameraRef.current = axesCamera;
+
+      const axesHelper = new THREE.AxesHelper(60);
+      axesScene.add(axesHelper);
+
+      // Render axes once per frame
+      const renderAxes = () => {
+        requestAnimationFrame(renderAxes);
+        axesRenderer.render(axesScene, axesCamera);
+      };
+      renderAxes();
+      console.log('🧭 Axes helper corner added');
+    }
 
     if (model.boundingBox) {
       const size = model.boundingBox.getSize(new Vector3());
@@ -239,9 +269,16 @@ export function STLViewer() {
   }, [painting.colorMap, painting.colors, model?.geometry]);
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full bg-gray-100 dark:bg-gray-900 rounded-lg"
-    />
+    <div className="relative w-full h-full">
+      <div
+        ref={containerRef}
+        className="w-full h-full bg-gray-900 rounded-lg"
+      />
+      <canvas
+        ref={axesCanvasRef}
+        className="absolute bottom-4 left-4 border border-gray-600 rounded bg-transparent"
+        style={{ width: '120px', height: '120px' }}
+      />
+    </div>
   );
 }
