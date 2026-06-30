@@ -43,6 +43,8 @@ export interface PaintingState {
   brushSize: number; // 5-50 pixels
   selectedColorId: ColorID | null; // Currently selected color for painting
   activeTool: PaintTool;
+  wandThreshold: number; // degrees 5-60, angle limit for magic wand
+  bucketThreshold: number; // degrees 0-90, angle limit for flood fill (0 = unlimited)
 }
 
 /**
@@ -81,6 +83,9 @@ export interface STLSplitterState {
 
   // Painting state
   painting: PaintingState;
+
+  // Undo history (snapshots of colorMap before each paint operation)
+  colorMapHistory: Map<FaceIndex, ColorID>[];
 
   // History/Sessions
   sessions: SavedSession[];

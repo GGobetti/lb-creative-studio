@@ -237,14 +237,20 @@ export function STLViewer() {
             console.log('⏳ Adjacency not ready yet, falling back to single face');
             selectedFaces = [faceIndex];
           } else {
-            selectedFaces = floodFillFaces(faceIndex, adjacencyRef.current, currentPainting.colorMap);
+            selectedFaces = floodFillFaces(
+              faceIndex,
+              adjacencyRef.current,
+              currentPainting.colorMap,
+              model.geometry!,
+              currentPainting.bucketThreshold
+            );
           }
         } else if (tool === 'wand') {
           if (!adjacencyRef.current) {
             console.log('⏳ Adjacency not ready yet, falling back to single face');
             selectedFaces = [faceIndex];
           } else {
-            selectedFaces = magicWandFill(faceIndex, adjacencyRef.current, model.geometry!, 25);
+            selectedFaces = magicWandFill(faceIndex, adjacencyRef.current, model.geometry!, currentPainting.wandThreshold);
           }
         } else {
           // brush

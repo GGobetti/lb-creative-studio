@@ -108,12 +108,21 @@ export function buildFaceAdjacency(geometry: BufferGeometry): Map<number, number
 }
 
 // Bucket (flood fill): BFS from startFace expanding through connected edges.
-// Stops at already-painted boundaries if respectBoundaries=true.
+// angleThresholdDegrees: if > 0, stops expanding when neighbor normal deviates
+// more than this angle from the start face's normal (0 = unlimited fill).
 export function floodFillFaces(
   startFace: number,
   adjacency: Map<number, number[]>,
-  existingColorMap?: Map<number, string>
+  existingColorMap?: Map<number, string>,
+  geometry?: BufferGeometry,
+  angleThresholdDegrees: number = 0
 ): number[] {
+  const positions = geometry?.attributes.position.array as Float32Array | undefined;
+  const startNormal = positions ? getFaceNormal(positions, startFace) : null;
+  const cosThreshold = (angleThresholdDegrees > 0 && startNormal)
+    ? Math.cos((angleThresholdDegrees * Math.PI) / 180)
+    : -Infinity;
+
   const visited = new Set<number>([startFace]);
   const queue = [startFace];
 
@@ -124,18 +133,22 @@ export function floodFillFaces(
     for (const neighbor of neighbors) {
       if (visited.has(neighbor)) continue;
       // Stop expanding into faces already painted with a DIFFERENT color
-      // (same color = ok to expand into, unpainted = always expand)
       if (existingColorMap) {
         const neighborColor = existingColorMap.get(neighbor);
         const startColor = existingColorMap.get(startFace);
         if (neighborColor && neighborColor !== startColor) continue;
+      }
+      // Angle threshold: don't cross sharp creases
+      if (startNormal && positions && cosThreshold > -Infinity) {
+        const neighborNormal = getFaceNormal(positions, neighbor);
+        if (startNormal.dot(neighborNormal) < cosThreshold) continue;
       }
       visited.add(neighbor);
       queue.push(neighbor);
     }
   }
 
-  console.log(`🪣 Flood fill from face ${startFace}: selected ${visited.size} faces`);
+  console.log(`🪣 Flood fill from face ${startFace} (angle limit: ${angleThresholdDegrees}°): selected ${visited.size} faces`);
   return Array.from(visited);
 }
 

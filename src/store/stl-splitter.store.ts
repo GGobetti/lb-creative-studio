@@ -91,6 +91,8 @@ const initialPaintingState: PaintingState = {
   brushSize: 5,
   selectedColorId: null,
   activeTool: 'brush',
+  wandThreshold: 15,
+  bucketThreshold: 60,
 };
 
 /**
@@ -110,6 +112,7 @@ const initialUIState: STLSplitterUIState = {
 const initialState: STLSplitterState = {
   model: null,
   painting: initialPaintingState,
+  colorMapHistory: [],
   sessions: [],
   ui: initialUIState,
 };
@@ -121,11 +124,14 @@ interface STLSplitterStoreActions {
 
   // Painting actions
   paintFaces: (faceIndices: FaceIndex[], colorId: ColorID) => void;
+  undoPaint: () => void;
   addColor: () => ColorID;
   selectColor: (colorId: ColorID | null) => void;
   removeColor: (colorId: ColorID) => void;
   setBrushSize: (size: number) => void;
   setActiveTool: (tool: PaintTool) => void;
+  setWandThreshold: (degrees: number) => void;
+  setBucketThreshold: (degrees: number) => void;
 
   // UI actions
   setLoading: (isLoading: boolean) => void;
@@ -180,6 +186,9 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
   // Painting actions
   paintFaces: (faceIndices, colorId) => {
     set((state) => {
+      // Snapshot current colorMap for undo (keep last 20)
+      const newHistory = [...state.colorMapHistory, new Map(state.painting.colorMap)].slice(-20);
+
       const newColorMap = new Map(state.painting.colorMap);
 
       for (const faceIndex of faceIndices) {
@@ -198,11 +207,28 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
       }
 
       return {
+        colorMapHistory: newHistory,
         painting: {
           ...state.painting,
           colorMap: newColorMap,
           colors,
         },
+      };
+    });
+  },
+
+  undoPaint: () => {
+    set((state) => {
+      if (state.colorMapHistory.length === 0) {
+        console.log('↩️ Undo: nothing to undo');
+        return state;
+      }
+      const history = [...state.colorMapHistory];
+      const prevColorMap = history.pop()!;
+      console.log(`↩️ Undo: restoring colorMap with ${prevColorMap.size} entries`);
+      return {
+        colorMapHistory: history,
+        painting: { ...state.painting, colorMap: prevColorMap },
       };
     });
   },
@@ -292,6 +318,18 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
         ...state.painting,
         activeTool: tool,
       },
+    }));
+  },
+
+  setWandThreshold: (degrees) => {
+    set((state) => ({
+      painting: { ...state.painting, wandThreshold: Math.max(5, Math.min(60, degrees)) },
+    }));
+  },
+
+  setBucketThreshold: (degrees) => {
+    set((state) => ({
+      painting: { ...state.painting, bucketThreshold: Math.max(0, Math.min(90, degrees)) },
     }));
   },
 
