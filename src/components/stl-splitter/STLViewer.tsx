@@ -14,6 +14,7 @@ import {
   PointLight,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { EdgesGeometry, LineSegments, LineBasicMaterial } from 'three';
 import * as THREE from 'three';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { expandBrushSelection } from '@/lib/stl-splitter/geometry-utils';
@@ -61,19 +62,44 @@ export function STLViewer() {
     });
 
     const material = new MeshPhongMaterial({
-      color: 0xcccccc,
-      emissive: 0x222222,
-      shininess: 200,
+      color: 0x888888,
+      emissive: 0x000000,
+      shininess: 100,
+      flatShading: false,
+      wireframe: false,
     });
     const mesh = new Mesh(model.geometry, material);
     meshRef.current = mesh;
     scene.add(mesh);
     console.log('✅ Mesh added to scene');
 
-    const light = new PointLight(0xffffff, 1);
-    light.position.set(50, 50, 50);
-    scene.add(light);
-    console.log('💡 Light added');
+    // Add edge visualization for better geometry visibility
+    const edges = new EdgesGeometry(model.geometry, 20);
+    const edgesMaterial = new LineBasicMaterial({ color: 0x444444, linewidth: 1 });
+    const edgesMesh = new LineSegments(edges, edgesMaterial);
+    scene.add(edgesMesh);
+    console.log('✨ Edges added for better visibility');
+
+    // Add multiple lights for better illumination
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    console.log('🌟 Ambient light added');
+
+    const light1 = new PointLight(0xffffff, 0.8);
+    light1.position.set(100, 100, 100);
+    scene.add(light1);
+
+    const light2 = new PointLight(0xffffff, 0.5);
+    light2.position.set(-100, -100, 100);
+    scene.add(light2);
+    console.log('💡 Point lights added');
+
+    // Add axes helper for orientation
+    const axesHelper = new THREE.AxesHelper(Math.max(model.boundingBox.max.x - model.boundingBox.min.x,
+                                                       model.boundingBox.max.y - model.boundingBox.min.y,
+                                                       model.boundingBox.max.z - model.boundingBox.min.z) * 0.3);
+    scene.add(axesHelper);
+    console.log('🧭 Axes helper added');
 
     if (model.boundingBox) {
       const size = model.boundingBox.getSize(new Vector3());
@@ -99,17 +125,31 @@ export function STLViewer() {
     const mouse = new Vector2();
 
     const handleClick = (event: MouseEvent) => {
-      if (!meshRef.current) return;
+      if (!meshRef.current) {
+        console.log('❌ Click: no mesh');
+        return;
+      }
+
+      if (!painting.selectedColorId) {
+        console.log('⚠️ Click: no color selected');
+        return;
+      }
 
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
+      console.log('🖱️ Click detected at:', { x: mouse.x, y: mouse.y });
+
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObject(meshRef.current);
 
-      if (intersects.length > 0 && intersects[0].face && painting.selectedColorId) {
+      console.log('🎯 Raycast intersects:', intersects.length, intersects.length > 0 ? intersects[0] : 'none');
+
+      if (intersects.length > 0 && intersects[0].face) {
         const faceIndex = intersects[0].face.a;
+        console.log('🖌️ Face detected:', faceIndex, 'Brush size:', painting.brushSize);
+
         const selectedFaces = expandBrushSelection(
           faceIndex,
           painting.brushSize,
@@ -119,7 +159,10 @@ export function STLViewer() {
           { width: renderer.domElement.clientWidth, height: renderer.domElement.clientHeight }
         );
 
+        console.log('🎨 Painting', selectedFaces.length, 'faces with color:', painting.selectedColorId);
         paintFaces(selectedFaces, painting.selectedColorId);
+      } else {
+        console.log('❌ No face intersection found');
       }
     };
 
