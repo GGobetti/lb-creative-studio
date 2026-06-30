@@ -171,7 +171,7 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
       faceCount: Math.floor(faceCount),
     };
 
-    set({ model: newModel });
+    set({ model: newModel, ui: { ...initialUIState, mode: 'painting' } });
   },
 
   // Painting actions

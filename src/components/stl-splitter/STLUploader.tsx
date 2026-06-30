@@ -13,20 +13,29 @@ export function STLUploader() {
   const [isDragging, setIsDragging] = React.useState(false);
 
   const handleParse = async (file: File) => {
+    console.log('🔧 STLUploader: Starting parse for', file.name);
     const validation = validateSTLFile(file);
+    console.log('✅ Validation result:', validation);
     if (!validation.valid) {
-      setError(validation.error || 'Invalid STL file');
+      const errorMsg = validation.error || 'Invalid STL file';
+      console.error('❌ Validation failed:', errorMsg);
+      setError(errorMsg);
       return;
     }
 
     try {
+      console.log('⏳ Starting STL parse...');
       setLoading(true);
       setError(null);
       const result = await parseSTL(file);
+      console.log('✅ Parse complete. Geometry:', result.geometry);
       setGeometry(result.geometry, file.name);
+      console.log('✅ Mode switched to painting');
       setLoading(false);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to parse STL');
+      const msg = error instanceof Error ? error.message : 'Failed to parse STL';
+      console.error('❌ Parse error:', msg, error);
+      setError(msg);
       setLoading(false);
     }
   };
