@@ -55,6 +55,11 @@ export function STLViewer() {
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    console.log('🔧 Geometry details:', {
+      vertexCount: model.geometry.attributes.position.count,
+      bounds: model.boundingBox,
+    });
+
     const material = new MeshPhongMaterial({
       color: 0xcccccc,
       emissive: 0x222222,
@@ -63,19 +68,27 @@ export function STLViewer() {
     const mesh = new Mesh(model.geometry, material);
     meshRef.current = mesh;
     scene.add(mesh);
+    console.log('✅ Mesh added to scene');
 
     const light = new PointLight(0xffffff, 1);
     light.position.set(50, 50, 50);
     scene.add(light);
+    console.log('💡 Light added');
 
     if (model.boundingBox) {
       const size = model.boundingBox.getSize(new Vector3());
+      const center = model.boundingBox.getCenter(new Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
       const fov = camera.fov * (Math.PI / 180);
       let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
       cameraZ *= 1.25;
-      camera.position.z = cameraZ;
-      camera.lookAt(model.boundingBox.getCenter(new Vector3()));
+      camera.position.set(center.x, center.y, center.z + cameraZ);
+      camera.lookAt(center);
+      console.log('📷 Camera positioned:', {
+        size,
+        center,
+        cameraPos: camera.position,
+      });
     }
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -112,8 +125,13 @@ export function STLViewer() {
 
     renderer.domElement.addEventListener('click', handleClick);
 
+    let frameCount = 0;
     const animate = () => {
       requestAnimationFrame(animate);
+      frameCount++;
+      if (frameCount === 1) {
+        console.log('▶️ Animation frame 1 rendered');
+      }
       controls.update();
       renderer.render(scene, camera);
     };
