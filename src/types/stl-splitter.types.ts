@@ -35,11 +35,14 @@ export interface STLModel {
 /**
  * Represents the painting state - which faces are assigned to which colors
  */
+export type PaintTool = 'brush' | 'bucket' | 'wand';
+
 export interface PaintingState {
   colorMap: Map<FaceIndex, ColorID>; // Maps face index to color ID
   colors: Map<ColorID, ColorGroup>; // All color groups
   brushSize: number; // 5-50 pixels
   selectedColorId: ColorID | null; // Currently selected color for painting
+  activeTool: PaintTool;
 }
 
 /**

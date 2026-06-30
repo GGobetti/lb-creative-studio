@@ -6,6 +6,7 @@ import {
   ColorID,
   FaceIndex,
   ColorGroup,
+  PaintTool,
   STLModel,
   PaintingState,
   SavedSession,
@@ -89,6 +90,7 @@ const initialPaintingState: PaintingState = {
   colors: new Map<ColorID, ColorGroup>(),
   brushSize: 5,
   selectedColorId: null,
+  activeTool: 'brush',
 };
 
 /**
@@ -123,6 +125,7 @@ interface STLSplitterStoreActions {
   selectColor: (colorId: ColorID | null) => void;
   removeColor: (colorId: ColorID) => void;
   setBrushSize: (size: number) => void;
+  setActiveTool: (tool: PaintTool) => void;
 
   // UI actions
   setLoading: (isLoading: boolean) => void;
@@ -279,6 +282,15 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
       painting: {
         ...state.painting,
         brushSize: clampedSize,
+      },
+    }));
+  },
+
+  setActiveTool: (tool) => {
+    set((state) => ({
+      painting: {
+        ...state.painting,
+        activeTool: tool,
       },
     }));
   },

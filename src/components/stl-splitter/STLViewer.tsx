@@ -15,7 +15,12 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as THREE from 'three';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
-import { expandBrushSelection } from '@/lib/stl-splitter/geometry-utils';
+import {
+  expandBrushSelection,
+  buildFaceAdjacency,
+  floodFillFaces,
+  magicWandFill,
+} from '@/lib/stl-splitter/geometry-utils';
 
 export function STLViewer() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +43,17 @@ export function STLViewer() {
   useEffect(() => {
     paintingRef.current = painting;
   }, [painting]);
+
+  // Adjacency is expensive to build — compute once per geometry, cache in ref.
+  const adjacencyRef = useRef<Map<number, number[]> | null>(null);
+  useEffect(() => {
+    if (!model?.geometry) { adjacencyRef.current = null; return; }
+    console.log('🗺️ Building face adjacency (one-time, may take ~0.5s for large meshes)…');
+    // Defer to next tick so the mesh renders first
+    setTimeout(() => {
+      adjacencyRef.current = buildFaceAdjacency(model.geometry!);
+    }, 0);
+  }, [model?.geometry]);
 
   useEffect(() => {
     console.log('📦 STLViewer: useEffect triggered. Container:', containerRef.current, 'Model:', model);
@@ -211,16 +227,36 @@ export function STLViewer() {
       // as a "face index" silently broke every downstream index calculation.
       if (intersects.length > 0 && intersects[0].face && intersects[0].faceIndex !== undefined) {
         const faceIndex = intersects[0].faceIndex!;
-        console.log('🖌️ Face detected:', faceIndex, 'Brush size:', currentPainting.brushSize);
+        const tool = currentPainting.activeTool;
+        console.log(`🖌️ Face ${faceIndex} hit. Tool: ${tool}`);
 
-        const selectedFaces = expandBrushSelection(
-          faceIndex,
-          currentPainting.brushSize,
-          model.geometry!,
-          meshRef.current,
-          camera,
-          { width: renderer.domElement.clientWidth, height: renderer.domElement.clientHeight }
-        );
+        let selectedFaces: number[];
+
+        if (tool === 'bucket') {
+          if (!adjacencyRef.current) {
+            console.log('⏳ Adjacency not ready yet, falling back to single face');
+            selectedFaces = [faceIndex];
+          } else {
+            selectedFaces = floodFillFaces(faceIndex, adjacencyRef.current, currentPainting.colorMap);
+          }
+        } else if (tool === 'wand') {
+          if (!adjacencyRef.current) {
+            console.log('⏳ Adjacency not ready yet, falling back to single face');
+            selectedFaces = [faceIndex];
+          } else {
+            selectedFaces = magicWandFill(faceIndex, adjacencyRef.current, model.geometry!, 25);
+          }
+        } else {
+          // brush
+          selectedFaces = expandBrushSelection(
+            faceIndex,
+            currentPainting.brushSize,
+            model.geometry!,
+            meshRef.current,
+            camera,
+            { width: renderer.domElement.clientWidth, height: renderer.domElement.clientHeight }
+          );
+        }
 
         console.log('🎨 Painting', selectedFaces.length, 'faces with color:', currentPainting.selectedColorId);
         paintFaces(selectedFaces, currentPainting.selectedColorId);

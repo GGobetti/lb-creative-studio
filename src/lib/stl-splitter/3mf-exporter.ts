@@ -1,5 +1,10 @@
 import { BufferGeometry } from 'three';
+import { zipSync, strToU8 } from 'fflate';
 import { FaceIndex, ColorID, ColorGroup } from '@/types/stl-splitter.types';
+
+// 3MF is a ZIP package — slicers like Bambu Studio / PrusaSlicer will reject
+// raw XML files that are only renamed to .3mf. This exporter creates a proper
+// ZIP with the required [Content_Types].xml, _rels/.rels, and 3D/3dmodel.model.
 
 export function export3MF(
   geometry: BufferGeometry,
@@ -9,23 +14,37 @@ export function export3MF(
   const positions = geometry.getAttribute('position').array as Float32Array;
 
   const facesByColor = new Map<ColorID, number[]>();
-
-  colors.forEach((color) => {
-    facesByColor.set(color.id, []);
-  });
-
+  colors.forEach((color) => facesByColor.set(color.id, []));
   colorMap.forEach((colorId, faceIndex) => {
-    const faces = facesByColor.get(colorId) || [];
-    faces.push(faceIndex);
-    facesByColor.set(colorId, faces);
+    facesByColor.get(colorId)?.push(faceIndex);
   });
 
-  const xml = buildXML_3MF(positions, facesByColor, colors);
+  const modelXML = buildModelXML(positions, facesByColor, colors);
 
-  return new Blob([xml], { type: 'application/vnd.ms-package.3dmodel+xml' });
+  const contentTypesXML = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="model" ContentType="application/vnd.ms-package.3dmodel-xml"/>
+</Types>`;
+
+  const relsXML = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>
+</Relationships>`;
+
+  const zip = zipSync(
+    {
+      '[Content_Types].xml': strToU8(contentTypesXML),
+      '_rels/.rels': strToU8(relsXML),
+      '3D/3dmodel.model': strToU8(modelXML),
+    },
+    { level: 0 } // no compression — faster and slicers don't care
+  );
+
+  return new Blob([zip], { type: 'application/zip' });
 }
 
-function buildXML_3MF(
+function buildModelXML(
   positions: Float32Array,
   facesByColor: Map<ColorID, number[]>,
   colors: Map<ColorID, ColorGroup>
@@ -38,104 +57,57 @@ function buildXML_3MF(
     if (faceIndices.length === 0) return;
 
     const color = colors.get(colorId);
-    const { meshXML } = buildMeshXML(positions, faceIndices);
+    const name = color?.name ?? `Part ${objectId}`;
+    const meshXML = buildMeshXML(positions, faceIndices);
 
-    resourcesXML += `
-    <object id="${objectId}" type="model">
-      ${meshXML}
-    </object>`;
+    resourcesXML += `    <object id="${objectId}" type="model" name="${name}">\n`;
+    resourcesXML += `      ${meshXML}\n`;
+    resourcesXML += `    </object>\n`;
 
-    buildXML += `
-    <item objectid="${objectId}" path="/3D/Components/${color?.name.replace(/\s+/g, '_') || 'Part_' + objectId}" />`;
-
+    buildXML += `    <item objectid="${objectId}"/>\n`;
     objectId++;
   });
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<model xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2013/12">
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2013/12">
   <resources>
-${resourcesXML}
-  </resources>
+${resourcesXML}  </resources>
   <build>
-${buildXML}
-  </build>
+${buildXML}  </build>
 </model>`;
-
-  return xml;
 }
 
-function buildMeshXML(
-  allPositions: Float32Array,
-  faceIndices: number[]
-): { meshXML: string; vertexMap: Map<number, number> } {
+function buildMeshXML(allPositions: Float32Array, faceIndices: number[]): string {
   const vertices: number[] = [];
-  const vertexMap = new Map<number, number>();
-  let newVertexIndex = 0;
+  // Re-map global vertex keys to local indices (deduplicates shared vertices)
+  const vertexMap = new Map<string, number>();
   const triangles: string[] = [];
 
-  faceIndices.forEach((faceIndex) => {
-    const faceStart = faceIndex * 9;
-    const v1 = faceStart / 3;
-    const v2 = v1 + 1;
-    const v3 = v1 + 2;
+  for (const faceIndex of faceIndices) {
+    const base = faceIndex * 9;
+    const localIndices: number[] = [];
 
-    if (!vertexMap.has(v1)) {
-      vertexMap.set(v1, newVertexIndex);
-      vertices.push(
-        allPositions[faceStart],
-        allPositions[faceStart + 1],
-        allPositions[faceStart + 2]
-      );
-      newVertexIndex++;
+    for (let v = 0; v < 3; v++) {
+      const px = allPositions[base + v * 3];
+      const py = allPositions[base + v * 3 + 1];
+      const pz = allPositions[base + v * 3 + 2];
+      const key = `${px.toFixed(6)},${py.toFixed(6)},${pz.toFixed(6)}`;
+
+      if (!vertexMap.has(key)) {
+        vertexMap.set(key, vertices.length / 3);
+        vertices.push(px, py, pz);
+      }
+      localIndices.push(vertexMap.get(key)!);
     }
 
-    if (!vertexMap.has(v2)) {
-      vertexMap.set(v2, newVertexIndex);
-      vertices.push(
-        allPositions[faceStart + 3],
-        allPositions[faceStart + 4],
-        allPositions[faceStart + 5]
-      );
-      newVertexIndex++;
-    }
-
-    if (!vertexMap.has(v3)) {
-      vertexMap.set(v3, newVertexIndex);
-      vertices.push(
-        allPositions[faceStart + 6],
-        allPositions[faceStart + 7],
-        allPositions[faceStart + 8]
-      );
-      newVertexIndex++;
-    }
-
-    const i1 = vertexMap.get(v1)!;
-    const i2 = vertexMap.get(v2)!;
-    const i3 = vertexMap.get(v3)!;
-
-    triangles.push(`      <triangle v1="${i1}" v2="${i2}" v3="${i3}" />`);
-  });
-
-  let verticesXML = '    <vertices>\n';
-  for (let i = 0; i < vertices.length; i += 3) {
-    verticesXML += `      <vertex x="${vertices[i].toFixed(6)}" y="${vertices[i + 1].toFixed(6)}" z="${vertices[i + 2].toFixed(6)}" />\n`;
+    triangles.push(`        <triangle v1="${localIndices[0]}" v2="${localIndices[1]}" v3="${localIndices[2]}"/>`);
   }
-  verticesXML += '    </vertices>\n';
 
-  const meshXML = `<mesh>
-${verticesXML}    <triangles>
-${triangles.join('\n')}
-    </triangles>
-  </mesh>`;
+  let verticesXML = '      <vertices>\n';
+  for (let i = 0; i < vertices.length; i += 3) {
+    verticesXML += `        <vertex x="${vertices[i].toFixed(6)}" y="${vertices[i + 1].toFixed(6)}" z="${vertices[i + 2].toFixed(6)}"/>\n`;
+  }
+  verticesXML += '      </vertices>';
 
-  return { meshXML, vertexMap };
-}
-
-export function exportOBJMultipart(
-  geometry: BufferGeometry,
-  colorMap: Map<FaceIndex, ColorID>,
-  colors: Map<ColorID, ColorGroup>
-): Blob {
-  // TODO: V2 - implement OBJ export with material groups
-  return new Blob();
+  return `<mesh>\n${verticesXML}\n      <triangles>\n${triangles.join('\n')}\n      </triangles>\n    </mesh>`;
 }
