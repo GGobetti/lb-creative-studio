@@ -29,8 +29,13 @@ export function STLViewer() {
   const paintFaces = useSTLSplitterStore((state) => state.paintFaces);
 
   useEffect(() => {
-    if (!containerRef.current || !model || !model.geometry) return;
+    console.log('📦 STLViewer: useEffect triggered. Container:', containerRef.current, 'Model:', model);
+    if (!containerRef.current || !model || !model.geometry) {
+      console.log('⚠️ Missing container or model, returning');
+      return;
+    }
 
+    console.log('🎨 Creating Three.js scene...');
     const scene = new Scene();
     scene.background = new Color(0xf5f5f5);
     sceneRef.current = scene;
@@ -46,6 +51,7 @@ export function STLViewer() {
     const renderer = new WebGLRenderer({ antialias: true });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
+    console.log('✅ Renderer created. Canvas size:', containerRef.current.clientWidth, 'x', containerRef.current.clientHeight);
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -111,6 +117,7 @@ export function STLViewer() {
       controls.update();
       renderer.render(scene, camera);
     };
+    console.log('▶️ Starting animation loop');
     animate();
 
     const handleResize = () => {
