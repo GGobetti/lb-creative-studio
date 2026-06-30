@@ -31,6 +31,14 @@ export function STLViewer() {
   const painting = useSTLSplitterStore((state) => state.painting);
   const paintFaces = useSTLSplitterStore((state) => state.paintFaces);
 
+  // The click handler is registered once (inside the model-load effect below)
+  // and must always read the LATEST painting state, not a stale closure from
+  // whenever the model first loaded. Keep it in a ref that's updated every render.
+  const paintingRef = useRef(painting);
+  useEffect(() => {
+    paintingRef.current = painting;
+  }, [painting]);
+
   useEffect(() => {
     console.log('📦 STLViewer: useEffect triggered. Container:', containerRef.current, 'Model:', model);
     if (!containerRef.current || !model || !model.geometry) {
@@ -172,13 +180,17 @@ export function STLViewer() {
     const mouse = new Vector2();
 
     const handleClick = (event: MouseEvent) => {
+      // Always read the LATEST painting state via ref — this handler is
+      // registered once when the model loads and must not use a stale closure.
+      const currentPainting = paintingRef.current;
+
       if (!meshRef.current) {
         console.log('❌ Click: no mesh');
         return;
       }
 
-      if (!painting.selectedColorId) {
-        console.log('⚠️ Click: no color selected');
+      if (!currentPainting.selectedColorId) {
+        console.log('⚠️ Click: no color selected. Add/select a color first.');
         return;
       }
 
@@ -195,19 +207,19 @@ export function STLViewer() {
 
       if (intersects.length > 0 && intersects[0].face) {
         const faceIndex = intersects[0].face.a;
-        console.log('🖌️ Face detected:', faceIndex, 'Brush size:', painting.brushSize);
+        console.log('🖌️ Face detected:', faceIndex, 'Brush size:', currentPainting.brushSize);
 
         const selectedFaces = expandBrushSelection(
           faceIndex,
-          painting.brushSize,
+          currentPainting.brushSize,
           model.geometry!,
           meshRef.current,
           camera,
           { width: renderer.domElement.clientWidth, height: renderer.domElement.clientHeight }
         );
 
-        console.log('🎨 Painting', selectedFaces.length, 'faces with color:', painting.selectedColorId);
-        paintFaces(selectedFaces, painting.selectedColorId);
+        console.log('🎨 Painting', selectedFaces.length, 'faces with color:', currentPainting.selectedColorId);
+        paintFaces(selectedFaces, currentPainting.selectedColorId);
       } else {
         console.log('❌ No face intersection found');
       }
