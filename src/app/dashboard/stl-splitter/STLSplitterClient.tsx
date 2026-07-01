@@ -33,6 +33,49 @@ export function STLSplitterClient() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
 
+  // The shared dashboard shell wraps every page's content in a centered
+  // `mx-auto max-w-6xl` box with no explicit height. That caps our width to
+  // 1152px AND — having no h-full/flex-1 of its own — breaks any h-full
+  // percentage chain below it, leaving a shrunken box surrounded by unused
+  // space. We can't touch that shared layout (it'd affect every other
+  // dashboard page), so instead we measure <main>'s real content box
+  // (ignoring the constraining wrapper entirely) and pin ourselves to it
+  // with fixed positioning, which isn't subject to ancestor width/height
+  // constraints at all.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [bounds, setBounds] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    const main = el?.closest('main');
+    if (!main) return;
+
+    const measure = () => {
+      const rect = main.getBoundingClientRect();
+      const style = getComputedStyle(main);
+      const padTop = parseFloat(style.paddingTop) || 0;
+      const padBottom = parseFloat(style.paddingBottom) || 0;
+      const padLeft = parseFloat(style.paddingLeft) || 0;
+      const padRight = parseFloat(style.paddingRight) || 0;
+      setBounds({
+        top: rect.top + padTop,
+        left: rect.left + padLeft,
+        width: rect.width - padLeft - padRight,
+        height: rect.height - padTop - padBottom,
+      });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(main);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [mode]);
+
+  const fillStyle: React.CSSProperties = bounds
+    ? { position: 'fixed', top: bounds.top, left: bounds.left, width: bounds.width, height: bounds.height, zIndex: 1 }
+    : { position: 'relative', width: '100%', height: '100%' };
+
   // Always-fresh refs so the 30s timer doesn't reset every time the user
   // paints a stroke (painting/connectors change on every action — if they
   // were direct effect deps, the interval would keep getting torn down and
@@ -91,7 +134,7 @@ export function STLSplitterClient() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div ref={rootRef} style={fillStyle} className="flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin mb-4">
             <RotateCcw className="h-12 w-12 text-blue-600" />
@@ -104,7 +147,7 @@ export function STLSplitterClient() {
 
   if (mode === 'upload') {
     return (
-      <div className="h-full flex flex-col p-6">
+      <div ref={rootRef} style={fillStyle} className="flex flex-col p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">STL Splitter</h1>
           <p className="text-gray-600 dark:text-gray-400">
@@ -135,7 +178,7 @@ export function STLSplitterClient() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-2.5 p-3">
+    <div ref={rootRef} style={fillStyle} className="flex flex-col gap-2.5 p-3">
       {error && (
         <div className="fixed top-6 right-6 max-w-sm p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 rounded-lg flex gap-3 z-50">
           <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
