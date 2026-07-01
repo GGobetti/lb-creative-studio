@@ -1,13 +1,14 @@
 "use client"
 
 import { useAppStore } from "@/store/store"
-import { User, Mail, MapPin, Camera, Save, Loader2, Globe, Zap, ArrowUpRight, ArrowDownLeft, Receipt } from "lucide-react"
+import { User, Mail, MapPin, Camera, Save, Loader2, Globe, Zap, ArrowUpRight, ArrowDownLeft, Receipt, Phone, Send, ShieldCheck, AlertTriangle, Trash2, Clock } from "lucide-react"
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { useToast } from "@/components/ui/Toast"
 import { useTranslation } from "@/lib/translations"
 import { XpTab } from "@/components/profile/XpTab"
+import { useLogout } from "@/hooks/useLogout"
 
 interface Transaction {
   id: string
@@ -31,25 +32,37 @@ function ProfileContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const searchParams = useSearchParams()
   const router = useRouter()
+  const handleLogout = useLogout()
   const activeTab = (searchParams.get('tab') || 'profile') as 'profile' | 'xp'
 
   // Local state for inputs
   const [fullName, setFullName] = useState("")
   const [address, setAddress] = useState("")
+  const [phone, setPhone] = useState("")
+  const [telegramUsername, setTelegramUsername] = useState("")
   const [langPref, setLangPref] = useState<'pt' | 'en' | 'es'>("pt")
-  
+  const [marketingConsent, setMarketingConsent] = useState(true)
+
   // Loading states
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [txLoading, setTxLoading] = useState(true)
 
+  // Account deletion state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
+
   // Initialize states from profile
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || "")
       setAddress(profile.address || "")
+      setPhone(profile.phone || "")
+      setTelegramUsername(profile.telegram_username || "")
       setLangPref((profile.language as 'pt' | 'en' | 'es') || "pt")
+      setMarketingConsent(profile.marketing_consent ?? true)
     }
   }, [profile])
 
@@ -79,6 +92,9 @@ function ProfileContent() {
         .update({
           full_name: fullName.trim(),
           address: address.trim(),
+          phone: phone.trim() || null,
+          telegram_username: telegramUsername.trim() || null,
+          marketing_consent: marketingConsent,
           language: langPref,
           updated_at: new Date().toISOString()
         })
@@ -92,6 +108,9 @@ function ProfileContent() {
         ...profile,
         full_name: fullName.trim(),
         address: address.trim(),
+        phone: phone.trim() || null,
+        telegram_username: telegramUsername.trim() || null,
+        marketing_consent: marketingConsent,
         language: langPref
       })
 
@@ -159,6 +178,31 @@ function ProfileContent() {
       toast(t("profile.toastUploadError", "Erro ao carregar foto: ") + (err.message || err), "error")
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const deleteConfirmWord = t("profile.deleteAccountConfirmPlaceholder", "EXCLUIR")
+
+  const handleDeleteAccount = async () => {
+    if (!profile || deleteConfirmText.trim().toUpperCase() !== deleteConfirmWord) return
+
+    setIsDeletingAccount(true)
+    try {
+      const supabase = getSupabaseBrowser()
+      const { error } = await supabase
+        .from("profiles")
+        .update({ deletion_requested_at: new Date().toISOString() })
+        .eq("id", profile.id)
+
+      if (error) throw error
+
+      toast(t("profile.deleteAccountRequested", "Solicitação de exclusão registrada. Você será desconectado."), "success")
+      setShowDeleteModal(false)
+      await handleLogout()
+    } catch (err: any) {
+      console.error("Erro ao solicitar exclusão da conta:", err)
+      toast(t("profile.deleteAccountError", "Erro ao solicitar exclusão da conta."), "error")
+      setIsDeletingAccount(false)
     }
   }
 
@@ -385,6 +429,41 @@ function ProfileContent() {
                 </div>
               </div>
 
+              {/* Phone & Telegram */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">{t("profile.phone", "Telefone / WhatsApp")}</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone size={16} className="text-muted-foreground" />
+                    </div>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow text-foreground"
+                      placeholder={t("profile.phonePlaceholder", "(11) 99999-9999")}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-foreground">{t("profile.telegram", "Usuário do Telegram")}</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Send size={16} className="text-muted-foreground" />
+                    </div>
+                    <input
+                      type="text"
+                      value={telegramUsername}
+                      onChange={(e) => setTelegramUsername(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow text-foreground"
+                      placeholder={t("profile.telegramPlaceholder", "@seu_usuario")}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Language Selection */}
               <div className="space-y-1.5 pt-2">
                 <label className="text-sm font-semibold text-foreground">{t("profile.language", "Idioma de Preferência")}</label>
@@ -422,9 +501,131 @@ function ProfileContent() {
             </form>
           </div>
 
+          {/* Privacy & Communication */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck size={18} className="text-primary" />
+              <h2 className="text-xl font-bold text-foreground">{t("profile.privacySection", "Privacidade e Comunicação")}</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-5">{t("profile.privacySectionDesc", "Controle como usamos seus dados, conforme a LGPD.")}</p>
+
+            <label className="flex items-start gap-3 p-4 rounded-xl border border-border bg-muted/20 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={marketingConsent}
+                onChange={(e) => setMarketingConsent(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-primary cursor-pointer shrink-0"
+              />
+              <span className="flex-1">
+                <span className="block text-sm font-semibold text-foreground">{t("profile.marketingConsent", "Receber ofertas e novidades por e-mail")}</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{t("profile.marketingConsentDesc", "Você pode desativar a qualquer momento. Não afeta e-mails transacionais (pedidos, faturas, suporte).")}</span>
+              </span>
+            </label>
+
+            <div className="pt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleSaveChanges}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity font-bold text-sm cursor-pointer disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {isSaving ? t("common.saving", "Salvando...") : t("profile.saveChanges", "Salvar Alterações")}
+              </button>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle size={18} className="text-destructive" />
+              <h2 className="text-xl font-bold text-destructive">{t("profile.dangerZone", "Zona de Risco")}</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-5">{t("profile.dangerZoneDesc", "Ações permanentes relacionadas à sua conta.")}</p>
+
+            {profile?.deletion_requested_at ? (
+              <div className="flex items-start gap-3 p-4 rounded-xl border border-destructive/30 bg-destructive/10">
+                <Clock size={18} className="text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-destructive">
+                    {t("profile.deletionPending", "Exclusão de conta solicitada em")} {new Date(profile.deletion_requested_at).toLocaleDateString("pt-BR")}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t("profile.deletionPendingDesc", "Sua conta está na fila para exclusão definitiva. Entre em contato com o suporte caso queira cancelar esse pedido.")}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-destructive/20 bg-card">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{t("profile.deleteAccount", "Excluir Minha Conta")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 max-w-md">{t("profile.deleteAccountDesc", "Solicite a exclusão definitiva da sua conta e dos seus dados pessoais, conforme seus direitos previstos na LGPD (Art. 18).")}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 font-bold text-xs shrink-0 cursor-pointer transition-all"
+                >
+                  <Trash2 size={14} />
+                  {t("profile.deleteAccount", "Excluir Minha Conta")}
+                </button>
+              </div>
+            )}
+          </div>
+
         </div>
 
       </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+            onClick={() => !isDeletingAccount && setShowDeleteModal(false)}
+          />
+          <div className="relative w-full max-w-md bg-card dark:bg-[#0c0c18] border border-destructive/30 rounded-2xl shadow-2xl shadow-black/70 backdrop-blur-lg p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={20} className="text-destructive" />
+              <h3 className="text-lg font-black text-foreground">{t("profile.deleteAccountModalTitle", "Excluir conta permanentemente?")}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t("profile.deleteAccountModalBody", "Esta ação solicitará a exclusão da sua conta. Você será desconectado imediatamente e não poderá mais acessar seus créditos, portfólio ou histórico. Dados com obrigação legal de retenção (ex: notas e transações financeiras) podem ser mantidos de forma anonimizada pelo prazo exigido por lei. A exclusão definitiva dos demais dados será concluída em até 15 dias.")}
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground">
+                {t("profile.deleteAccountConfirmLabel", "Digite EXCLUIR para confirmar")}
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={deleteConfirmWord}
+                className="w-full px-3 py-2 bg-background border border-destructive/30 rounded-lg text-sm focus:outline-none focus:border-destructive focus:ring-1 focus:ring-destructive text-foreground"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText("") }}
+                disabled={isDeletingAccount}
+                className="px-4 py-2 rounded-xl border border-border text-muted-foreground hover:bg-muted text-xs font-bold cursor-pointer transition-all disabled:opacity-50"
+              >
+                {t("profile.deleteAccountCancel", "Cancelar")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount || deleteConfirmText.trim().toUpperCase() !== deleteConfirmWord}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-destructive hover:opacity-90 disabled:opacity-40 text-destructive-foreground text-xs font-black cursor-pointer transition-all"
+              >
+                {isDeletingAccount ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {t("profile.deleteAccountConfirm", "Confirmar Exclusão")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

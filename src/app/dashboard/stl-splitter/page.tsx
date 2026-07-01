@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { STLSplitterClient } from './STLSplitterClient';
+import { DesktopOnlyNotice } from '@/components/DesktopOnlyNotice';
 
 export const metadata: Metadata = {
   title: 'STL Splitter | LB Creative Studio',
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function STLSplitterPage() {
-  return <STLSplitterClient />;
+  return (
+    <DesktopOnlyNotice breakpoint="lg">
+      <STLSplitterClient />
+    </DesktopOnlyNotice>
+  );
 }

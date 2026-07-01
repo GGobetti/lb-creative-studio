@@ -85,6 +85,10 @@ export interface Profile {
   address?: string | null
   language?: 'pt' | 'en' | 'es' | null
   onboarding_completed: boolean
+  phone?: string | null
+  telegram_username?: string | null
+  marketing_consent?: boolean
+  deletion_requested_at?: string | null
 }
 
 export interface CatalogItem {

@@ -210,7 +210,7 @@ function LoginContent() {
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-xl
                          bg-primary hover:bg-primary/90
-                         text-white font-semibold text-sm
+                         text-primary-foreground font-semibold text-sm
                          transition-all duration-200 shadow-primary
                          disabled:opacity-50 disabled:cursor-not-allowed
                          hover:scale-[1.01] active:scale-[0.99]"

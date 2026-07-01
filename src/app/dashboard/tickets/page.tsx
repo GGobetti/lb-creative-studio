@@ -25,7 +25,8 @@ import { motion, AnimatePresence } from "framer-motion"
 export default function TicketsPage() {
   const { profile } = useAppStore()
   const { toast } = useToast()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
 
   // State
   const [tickets, setTickets] = useState<SupportTicket[]>([])
@@ -354,7 +355,7 @@ export default function TicketsPage() {
                   onClick={() => setShowCreateForm(false)}
                   className="px-4 py-2 rounded-xl border border-border text-muted-foreground hover:bg-muted text-xs font-bold cursor-pointer transition-all"
                 >
-                  Cancelar
+                  {t('tickets.cancel', "Cancelar")}
                 </button>
                 <button
                   type="submit"
@@ -385,7 +386,7 @@ export default function TicketsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por chamado..."
+            placeholder={t('tickets.searchPlaceholder', "Buscar por chamado...")}
             className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
@@ -394,7 +395,7 @@ export default function TicketsPage() {
         <div className="flex gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5 text-xs text-muted-foreground">
             <Filter size={14} />
-            <span>Filtrar</span>
+            <span>{t('tickets.filter', "Filtrar")}</span>
           </div>
 
           {/* Status filter */}
@@ -403,11 +404,11 @@ export default function TicketsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="bg-card border border-border rounded-xl px-3 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="all">Todos os Status</option>
-            <option value="open">Abertos</option>
-            <option value="in_progress">Em Atendimento</option>
-            <option value="resolved">Resolvidos</option>
-            <option value="closed">Fechados</option>
+            <option value="all">{t('tickets.allStatuses', "Todos os Status")}</option>
+            <option value="open">{t('tickets.status_open', "Aberto")}</option>
+            <option value="in_progress">{t('tickets.status_in_progress', "Em Atendimento")}</option>
+            <option value="resolved">{t('tickets.status_resolved', "Resolvido")}</option>
+            <option value="closed">{t('tickets.status_closed', "Fechado")}</option>
           </select>
 
           {/* Category filter */}
@@ -416,10 +417,10 @@ export default function TicketsPage() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="bg-card border border-border rounded-xl px-3 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="all">Todas Categorias</option>
-            <option value="request_stl">Solicitar STL</option>
-            <option value="stl_adjustment">Ajuste de STL</option>
-            <option value="other">Outros</option>
+            <option value="all">{t('tickets.allCategories', "Todas Categorias")}</option>
+            <option value="request_stl">{t('tickets.category_request_stl', "Solicitar STL")}</option>
+            <option value="stl_adjustment">{t('tickets.category_stl_adjustment', "Solicitar Ajuste de STL")}</option>
+            <option value="other">{t('tickets.category_other', "Outros")}</option>
           </select>
         </div>
       </div>
@@ -428,7 +429,7 @@ export default function TicketsPage() {
       {loading ? (
         <div className="h-64 flex flex-col items-center justify-center bg-card border border-border rounded-3xl">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-3" />
-          <span className="text-sm text-muted-foreground">Carregando seus chamados...</span>
+          <span className="text-sm text-muted-foreground">{t('tickets.loadingMyTickets', "Carregando seus chamados...")}</span>
         </div>
       ) : filteredTickets.length === 0 ? (
         <div className="p-16 text-center bg-card border border-border rounded-3xl space-y-4">
@@ -436,9 +437,9 @@ export default function TicketsPage() {
             <LifeBuoy size={28} />
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-foreground">Nenhum chamado encontrado</h3>
+            <h3 className="font-bold text-foreground">{t('tickets.noTicketsFound', "Nenhum chamado encontrado")}</h3>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-              Crie um novo chamado caso precise de suporte técnico ou queira solicitar novos modelos 3D STL.
+              {t('tickets.noTicketsFoundDesc', "Crie um novo chamado caso precise de suporte técnico ou queira solicitar novos modelos 3D STL.")}
             </p>
           </div>
           <button
@@ -476,10 +477,10 @@ export default function TicketsPage() {
               <div className="flex items-center justify-between pt-3 border-t border-border/60 text-[10px] text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar size={12} />
-                  <span>Atualizado: {new Date(ticket.updated_at).toLocaleDateString("pt-BR")}</span>
+                  <span>{t('tickets.updatedAt', "Atualizado em")}: {new Date(ticket.updated_at).toLocaleDateString(locale)}</span>
                 </div>
                 <div className="flex items-center gap-1 text-primary font-bold group-hover:translate-x-0.5 transition-transform">
-                  <span>Abrir Conversa</span>
+                  <span>{t('tickets.openConversation', "Abrir Conversa")}</span>
                   <ChevronRight size={12} />
                 </div>
               </div>

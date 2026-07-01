@@ -178,7 +178,7 @@ export function PhotoMatch() {
 
       <TimerBar key={timerKey} seconds={TIMER_SECONDS} onTimeout={handleTimeout} paused={false} />
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
@@ -186,9 +186,9 @@ export function PhotoMatch() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.18 }}
-            className="flex flex-col sm:flex-row gap-4"
+            className="flex flex-col sm:flex-row gap-6"
           >
-            <div className="w-full sm:w-56 shrink-0 aspect-square rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center">
+            <div className="w-full sm:w-80 lg:w-96 shrink-0 aspect-square rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center">
               {currentQuestion.imageUrl ? (
                 <img
                   src={currentQuestion.imageUrl}
@@ -197,7 +197,7 @@ export function PhotoMatch() {
                 />
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
-                  <ImageIcon size={36} />
+                  <ImageIcon size={48} />
                   <span className="text-xs">Preview</span>
                 </div>
               )}

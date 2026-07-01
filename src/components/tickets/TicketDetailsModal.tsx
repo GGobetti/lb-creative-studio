@@ -32,7 +32,8 @@ export function TicketDetailsModal({
   onTicketUpdated
 }: TicketDetailsModalProps) {
   const { profile } = useAppStore()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   
   const [messages, setMessages] = useState<TicketMessage[]>([])
   const [loadingMessages, setLoadingMessages] = useState(false)
@@ -176,9 +177,9 @@ export function TicketDetailsModal({
         .insert({
           ticket_id: ticket.id,
           sender_id: profile?.id,
-          message: newStatus === "closed" 
-            ? "[Status] Chamado encerrado pelo usuário." 
-            : "[Status] Chamado reaberto pelo usuário."
+          message: newStatus === "closed"
+            ? `[Status] ${t('tickets.ticketClosedByUser', "Chamado encerrado pelo usuário.")}`
+            : `[Status] ${t('tickets.ticketClosedReopened', "Chamado reaberto pelo usuário.")}`
         })
 
       await fetchMessages()
@@ -217,7 +218,7 @@ export function TicketDetailsModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => onOpenChange(false)}
-          className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/75 backdrop-blur-sm"
         />
 
         {/* Modal Window */}
@@ -225,7 +226,7 @@ export function TicketDetailsModal({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-4xl h-[85vh] bg-card border border-border rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10"
+          className="relative w-full max-w-4xl max-h-[80vh] bg-card dark:bg-[#0c0c18] border border-border rounded-3xl shadow-2xl shadow-black/70 flex flex-col overflow-hidden backdrop-blur-lg z-10"
         >
           {/* Header */}
           <div className="p-6 border-b border-border bg-muted/20 flex items-center justify-between">
@@ -253,7 +254,7 @@ export function TicketDetailsModal({
             {/* Left: Ticket Description & Info */}
             <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-border p-6 space-y-6 overflow-y-auto bg-muted/10 shrink-0">
               <div className="space-y-2">
-                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Descrição Inicial</h3>
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('tickets.initialDescription', "Descrição Inicial")}</h3>
                 <div className="p-4 rounded-2xl bg-card border border-border text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                   {ticket.description}
                 </div>
@@ -261,7 +262,7 @@ export function TicketDetailsModal({
 
               {ticket.attachment_url && (
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Anexo do Chamado</h3>
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('tickets.ticketAttachment', "Anexo do Chamado")}</h3>
                   <a
                     href={ticket.attachment_url}
                     target="_blank"
@@ -269,7 +270,7 @@ export function TicketDetailsModal({
                     className="flex items-center gap-2 p-3 rounded-xl border border-violet-500/25 bg-violet-500/5 text-violet-400 hover:bg-violet-500/10 hover:border-violet-500/40 text-xs font-bold transition-all"
                   >
                     <Paperclip size={14} />
-                    <span className="truncate">Visualizar Arquivo Anexo</span>
+                    <span className="truncate">{t('tickets.viewAttachedFile', "Visualizar Arquivo Anexo")}</span>
                   </a>
                 </div>
               )}
@@ -277,11 +278,11 @@ export function TicketDetailsModal({
               <div className="space-y-3 pt-4 border-t border-border">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar size={14} />
-                  <span>Aberto em: {new Date(ticket.created_at).toLocaleString("pt-BR")}</span>
+                  <span>{t('tickets.openedAt', "Aberto em")}: {new Date(ticket.created_at).toLocaleString(locale)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <RefreshCw size={14} className="animate-spin-slow" />
-                  <span>Atualizado em: {new Date(ticket.updated_at).toLocaleString("pt-BR")}</span>
+                  <span>{t('tickets.updatedAt', "Atualizado em")}: {new Date(ticket.updated_at).toLocaleString(locale)}</span>
                 </div>
               </div>
 
@@ -320,12 +321,12 @@ export function TicketDetailsModal({
                 {loadingMessages ? (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
                     <Loader2 size={24} className="animate-spin text-primary mb-2" />
-                    <span className="text-xs">Carregando histórico do chamado...</span>
+                    <span className="text-xs">{t('tickets.loadingHistory', "Carregando histórico do chamado...")}</span>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
                     <MessageSquare size={32} className="stroke-1 mb-2 text-muted-foreground/50" />
-                    <p className="text-xs">Inicie a discussão enviando uma mensagem no campo abaixo.</p>
+                    <p className="text-xs">{t('tickets.startDiscussion', "Inicie a discussão enviando uma mensagem no campo abaixo.")}</p>
                   </div>
                 ) : (
                   messages.map((msg) => {
@@ -352,10 +353,10 @@ export function TicketDetailsModal({
                       >
                         <div className="flex items-center gap-1.5 px-1">
                           <span className="text-[10px] text-muted-foreground font-mono">
-                            {isOwnMessage ? "Você" : isSupportReply ? "Suporte" : msg.sender_email}
+                            {isOwnMessage ? t('tickets.you', "Você") : isSupportReply ? t('tickets.support', "Suporte") : msg.sender_email}
                           </span>
                           <span className="text-[8px] text-muted-foreground/60">
-                            {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(msg.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <div
@@ -385,7 +386,7 @@ export function TicketDetailsModal({
                     className="flex-1 bg-muted border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
                     placeholder={
                       ticket.status === "closed"
-                        ? "Este chamado está fechado. Reabra para enviar mensagens."
+                        ? t('tickets.closedInputPlaceholder', "Este chamado está fechado. Reabra para enviar mensagens.")
                         : t('tickets.replyPlaceholder', "Digite sua resposta...")
                     }
                   />

@@ -113,7 +113,7 @@ export function GameHub() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 max-w-2xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-4 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

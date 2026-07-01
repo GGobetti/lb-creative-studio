@@ -115,14 +115,50 @@ export async function GET(request: Request): Promise<NextResponse> {
     // Cast data to UserStlPortfolio[] (validated by view RLS)
     const items = (portfolioItems || []) as UserStlPortfolio[]
 
+    // ── 3b. Manually-imported models (paste-a-link flow, portfolio_items table) ──
+    // These live in a separate table from the Telegram-acquired STLs above, but
+    // share the "Importados Makerworld" tab in the UI, so they're normalized into
+    // the same shape and merged into the makerworld bucket below.
+    const { data: manualImports, error: manualImportsError } = await userClient
+      .from('portfolio_items')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('source_type', 'makerworld')
+      .order('created_at', { ascending: false })
+
+    if (manualImportsError) {
+      console.error('[portfolio] Manual imports query error:', manualImportsError.message)
+    }
+
+    const normalizedManualImports: UserStlPortfolio[] = (manualImports || []).map((row: any) => ({
+      acquisition_id: row.id,
+      user_id: row.user_id,
+      source: 'import',
+      acquired_at: row.created_at,
+      stl_id: row.id,
+      title: row.title,
+      description: row.description,
+      thumbnail_url: row.thumbnail_url,
+      file_name: row.title,
+      file_size_bytes: 0,
+      tags: [],
+      categories: null,
+      parent_id: null,
+      parts_count: 1,
+      telegram_group_id: '',
+      stl_created_at: row.created_at,
+    }))
+
     // ── 4. Segregar por source ─────────────────────────────────────────────────
     const { makerworld, stlSearch } = segregateBySource(items)
+    makerworld.push(...normalizedManualImports)
+    makerworld.sort((a, b) => new Date(b.acquired_at).getTime() - new Date(a.acquired_at).getTime())
 
     // ── 5. Montar resposta ─────────────────────────────────────────────────────
     const response: PortfolioResponse = {
       makerworld,
       stlSearch,
-      total: items.length,
+      total: items.length + normalizedManualImports.length,
       timestamp: new Date().toISOString(),
     }
 
