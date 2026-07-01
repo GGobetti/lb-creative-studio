@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { PaintTool } from '@/types/stl-splitter.types';
+import { fillEnclosedGaps } from '@/lib/stl-splitter/geometry-utils';
+import { Bandage } from 'lucide-react';
 
 const TOOLS: { id: PaintTool; label: string; icon: string; hint: string; key: string }[] = [
   { id: 'navigate', icon: '✋', label: 'Navegar', hint: 'Orbitar/girar livremente sem pintar (Space = temporário)',    key: 'H' },
@@ -15,6 +17,7 @@ const TOOLS: { id: PaintTool; label: string; icon: string; hint: string; key: st
 ];
 
 export function PaintToolbar() {
+  const model             = useSTLSplitterStore((state) => state.model);
   const brushSize        = useSTLSplitterStore((state) => state.painting.brushSize);
   const selectedColorId  = useSTLSplitterStore((state) => state.painting.selectedColorId);
   const activeTool       = useSTLSplitterStore((state) => state.painting.activeTool);
@@ -22,6 +25,7 @@ export function PaintToolbar() {
   const wandMode         = useSTLSplitterStore((state) => state.painting.wandMode);
   const bucketThreshold  = useSTLSplitterStore((state) => state.painting.bucketThreshold);
   const colors           = useSTLSplitterStore((state) => state.painting.colors);
+  const colorMap         = useSTLSplitterStore((state) => state.painting.colorMap);
   const colorMapHistory  = useSTLSplitterStore((state) => state.colorMapHistory);
 
   const setBrushSize       = useSTLSplitterStore((state) => state.setBrushSize);
@@ -31,9 +35,19 @@ export function PaintToolbar() {
   const setWandMode        = useSTLSplitterStore((state) => state.setWandMode);
   const setBucketThreshold = useSTLSplitterStore((state) => state.setBucketThreshold);
   const undoPaint          = useSTLSplitterStore((state) => state.undoPaint);
+  const fillFaces           = useSTLSplitterStore((state) => state.fillFaces);
+
+  const [lastFillCount, setLastFillCount] = useState<number | null>(null);
 
   const selectedColor = selectedColorId ? colors.get(selectedColorId) : null;
   const canUndo = colorMapHistory.length > 0;
+
+  const handleFillGaps = () => {
+    if (!model?.geometry) return;
+    const fills = fillEnclosedGaps(model.geometry, colorMap);
+    fillFaces(fills);
+    setLastFillCount(fills.size);
+  };
 
   // Keyboard shortcuts: Ctrl+Z undo, H/B/G/W/E/L tool switch, Space = temp navigate
   useEffect(() => {
@@ -149,6 +163,25 @@ export function PaintToolbar() {
       >
         ↩️ Desfazer {canUndo && <span className="text-gray-400">({colorMapHistory.length})</span>}
       </button>
+
+      {/* Fill enclosed gaps — catches stray unpainted triangles left inside a region */}
+      <button
+        title="Preenche triângulos sem pintar que ficaram cercados por uma única cor (ex: dentro de uma perna)"
+        onClick={handleFillGaps}
+        disabled={colors.size === 0}
+        className={`w-full py-1.5 rounded-lg border text-xs font-medium transition flex items-center justify-center gap-1.5 ${
+          colors.size > 0
+            ? 'border-gray-300 dark:border-gray-600 hover:border-purple-400 hover:text-purple-600 dark:hover:text-purple-400 text-gray-600 dark:text-gray-300'
+            : 'border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+        }`}
+      >
+        <Bandage className="h-3.5 w-3.5" /> Preencher lacunas internas
+      </button>
+      {lastFillCount !== null && (
+        <p className="text-xs text-center text-purple-600 dark:text-purple-400 -mt-1.5">
+          {lastFillCount > 0 ? `✅ ${lastFillCount} faces preenchidas` : 'Nenhuma lacuna encontrada'}
+        </p>
+      )}
 
       {/* Brush size — only for brush/eraser */}
       {(activeTool === 'brush' || activeTool === 'eraser') && (

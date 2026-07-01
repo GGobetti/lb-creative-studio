@@ -113,6 +113,7 @@ const initialPaintingState: PaintingState = {
   bucketThreshold: 60,
   isolatedColorId: null,
   autoSegmentThreshold: 45,
+  transparentColorIds: [],
 };
 
 /**
@@ -162,6 +163,8 @@ interface STLSplitterStoreActions {
   applyAutoSegment: (segmentMap: Map<number, number>) => void;
   setShowWireframe: (show: boolean) => void;
   setAutoSegmentThreshold: (degrees: number) => void;
+  toggleTransparentColor: (colorId: ColorID) => void;
+  fillFaces: (fills: Map<FaceIndex, ColorID>) => void;
 
   // UI actions
   setLoading: (isLoading: boolean) => void;
@@ -176,6 +179,7 @@ interface STLSplitterStoreActions {
 
   // Connector actions
   addConnector: (connector: Omit<ConnectorPoint, 'id'>) => void;
+  updateConnector: (id: string, updates: Partial<Omit<ConnectorPoint, 'id'>>) => void;
   removeConnector: (id: string) => void;
   clearConnectors: () => void;
   setConnectorRadius: (radius: number) => void;
@@ -474,6 +478,37 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
     }));
   },
 
+  toggleTransparentColor: (colorId) => {
+    set((state) => {
+      const current = state.painting.transparentColorIds;
+      const transparentColorIds = current.includes(colorId)
+        ? current.filter((id) => id !== colorId)
+        : [...current, colorId];
+      return { painting: { ...state.painting, transparentColorIds } };
+    });
+  },
+
+  fillFaces: (fills) => {
+    if (fills.size === 0) return;
+    set((state) => {
+      const newHistory = [...state.colorMapHistory, new Map(state.painting.colorMap)].slice(-20);
+      const newColorMap = new Map(state.painting.colorMap);
+      fills.forEach((colorId, faceIndex) => newColorMap.set(faceIndex, colorId));
+
+      const colors = new Map(state.painting.colors);
+      colors.forEach((color, colorId) => {
+        const count = Array.from(newColorMap.values()).filter((id) => id === colorId).length;
+        colors.set(colorId, { ...color, faceCount: count });
+      });
+
+      console.log(`🩹 Filled ${fills.size} enclosed gap faces`);
+      return {
+        colorMapHistory: newHistory,
+        painting: { ...state.painting, colorMap: newColorMap, colors },
+      };
+    });
+  },
+
   // UI actions
   setLoading: (isLoading) => {
     set((state) => ({
@@ -566,6 +601,12 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
     const id = `conn-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
     set((state) => ({ connectors: [...state.connectors, { ...connector, id }] }));
     console.log('🔩 Connector added:', id);
+  },
+
+  updateConnector: (id, updates) => {
+    set((state) => ({
+      connectors: state.connectors.map((c) => (c.id === id ? { ...c, ...updates } : c)),
+    }));
   },
 
   removeConnector: (id) => {

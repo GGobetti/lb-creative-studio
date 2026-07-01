@@ -3,16 +3,18 @@
 import React, { useState, useRef } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { ColorID } from '@/types/stl-splitter.types';
-import { Trash2, Eye, EyeOff } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Layers } from 'lucide-react';
 
 export function ColorList() {
-  const colors             = useSTLSplitterStore((state) => state.painting.colors);
-  const selectedColorId    = useSTLSplitterStore((state) => state.painting.selectedColorId);
-  const isolatedColorId    = useSTLSplitterStore((state) => state.painting.isolatedColorId);
-  const selectColor        = useSTLSplitterStore((state) => state.selectColor);
-  const removeColor        = useSTLSplitterStore((state) => state.removeColor);
-  const updateColor        = useSTLSplitterStore((state) => state.updateColor);
-  const setIsolatedColorId = useSTLSplitterStore((state) => state.setIsolatedColorId);
+  const colors              = useSTLSplitterStore((state) => state.painting.colors);
+  const selectedColorId     = useSTLSplitterStore((state) => state.painting.selectedColorId);
+  const isolatedColorId     = useSTLSplitterStore((state) => state.painting.isolatedColorId);
+  const transparentColorIds = useSTLSplitterStore((state) => state.painting.transparentColorIds);
+  const selectColor         = useSTLSplitterStore((state) => state.selectColor);
+  const removeColor         = useSTLSplitterStore((state) => state.removeColor);
+  const updateColor         = useSTLSplitterStore((state) => state.updateColor);
+  const setIsolatedColorId  = useSTLSplitterStore((state) => state.setIsolatedColorId);
+  const toggleTransparentColor = useSTLSplitterStore((state) => state.toggleTransparentColor);
 
   const [editingNameId, setEditingNameId] = useState<ColorID | null>(null);
   const [draftName, setDraftName] = useState('');
@@ -53,6 +55,7 @@ export function ColorList() {
           const isIsolated      = isolatedColorId === color.id;
           const isOtherIsolated = isolatedColorId !== null && !isIsolated;
           const isEditingName   = editingNameId === color.id;
+          const isTransparent   = transparentColorIds.includes(color.id);
 
           return (
             <div
@@ -130,6 +133,20 @@ export function ColorList() {
                 }`}
               >
                 {isIsolated ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              </button>
+
+              {/* Transparency toggle — see connectors embedded inside this part */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleTransparentColor(color.id);
+                }}
+                title={isTransparent ? `Deixar ${color.name} opaca` : `Deixar ${color.name} transparente`}
+                className={`p-1 rounded transition flex-shrink-0 opacity-0 group-hover:opacity-100 ${
+                  isTransparent ? 'opacity-100 text-orange-500' : 'text-gray-400 hover:text-orange-500'
+                }`}
+              >
+                <Layers className="h-3.5 w-3.5" />
               </button>
 
               {/* Delete button */}

@@ -22,6 +22,7 @@ import {
   magicWandFill,
   getFacesInLasso,
   findNearestBoundary,
+  getEffectiveConnectorTransform,
 } from '@/lib/stl-splitter/geometry-utils';
 import type { ConnectorPoint } from '@/types/stl-splitter.types';
 
@@ -50,20 +51,23 @@ export function STLViewer() {
   const lastPaintTimeRef       = useRef(0);
   const lastHoverTimeRef       = useRef(0);
 
-  const model            = useSTLSplitterStore((state) => state.model);
-  const painting         = useSTLSplitterStore((state) => state.painting);
-  const isolatedColorId  = useSTLSplitterStore((state) => state.painting.isolatedColorId);
-  const showWireframe    = useSTLSplitterStore((state) => state.ui.showWireframe);
-  const setShowWireframe = useSTLSplitterStore((state) => state.setShowWireframe);
-  const connectors       = useSTLSplitterStore((state) => state.connectors);
-  const connectorRadius  = useSTLSplitterStore((state) => state.connectorRadius);
-  const addConnector     = useSTLSplitterStore((state) => state.addConnector);
-  const paintFaces       = useSTLSplitterStore((state) => state.paintFaces);
-  const eraseFaces       = useSTLSplitterStore((state) => state.eraseFaces);
+  const model              = useSTLSplitterStore((state) => state.model);
+  const painting           = useSTLSplitterStore((state) => state.painting);
+  const isolatedColorId    = useSTLSplitterStore((state) => state.painting.isolatedColorId);
+  const transparentColorIds = useSTLSplitterStore((state) => state.painting.transparentColorIds);
+  const showWireframe      = useSTLSplitterStore((state) => state.ui.showWireframe);
+  const setShowWireframe   = useSTLSplitterStore((state) => state.setShowWireframe);
+  const connectors         = useSTLSplitterStore((state) => state.connectors);
+  const addConnector       = useSTLSplitterStore((state) => state.addConnector);
+  const paintFaces         = useSTLSplitterStore((state) => state.paintFaces);
+  const eraseFaces         = useSTLSplitterStore((state) => state.eraseFaces);
 
   // Always-fresh painting state for handlers registered once at model load
   const paintingRef = useRef(painting);
   useEffect(() => { paintingRef.current = painting; }, [painting]);
+
+  const transparentColorIdsRef = useRef(transparentColorIds);
+  useEffect(() => { transparentColorIdsRef.current = transparentColorIds; }, [transparentColorIds]);
 
   // Adjacency graph — built once per geometry, cached
   const adjacencyRef = useRef<Map<number, number[]> | null>(null);
@@ -98,12 +102,21 @@ export function STLViewer() {
 
     if (!model.geometry.attributes.normal) model.geometry.computeVertexNormals();
 
-    if (!model.geometry.attributes.color) {
+    // RGBA vertex colors (not just RGB) so individual parts can be made
+    // semi-transparent — the alpha channel lets "Deixar transparente" work
+    // per-part on a single shared mesh instead of needing separate meshes.
+    if (!model.geometry.attributes.color || (model.geometry.attributes.color as THREE.BufferAttribute).itemSize !== 4) {
       const count = model.geometry.attributes.position.count;
-      model.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3).fill(0.55), 3));
+      const colorArr = new Float32Array(count * 4);
+      for (let i = 0; i < count; i++) {
+        const base = i * 4;
+        colorArr[base] = colorArr[base + 1] = colorArr[base + 2] = 0.55;
+        colorArr[base + 3] = 1;
+      }
+      model.geometry.setAttribute('color', new THREE.BufferAttribute(colorArr, 4));
     }
 
-    const material = new MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide });
+    const material = new MeshStandardMaterial({ color: 0xffffff, vertexColors: true, transparent: true, roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide });
     const mesh = new Mesh(model.geometry, material);
     meshRef.current = mesh;
     scene.add(mesh);
@@ -200,9 +213,10 @@ export function STLViewer() {
       if (prev !== null) {
         const cid = p.colorMap.get(prev);
         const c   = cid ? p.colors.get(cid) : null;
+        const a   = cid && transparentColorIdsRef.current.includes(cid) ? 0.18 : 1;
         for (let i = 0; i < 3; i++) {
-          const vi = (prev * 3 + i) * 3;
-          if (vi + 2 >= colors.length) continue;
+          const vi = (prev * 3 + i) * 4;
+          if (vi + 3 >= colors.length) continue;
           if (c) {
             const hex = c.hex.replace('#', '');
             colors[vi]     = parseInt(hex.substring(0, 2), 16) / 255;
@@ -212,6 +226,7 @@ export function STLViewer() {
             const base = p.isolatedColorId ? 0.08 : 0.55;
             colors[vi] = colors[vi + 1] = colors[vi + 2] = base;
           }
+          colors[vi + 3] = a;
         }
       }
 
@@ -219,9 +234,9 @@ export function STLViewer() {
 
       if (faceIndex !== null) {
         for (let i = 0; i < 3; i++) {
-          const vi = (faceIndex * 3 + i) * 3;
-          if (vi + 2 >= colors.length) continue;
-          colors[vi] = 1.0; colors[vi + 1] = 0.95; colors[vi + 2] = 0.4;
+          const vi = (faceIndex * 3 + i) * 4;
+          if (vi + 3 >= colors.length) continue;
+          colors[vi] = 1.0; colors[vi + 1] = 0.95; colors[vi + 2] = 0.4; colors[vi + 3] = 1;
         }
       }
       model.geometry.attributes.color.needsUpdate = true;
@@ -418,10 +433,13 @@ export function STLViewer() {
       pendingConnectorRef.current = {
         position: { x: worldMid.x, y: worldMid.y, z: worldMid.z },
         normal:   { x: axis.x, y: axis.y, z: axis.z },
+        positionOffset: { x: 0, y: 0, z: 0 },
+        rotationDeg: { x: 0, y: 0, z: 0 },
         partAColorId: hitColorId,
         partBColorId: boundary.colorB,
         radius,
         depth,
+        clearance: 0.2,
       };
     };
 
@@ -486,7 +504,11 @@ export function STLViewer() {
     if (!meshRef.current || !model?.geometry?.attributes.color) return;
 
     const colors = model.geometry.attributes.color.array as Float32Array;
-    colors.fill(isolatedColorId ? 0.08 : 0.55);
+    const baseGray = isolatedColorId ? 0.08 : 0.55;
+    for (let i = 0; i < colors.length; i += 4) {
+      colors[i] = colors[i + 1] = colors[i + 2] = baseGray;
+      colors[i + 3] = 1;
+    }
 
     painting.colorMap.forEach((colorId, faceIndex) => {
       if (isolatedColorId && colorId !== isolatedColorId) return;
@@ -496,17 +518,18 @@ export function STLViewer() {
       const r = parseInt(hex.substring(0, 2), 16) / 255;
       const g = parseInt(hex.substring(2, 4), 16) / 255;
       const b = parseInt(hex.substring(4, 6), 16) / 255;
+      const a = transparentColorIds.includes(colorId) ? 0.18 : 1;
       for (let i = 0; i < 3; i++) {
-        const vi = (faceIndex * 3 + i) * 3;
-        if (vi + 2 < colors.length) {
-          colors[vi] = r; colors[vi + 1] = g; colors[vi + 2] = b;
+        const vi = (faceIndex * 3 + i) * 4;
+        if (vi + 3 < colors.length) {
+          colors[vi] = r; colors[vi + 1] = g; colors[vi + 2] = b; colors[vi + 3] = a;
         }
       }
     });
 
     hoveredFaceRef.current = null;
     model.geometry.attributes.color.needsUpdate = true;
-  }, [painting.colorMap, painting.colors, isolatedColorId, model?.geometry]);
+  }, [painting.colorMap, painting.colors, isolatedColorId, transparentColorIds, model?.geometry]);
 
   // ── Wireframe overlay effect ───────────────────────────────────────────────
   useEffect(() => {
@@ -527,28 +550,22 @@ export function STLViewer() {
     }
   }, [showWireframe, model?.geometry]);
 
-  // ── Connector preview spheres ─────────────────────────────────────────────
+  // ── Connector preview meshes ───────────────────────────────────────────────
+  // Rebuilt in full on every change (connectors are few, geometries cheap) so
+  // edits from the editing panel (move/rotate/resize) always show correctly —
+  // not just brand-new connectors.
   useEffect(() => {
     if (!sceneRef.current) return;
     const scene = sceneRef.current;
 
-    // Remove meshes for connectors that were deleted
-    connectorMeshesRef.current.forEach((mesh, id) => {
-      if (!connectors.find((c) => c.id === id)) {
-        scene.remove(mesh);
-        connectorMeshesRef.current.delete(id);
-      }
-    });
+    connectorMeshesRef.current.forEach((mesh) => scene.remove(mesh));
+    connectorMeshesRef.current.clear();
 
-    // Add meshes for new connectors
     for (const conn of connectors) {
-      if (connectorMeshesRef.current.has(conn.id)) continue;
-
-      const norm   = new THREE.Vector3(conn.normal.x, conn.normal.y, conn.normal.z).normalize();
-      const up     = new THREE.Vector3(0, 1, 0);
-      const quat   = new THREE.Quaternion().setFromUnitVectors(up, norm);
-      const center = new THREE.Vector3(conn.position.x, conn.position.y, conn.position.z);
-      const half   = conn.depth / 2;
+      const { position, normal } = getEffectiveConnectorTransform(conn);
+      const up   = new THREE.Vector3(0, 1, 0);
+      const quat = new THREE.Quaternion().setFromUnitVectors(up, normal);
+      const half = conn.depth / 2;
 
       // Full pin volume, centered exactly on the seam — matches the export
       // geometry 1:1, so rotating the model shows the half that's embedded
@@ -560,19 +577,18 @@ export function STLViewer() {
       });
       const pinMesh = new THREE.Mesh(pinGeo, pinMat);
       pinMesh.quaternion.copy(quat);
-      pinMesh.position.copy(center);
+      pinMesh.position.copy(position);
 
       // Small red marker on the hole/socket side so it's clear which end goes where
       const markerGeo = new THREE.SphereGeometry(conn.radius * 0.9, 10, 8);
       const markerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, roughness: 0.4 });
       const marker = new THREE.Mesh(markerGeo, markerMat);
-      marker.position.copy(center).addScaledVector(norm, -half);
+      marker.position.copy(position).addScaledVector(normal, -half);
 
       const group = new THREE.Group();
       group.add(pinMesh, marker);
 
       scene.add(group);
-      // Store the group by id so we can remove it later
       connectorMeshesRef.current.set(conn.id, group as unknown as THREE.Mesh);
     }
   }, [connectors]);
@@ -594,15 +610,6 @@ export function STLViewer() {
     // Hide custom circle cursor for navigate, lasso and connector
     if (cursorRef.current && (tool === 'navigate' || tool === 'lasso' || tool === 'connector')) {
       cursorRef.current.style.display = 'none';
-    }
-
-    // Semi-transparent model while placing connectors, so the pin preview is
-    // visible sitting inside the material instead of just on the surface.
-    if (meshRef.current) {
-      const mat = meshRef.current.material as MeshStandardMaterial;
-      mat.transparent = tool === 'connector';
-      mat.opacity = tool === 'connector' ? 0.55 : 1;
-      mat.depthWrite = tool !== 'connector';
     }
 
     if (tool !== 'connector' && connectorPreviewRef.current) {

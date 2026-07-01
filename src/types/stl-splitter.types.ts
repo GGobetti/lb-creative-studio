@@ -48,6 +48,7 @@ export interface PaintingState {
   bucketThreshold: number; // degrees 0-90, angle limit for flood fill (0 = unlimited)
   isolatedColorId: ColorID | null; // when set, non-isolated faces render near-black
   autoSegmentThreshold: number; // degrees 10-180: edges sharper than this split segments
+  transparentColorIds: ColorID[]; // parts rendered semi-transparent, to see connectors embedded inside
 }
 
 /**
@@ -56,12 +57,15 @@ export interface PaintingState {
  */
 export interface ConnectorPoint {
   id: string;
-  position: { x: number; y: number; z: number }; // world-space position (serializable)
-  normal: { x: number; y: number; z: number };   // points from B toward A
+  position: { x: number; y: number; z: number }; // auto-computed (snap) base position
+  normal: { x: number; y: number; z: number };   // auto-computed (snap) base axis, points from B toward A
+  positionOffset: { x: number; y: number; z: number }; // manual nudge in mm, world-space, added to `position`
+  rotationDeg: { x: number; y: number; z: number };    // manual rotation in degrees, applied to `normal`
   partAColorId: ColorID; // pin side
   partBColorId: ColorID; // hole side
   radius: number; // mm
   depth: number;  // mm total length (split equally between the two parts)
+  clearance: number; // mm added to the hole's radius/length for fit tolerance
 }
 
 /**

@@ -1,5 +1,5 @@
-import { Raycaster, Mesh, Vector2, BufferGeometry, Vector3, Matrix4 } from 'three';
-import type { ColorID } from '@/types/stl-splitter.types';
+import { Raycaster, Mesh, Vector2, BufferGeometry, Vector3, Euler } from 'three';
+import type { ColorID, ConnectorPoint } from '@/types/stl-splitter.types';
 
 export function pickFaceAtRaycast(
   raycaster: Raycaster,
@@ -697,4 +697,72 @@ export function buildCappedPartGeometry(
 
   console.log(`🧊 Capped part ${colorId}: ${faceIndices.length} faces + ${loops.length} loop(s) → ${caps.length / 9} cap triangles`);
   return ensureOutwardWinding(combined);
+}
+
+// Resolves a connector's final placement: the auto-computed (snap) position
+// and axis, adjusted by the manual position/rotation nudges from the editing
+// panel. Used consistently by both the 3D preview and the CSG export so they
+// never disagree.
+export function getEffectiveConnectorTransform(conn: ConnectorPoint): { position: Vector3; normal: Vector3 } {
+  const position = new Vector3(conn.position.x, conn.position.y, conn.position.z).add(
+    new Vector3(conn.positionOffset.x, conn.positionOffset.y, conn.positionOffset.z)
+  );
+
+  const euler = new Euler(
+    (conn.rotationDeg.x * Math.PI) / 180,
+    (conn.rotationDeg.y * Math.PI) / 180,
+    (conn.rotationDeg.z * Math.PI) / 180,
+    'XYZ'
+  );
+  const normal = new Vector3(conn.normal.x, conn.normal.y, conn.normal.z).applyEuler(euler).normalize();
+
+  return { position, normal };
+}
+
+// Finds triangles the paint tools left unpainted but that are fully enclosed
+// by a single color (e.g. bucket/wand stopping short at a local crease,
+// leaving a stray island inside a leg). Returns which color should adopt
+// each such face. Ambiguous gaps (bordered by more than one color, or not
+// bordered by any painted face at all) are left untouched.
+export function fillEnclosedGaps(
+  geometry: BufferGeometry,
+  colorMap: Map<number, ColorID>
+): Map<number, ColorID> {
+  const positions = geometry.attributes.position.array as Float32Array;
+  const totalFaces = Math.floor(positions.length / 9);
+  const adjacency = buildFaceAdjacency(geometry);
+
+  const fills = new Map<number, ColorID>();
+  const visited = new Set<number>();
+
+  for (let fi = 0; fi < totalFaces; fi++) {
+    if (colorMap.has(fi) || visited.has(fi)) continue;
+
+    const component: number[] = [];
+    const borderingColors = new Set<ColorID>();
+    const queue = [fi];
+    visited.add(fi);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      component.push(current);
+      for (const nb of (adjacency.get(current) || [])) {
+        const nbColor = colorMap.get(nb);
+        if (nbColor) {
+          borderingColors.add(nbColor);
+        } else if (!visited.has(nb)) {
+          visited.add(nb);
+          queue.push(nb);
+        }
+      }
+    }
+
+    if (borderingColors.size === 1) {
+      const [color] = borderingColors;
+      for (const cf of component) fills.set(cf, color);
+    }
+  }
+
+  console.log(`🩹 fillEnclosedGaps: ${fills.size} stray faces filled from enclosed gaps`);
+  return fills;
 }
