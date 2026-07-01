@@ -92,7 +92,9 @@ const initialPaintingState: PaintingState = {
   selectedColorId: null,
   activeTool: 'brush',
   wandThreshold: 15,
+  wandMode: 'local',
   bucketThreshold: 60,
+  isolatedColorId: null,
 };
 
 /**
@@ -124,6 +126,7 @@ interface STLSplitterStoreActions {
 
   // Painting actions
   paintFaces: (faceIndices: FaceIndex[], colorId: ColorID) => void;
+  eraseFaces: (faceIndices: FaceIndex[]) => void;
   undoPaint: () => void;
   addColor: () => ColorID;
   selectColor: (colorId: ColorID | null) => void;
@@ -131,7 +134,9 @@ interface STLSplitterStoreActions {
   setBrushSize: (size: number) => void;
   setActiveTool: (tool: PaintTool) => void;
   setWandThreshold: (degrees: number) => void;
+  setWandMode: (mode: 'local' | 'global') => void;
   setBucketThreshold: (degrees: number) => void;
+  setIsolatedColorId: (id: ColorID | null) => void;
 
   // UI actions
   setLoading: (isLoading: boolean) => void;
@@ -213,6 +218,36 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
           colorMap: newColorMap,
           colors,
         },
+      };
+    });
+  },
+
+  eraseFaces: (faceIndices) => {
+    set((state) => {
+      const newHistory = [...state.colorMapHistory, new Map(state.painting.colorMap)].slice(-20);
+      const newColorMap = new Map(state.painting.colorMap);
+      const colorFaceDiff = new Map<ColorID, number>();
+
+      for (const fi of faceIndices) {
+        const colorId = newColorMap.get(fi as FaceIndex);
+        if (colorId) {
+          colorFaceDiff.set(colorId, (colorFaceDiff.get(colorId) || 0) + 1);
+          newColorMap.delete(fi as FaceIndex);
+        }
+      }
+
+      const colors = new Map(state.painting.colors);
+      colorFaceDiff.forEach((removed, colorId) => {
+        const color = colors.get(colorId);
+        if (color) {
+          colors.set(colorId, { ...color, faceCount: Math.max(0, color.faceCount - removed) });
+        }
+      });
+
+      console.log(`🧹 Erase: removed color from ${faceIndices.length} faces`);
+      return {
+        colorMapHistory: newHistory,
+        painting: { ...state.painting, colorMap: newColorMap, colors },
       };
     });
   },
@@ -327,10 +362,18 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
     }));
   },
 
+  setWandMode: (mode) => {
+    set((state) => ({ painting: { ...state.painting, wandMode: mode } }));
+  },
+
   setBucketThreshold: (degrees) => {
     set((state) => ({
       painting: { ...state.painting, bucketThreshold: Math.max(0, Math.min(90, degrees)) },
     }));
+  },
+
+  setIsolatedColorId: (id) => {
+    set((state) => ({ painting: { ...state.painting, isolatedColorId: id } }));
   },
 
   // UI actions
