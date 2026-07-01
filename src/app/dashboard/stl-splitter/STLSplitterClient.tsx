@@ -8,6 +8,7 @@ import { PaintToolbar } from '@/components/stl-splitter/PaintToolbar';
 import { ColorList } from '@/components/stl-splitter/ColorList';
 import { ExportModal } from '@/components/stl-splitter/ExportModal';
 import { SessionHistory } from '@/components/stl-splitter/SessionHistory';
+import { AutoSegmentPanel } from '@/components/stl-splitter/AutoSegmentPanel';
 import { AlertCircle, Download, RotateCcw } from 'lucide-react';
 
 export function STLSplitterClient() {
@@ -100,6 +101,8 @@ export function STLSplitterClient() {
         <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
           <PaintToolbar />
         </div>
+
+        <AutoSegmentPanel />
 
         <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
           <h3 className="font-semibold p-4 border-b border-gray-200 dark:border-gray-700">Parts</h3>

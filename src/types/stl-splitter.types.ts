@@ -35,7 +35,7 @@ export interface STLModel {
 /**
  * Represents the painting state - which faces are assigned to which colors
  */
-export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser';
+export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser' | 'lasso';
 
 export interface PaintingState {
   colorMap: Map<FaceIndex, ColorID>; // Maps face index to color ID
@@ -47,6 +47,7 @@ export interface PaintingState {
   wandMode: 'local' | 'global'; // local: compare to parent normal; global: compare to start normal
   bucketThreshold: number; // degrees 0-90, angle limit for flood fill (0 = unlimited)
   isolatedColorId: ColorID | null; // when set, non-isolated faces render near-black
+  autoSegmentThreshold: number; // degrees 10-180: edges sharper than this split segments
 }
 
 /**
@@ -74,6 +75,7 @@ export interface STLSplitterUIState {
   mode: 'upload' | 'painting' | 'export';
   showSessionRestore: boolean;
   exportProgress: number; // 0-100
+  showWireframe: boolean;
 }
 
 /**

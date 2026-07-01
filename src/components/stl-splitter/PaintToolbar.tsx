@@ -9,6 +9,7 @@ const TOOLS: { id: PaintTool; label: string; icon: string; hint: string }[] = [
   { id: 'bucket', icon: '🪣', label: 'Balde',   hint: 'Preenchimento por região conectada a partir da face clicada' },
   { id: 'wand',   icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (BFS)' },
   { id: 'eraser', icon: '🧹', label: 'Borracha', hint: 'Clique ou arraste para apagar cores de faces pintadas' },
+  { id: 'lasso',  icon: '🔵', label: 'Laço',    hint: 'Desenhe uma área livre para pintar todas as faces dentro' },
 ];
 
 export function PaintToolbar() {
@@ -49,7 +50,7 @@ export function PaintToolbar() {
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
 
       {/* Tool selector */}
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-5 gap-1">
         {TOOLS.map((tool) => (
           <button
             key={tool.id}
@@ -193,6 +194,7 @@ export function PaintToolbar() {
           {activeTool === 'bucket' && `🪣 Clique para preencher região conectada com ${selectedColor.name}`}
           {activeTool === 'wand'   && `✨ Clique numa superfície — pinta faces de ângulo similar com ${selectedColor.name}`}
           {activeTool === 'eraser' && `🧹 Clique ou arraste para apagar cores no modelo`}
+          {activeTool === 'lasso'  && `🔵 Segure e arraste para desenhar o laço — pinta tudo dentro com ${selectedColor.name}`}
         </div>
       ) : activeTool !== 'eraser' ? (
         <div className="text-xs px-3 py-2 rounded bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300">

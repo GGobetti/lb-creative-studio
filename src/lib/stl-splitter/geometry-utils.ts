@@ -209,3 +209,120 @@ export function magicWandFill(
 export function getAdjacentFaces(faceIndex: number, geometry: BufferGeometry): number[] {
   return [];
 }
+
+// Auto-segmentation: BFS through face adjacency using only "gentle" edges.
+// Edges where adjacent-face normals differ by more than thresholdDegrees break
+// the graph, splitting those faces into separate segments.
+// thresholdDegrees=180 → only disconnected shells separate.  45 → split at creases.
+export function autoSegmentBySharpEdges(
+  geometry: BufferGeometry,
+  thresholdDegrees: number = 45
+): Map<number, number> {
+  const positions = geometry.attributes.position.array as Float32Array;
+  const totalFaces = Math.floor(positions.length / 9);
+  const cosThreshold = Math.cos((thresholdDegrees * Math.PI) / 180);
+
+  // Build edge → faces map
+  const edgeToFaces = new Map<string, number[]>();
+  for (let fi = 0; fi < totalFaces; fi++) {
+    for (let ei = 0; ei < 3; ei++) {
+      const va = fi * 9 + ei * 3;
+      const vb = fi * 9 + ((ei + 1) % 3) * 3;
+      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
+      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      const entry = edgeToFaces.get(key);
+      if (entry) entry.push(fi); else edgeToFaces.set(key, [fi]);
+    }
+  }
+
+  // Build restricted adjacency: only connect faces whose normals are within threshold
+  const adj = new Map<number, number[]>();
+  for (const faces of edgeToFaces.values()) {
+    if (faces.length < 2) continue;
+    for (let i = 0; i < faces.length; i++) {
+      for (let j = i + 1; j < faces.length; j++) {
+        const fi = faces[i], fj = faces[j];
+        const ni = getFaceNormal(positions, fi);
+        const nj = getFaceNormal(positions, fj);
+        if (ni.dot(nj) >= cosThreshold) {
+          const ai = adj.get(fi); if (ai) ai.push(fj); else adj.set(fi, [fj]);
+          const aj = adj.get(fj); if (aj) aj.push(fi); else adj.set(fj, [fi]);
+        }
+      }
+    }
+  }
+
+  // BFS to find connected components in restricted graph
+  const faceToSegment = new Map<number, number>();
+  let segmentId = 0;
+  for (let start = 0; start < totalFaces; start++) {
+    if (faceToSegment.has(start)) continue;
+    const queue = [start];
+    faceToSegment.set(start, segmentId);
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      for (const nb of (adj.get(cur) || [])) {
+        if (!faceToSegment.has(nb)) { faceToSegment.set(nb, segmentId); queue.push(nb); }
+      }
+    }
+    segmentId++;
+  }
+
+  console.log(`🔷 Auto-segment (threshold ${thresholdDegrees}°): ${segmentId} segments, ${totalFaces} faces`);
+  return faceToSegment;
+}
+
+// Returns true if point (px, py) is inside the polygon using ray-casting.
+export function isPointInPolygon(
+  px: number,
+  py: number,
+  polygon: { x: number; y: number }[]
+): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+// Projects all face centroids to screen space and returns faces whose centroid
+// falls inside the lasso polygon.
+export function getFacesInLasso(
+  polygon: { x: number; y: number }[],
+  mesh: Mesh,
+  camera: any,
+  viewportW: number,
+  viewportH: number,
+  positions: Float32Array
+): number[] {
+  if (polygon.length < 3) return [];
+
+  const mvpMatrix = camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse);
+  const worldMatrix = mesh.matrixWorld;
+  const selected: number[] = [];
+  const totalFaces = Math.floor(positions.length / 9);
+  const tmp = new Vector3();
+
+  for (let fi = 0; fi < totalFaces; fi++) {
+    const base = fi * 9;
+    const cx = (positions[base] + positions[base + 3] + positions[base + 6]) / 3;
+    const cy = (positions[base + 1] + positions[base + 4] + positions[base + 7]) / 3;
+    const cz = (positions[base + 2] + positions[base + 5] + positions[base + 8]) / 3;
+
+    tmp.set(cx, cy, cz).applyMatrix4(worldMatrix).applyMatrix4(mvpMatrix);
+    if (tmp.z > 1) continue;
+
+    const sx = ((tmp.x + 1) / 2) * viewportW;
+    const sy = ((1 - tmp.y) / 2) * viewportH;
+
+    if (isPointInPolygon(sx, sy, polygon)) selected.push(fi);
+  }
+
+  console.log(`🔵 Lasso: ${selected.length} faces in polygon`);
+  return selected;
+}

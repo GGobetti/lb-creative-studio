@@ -14,6 +14,13 @@ import {
   STLSplitterState,
 } from '@/types/stl-splitter.types';
 
+const AUTO_SEGMENT_PALETTE = [
+  '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6',
+  '#1ABC9C', '#E67E22', '#2980B9', '#27AE60', '#8E44AD',
+  '#C0392B', '#16A085', '#D35400', '#2471A3', '#1E8449',
+  '#7D3C98',
+];
+
 /**
  * Helper to create a branded ColorID
  */
@@ -95,6 +102,7 @@ const initialPaintingState: PaintingState = {
   wandMode: 'local',
   bucketThreshold: 60,
   isolatedColorId: null,
+  autoSegmentThreshold: 45,
 };
 
 /**
@@ -106,6 +114,7 @@ const initialUIState: STLSplitterUIState = {
   mode: 'upload',
   showSessionRestore: false,
   exportProgress: 0,
+  showWireframe: false,
 };
 
 /**
@@ -137,6 +146,10 @@ interface STLSplitterStoreActions {
   setWandMode: (mode: 'local' | 'global') => void;
   setBucketThreshold: (degrees: number) => void;
   setIsolatedColorId: (id: ColorID | null) => void;
+  updateColor: (colorId: ColorID, updates: { hex?: string; name?: string }) => void;
+  applyAutoSegment: (segmentMap: Map<number, number>) => void;
+  setShowWireframe: (show: boolean) => void;
+  setAutoSegmentThreshold: (degrees: number) => void;
 
   // UI actions
   setLoading: (isLoading: boolean) => void;
@@ -374,6 +387,73 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
 
   setIsolatedColorId: (id) => {
     set((state) => ({ painting: { ...state.painting, isolatedColorId: id } }));
+  },
+
+  updateColor: (colorId, updates) => {
+    set((state) => {
+      const colors = new Map(state.painting.colors);
+      const color = colors.get(colorId);
+      if (!color) return state;
+      colors.set(colorId, { ...color, ...updates });
+      return { painting: { ...state.painting, colors } };
+    });
+  },
+
+  applyAutoSegment: (segmentMap) => {
+    set((state) => {
+      const newHistory = [...state.colorMapHistory, new Map(state.painting.colorMap)].slice(-20);
+
+      const counts = new Map<number, number>();
+      segmentMap.forEach((segId) => counts.set(segId, (counts.get(segId) || 0) + 1));
+      const top = Array.from(counts.entries())
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 16);
+      const topIds = new Set(top.map(([id]) => id));
+      const fallbackId = top[top.length - 1]?.[0] ?? 0;
+
+      const segToColor = new Map<number, ColorID>();
+      const colors = new Map<ColorID, ColorGroup>();
+
+      top.forEach(([segId], idx) => {
+        const colorId = generateColorID();
+        colors.set(colorId, {
+          id: colorId,
+          name: `Parte ${idx + 1}`,
+          hex: AUTO_SEGMENT_PALETTE[idx % AUTO_SEGMENT_PALETTE.length],
+          faceCount: 0,
+          createdAt: Date.now(),
+        });
+        segToColor.set(segId, colorId);
+      });
+
+      const newColorMap = new Map<FaceIndex, ColorID>();
+      segmentMap.forEach((segId, faceIndex) => {
+        const resolvedSeg = topIds.has(segId) ? segId : fallbackId;
+        const colorId = segToColor.get(resolvedSeg);
+        if (colorId) newColorMap.set(faceIndex as FaceIndex, colorId);
+      });
+
+      colors.forEach((color, colorId) => {
+        const count = Array.from(newColorMap.values()).filter((id) => id === colorId).length;
+        colors.set(colorId, { ...color, faceCount: count });
+      });
+
+      console.log(`🔷 Auto-segment applied: ${top.length} parts, ${newColorMap.size} faces painted`);
+      return {
+        colorMapHistory: newHistory,
+        painting: { ...state.painting, colors, colorMap: newColorMap, selectedColorId: null },
+      };
+    });
+  },
+
+  setShowWireframe: (show) => {
+    set((state) => ({ ui: { ...state.ui, showWireframe: show } }));
+  },
+
+  setAutoSegmentThreshold: (degrees) => {
+    set((state) => ({
+      painting: { ...state.painting, autoSegmentThreshold: Math.max(10, Math.min(180, degrees)) },
+    }));
   },
 
   // UI actions
