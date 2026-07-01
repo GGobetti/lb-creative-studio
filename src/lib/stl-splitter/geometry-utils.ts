@@ -276,11 +276,50 @@ export function autoSegmentBySharpEdges(
 
 // ── Connector helpers ─────────────────────────────────────────────────────────
 
+export function getFaceCentroid(positions: Float32Array, faceIndex: number): Vector3 {
+  const base = faceIndex * 9;
+  return new Vector3(
+    (positions[base] + positions[base + 3] + positions[base + 6]) / 3,
+    (positions[base + 1] + positions[base + 4] + positions[base + 7]) / 3,
+    (positions[base + 2] + positions[base + 5] + positions[base + 8]) / 3
+  );
+}
+
+// Finds the midpoint of the edge shared between two adjacent faces.
+export function getSharedEdgeMidpoint(
+  positions: Float32Array,
+  faceA: number,
+  faceB: number
+): Vector3 | null {
+  const keyAt = (base: number) =>
+    `${positions[base].toFixed(5)},${positions[base + 1].toFixed(5)},${positions[base + 2].toFixed(5)}`;
+  const edgesOf = (fi: number) => {
+    const base = fi * 9;
+    return [[base, base + 3], [base + 3, base + 6], [base + 6, base]].map(([a, b]) => ({
+      a, b, ka: keyAt(a), kb: keyAt(b),
+    }));
+  };
+
+  for (const ea of edgesOf(faceA)) {
+    for (const eb of edgesOf(faceB)) {
+      if ((ea.ka === eb.ka && ea.kb === eb.kb) || (ea.ka === eb.kb && ea.kb === eb.ka)) {
+        return new Vector3(
+          (positions[ea.a] + positions[ea.b]) / 2,
+          (positions[ea.a + 1] + positions[ea.b + 1]) / 2,
+          (positions[ea.a + 2] + positions[ea.b + 2]) / 2
+        );
+      }
+    }
+  }
+  return null;
+}
+
 export interface BoundaryEdgeInfo {
   midpoint: Vector3;
-  normal: Vector3;       // face normal at midpoint, pointing from faceB toward faceA
+  normal: Vector3;       // tangential direction across the seam, from faceB's centroid toward faceA's
   colorA: ColorID;       // face that will receive the pin
   colorB: ColorID;       // face that will receive the hole
+  gap: number;            // distance between the two face centroids (used to size embed depth)
 }
 
 // Finds all shared edges between faces of different colors.
@@ -319,9 +358,18 @@ export function findColorBoundaryEdges(
         const [ax, ay, az] = parts[0].split(',').map(Number);
         const [bx, by, bz] = parts[1].split(',').map(Number);
         const midpoint = new Vector3((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
-        const normal = getFaceNormal(positions, fA);
 
-        edges.push({ midpoint, normal, colorA: cA, colorB: cB });
+        // Tangential direction across the seam (NOT the surface normal — that
+        // points straight out of the model, which is why connectors used to
+        // look like isolated pins instead of bridging the two parts).
+        const centroidA = getFaceCentroid(positions, fA);
+        const centroidB = getFaceCentroid(positions, fB);
+        const gap = centroidA.distanceTo(centroidB);
+        const normal = gap > 1e-6
+          ? new Vector3().subVectors(centroidA, centroidB).divideScalar(gap)
+          : getFaceNormal(positions, fA);
+
+        edges.push({ midpoint, normal, colorA: cA, colorB: cB, gap });
       }
     }
   }
@@ -404,4 +452,157 @@ export function getFacesInLasso(
 
   console.log(`🔵 Lasso: ${selected.length} faces in polygon`);
   return selected;
+}
+
+// ── Solid capping for export ──────────────────────────────────────────────
+//
+// Each color group is exported as just its own triangles, which leaves an
+// open shell wherever it was cut from a neighboring color (no "lid"). CSG
+// booleans (used for connector pins/holes) need closed volumes to behave
+// correctly, so before export every part gets its boundary loop(s) fan-
+// triangulated shut.
+
+// Builds an edge -> [faceIndex, ...] map for the whole mesh. Shared by
+// findColorBoundaryEdges-style lookups and by the capping routine below.
+export function buildWholeMeshEdgeToFaces(positions: Float32Array): Map<string, number[]> {
+  const totalFaces = Math.floor(positions.length / 9);
+  const edgeToFaces = new Map<string, number[]>();
+  for (let fi = 0; fi < totalFaces; fi++) {
+    for (let ei = 0; ei < 3; ei++) {
+      const va = fi * 9 + ei * 3;
+      const vb = fi * 9 + ((ei + 1) % 3) * 3;
+      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
+      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      const entry = edgeToFaces.get(key);
+      if (entry) entry.push(fi); else edgeToFaces.set(key, [fi]);
+    }
+  }
+  return edgeToFaces;
+}
+
+// Finds closed boundary loop(s) around a color group by chaining directed
+// boundary edges, each kept in the winding direction of its owning triangle
+// so that fan-capping them preserves outward-facing normals.
+function findBoundaryLoops(
+  positions: Float32Array,
+  faceIndices: number[],
+  colorMap: Map<number, ColorID>,
+  thisColor: ColorID,
+  edgeToFaces: Map<string, number[]>
+): Vector3[][] {
+  const directedByStart = new Map<string, { toKey: string; from: Vector3 }>();
+
+  for (const fi of faceIndices) {
+    for (let ei = 0; ei < 3; ei++) {
+      const va = fi * 9 + ei * 3;
+      const vb = fi * 9 + ((ei + 1) % 3) * 3;
+      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
+      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const undirectedKey = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      const facesOnEdge = edgeToFaces.get(undirectedKey) || [fi];
+      const otherFace = facesOnEdge.find((f) => f !== fi);
+      const otherColor = otherFace !== undefined ? colorMap.get(otherFace) : undefined;
+      const isBoundary = otherFace === undefined || otherColor !== thisColor;
+      if (!isBoundary) continue;
+
+      directedByStart.set(ka, {
+        toKey: kb,
+        from: new Vector3(positions[va], positions[va + 1], positions[va + 2]),
+      });
+    }
+  }
+
+  const loops: Vector3[][] = [];
+  const visited = new Set<string>();
+  for (const startKey of directedByStart.keys()) {
+    if (visited.has(startKey)) continue;
+    const loop: Vector3[] = [];
+    let curKey = startKey;
+    let guard = 0;
+    while (directedByStart.has(curKey) && !visited.has(curKey) && guard < 200000) {
+      visited.add(curKey);
+      const edge = directedByStart.get(curKey)!;
+      loop.push(edge.from);
+      curKey = edge.toKey;
+      guard++;
+      if (curKey === startKey) break;
+    }
+    if (loop.length >= 3) loops.push(loop);
+  }
+
+  return loops;
+}
+
+// Fan-triangulates each boundary loop from its centroid, producing cap
+// triangles that close the part into a (near-)watertight solid.
+function capLoops(loops: Vector3[][]): number[] {
+  const tris: number[] = [];
+  for (const loop of loops) {
+    const centroid = new Vector3();
+    for (const v of loop) centroid.add(v);
+    centroid.divideScalar(loop.length);
+
+    for (let i = 0; i < loop.length; i++) {
+      const a = loop[i];
+      const b = loop[(i + 1) % loop.length];
+      tris.push(a.x, a.y, a.z, b.x, b.y, b.z, centroid.x, centroid.y, centroid.z);
+    }
+  }
+  return tris;
+}
+
+// Flips triangle winding for the whole geometry if the signed volume comes
+// out negative, so the exported solid always ends up with outward-facing
+// normals regardless of which way the caps happened to wind.
+function ensureOutwardWinding(flat: Float32Array): Float32Array {
+  const totalFaces = Math.floor(flat.length / 9);
+  let volume6 = 0;
+  for (let fi = 0; fi < totalFaces; fi++) {
+    const b = fi * 9;
+    const v0x = flat[b], v0y = flat[b + 1], v0z = flat[b + 2];
+    const v1x = flat[b + 3], v1y = flat[b + 4], v1z = flat[b + 5];
+    const v2x = flat[b + 6], v2y = flat[b + 7], v2z = flat[b + 8];
+    volume6 += v0x * (v1y * v2z - v1z * v2y)
+             - v0y * (v1x * v2z - v1z * v2x)
+             + v0z * (v1x * v2y - v1y * v2x);
+  }
+  if (volume6 >= 0) return flat;
+
+  const flipped = flat.slice();
+  for (let fi = 0; fi < totalFaces; fi++) {
+    const b = fi * 9;
+    for (let k = 0; k < 3; k++) {
+      const tmp = flipped[b + 3 + k];
+      flipped[b + 3 + k] = flipped[b + 6 + k];
+      flipped[b + 6 + k] = tmp;
+    }
+  }
+  return flipped;
+}
+
+// Builds a (near-)watertight solid for one color group: the group's own
+// faces plus fan-triangulated caps closing every boundary loop. Needed so
+// CSG connectors (which require closed volumes) actually embed pins/holes
+// instead of floating on an open shell.
+export function buildCappedPartGeometry(
+  positions: Float32Array,
+  faceIndices: number[],
+  colorMap: Map<number, ColorID>,
+  colorId: ColorID,
+  edgeToFaces?: Map<string, number[]>
+): Float32Array {
+  const wholeEdgeToFaces = edgeToFaces ?? buildWholeMeshEdgeToFaces(positions);
+  const own = new Float32Array(faceIndices.length * 9);
+  faceIndices.forEach((fi, i) => own.set(positions.slice(fi * 9, fi * 9 + 9), i * 9));
+
+  const loops = findBoundaryLoops(positions, faceIndices, colorMap, colorId, wholeEdgeToFaces);
+  const caps = capLoops(loops);
+
+  const combined = new Float32Array(own.length + caps.length);
+  combined.set(own, 0);
+  combined.set(caps, own.length);
+
+  console.log(`🧊 Capped part ${colorId}: ${faceIndices.length} faces + ${loops.length} loop(s) → ${caps.length / 9} cap triangles`);
+  return ensureOutwardWinding(combined);
 }

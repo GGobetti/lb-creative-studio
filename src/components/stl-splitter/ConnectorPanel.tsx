@@ -39,7 +39,7 @@ export function ConnectorPanel() {
           partAColorId: edge.colorA,
           partBColorId: edge.colorB,
           radius: connectorRadius,
-          depth:  connectorRadius * 2.5,
+          depth:  Math.max(connectorRadius * 4, edge.gap + connectorRadius * 3),
         });
       }
 

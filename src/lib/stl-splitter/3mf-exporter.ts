@@ -3,6 +3,7 @@ import { BufferGeometry } from 'three';
 import { zipSync, strToU8 } from 'fflate';
 import { FaceIndex, ColorID, ColorGroup, ConnectorPoint } from '@/types/stl-splitter.types';
 import { applyConnectorsCSG } from './connector-csg';
+import { buildCappedPartGeometry, buildWholeMeshEdgeToFaces } from './geometry-utils';
 
 // 3MF is a ZIP package — slicers like Bambu Studio / PrusaSlicer will reject
 // raw XML files that are only renamed to .3mf. This exporter creates a proper
@@ -27,20 +28,20 @@ export async function export3MF(
     facesByColor.get(colorId)?.push(faceIndex);
   });
 
-  // Build per-part geometries, applying CSG for connectors when present
+  // Build per-part geometries. Each part is capped into a watertight solid
+  // first (raw color-group faces are just an open shell, and CSG booleans
+  // need closed volumes to actually embed pins/holes rather than float).
   const partGeometries = new Map<ColorID, Float32Array>();
+  const edgeToFaces = buildWholeMeshEdgeToFaces(positions);
 
   for (const [colorId, faceIndices] of facesByColor.entries()) {
     if (faceIndices.length === 0) continue;
 
+    const cappedPositions = buildCappedPartGeometry(positions, faceIndices, colorMap, colorId, edgeToFaces);
+
     if (connectors.length > 0) {
-      // Build a sub-geometry for this part
-      const partPositions = new Float32Array(faceIndices.length * 9);
-      faceIndices.forEach((fi, i) => {
-        partPositions.set(positions.slice(fi * 9, fi * 9 + 9), i * 9);
-      });
       const partGeo = new THREE.BufferGeometry();
-      partGeo.setAttribute('position', new THREE.BufferAttribute(partPositions, 3));
+      partGeo.setAttribute('position', new THREE.BufferAttribute(cappedPositions, 3));
       partGeo.computeVertexNormals();
 
       try {
@@ -59,11 +60,11 @@ export async function export3MF(
         }
         partGeometries.set(colorId, geo.getAttribute('position').array as Float32Array);
       } catch (err) {
-        console.warn(`⚠️ CSG failed for ${colors.get(colorId)?.name}, falling back to raw faces:`, err);
-        partGeometries.set(colorId, buildPartPositions(positions, faceIndices));
+        console.warn(`⚠️ CSG failed for ${colors.get(colorId)?.name}, exporting capped part without connectors:`, err);
+        partGeometries.set(colorId, cappedPositions);
       }
     } else {
-      partGeometries.set(colorId, buildPartPositions(positions, faceIndices));
+      partGeometries.set(colorId, cappedPositions);
     }
   }
 
@@ -90,12 +91,6 @@ export async function export3MF(
   );
 
   return new Blob([zip], { type: 'application/zip' });
-}
-
-function buildPartPositions(allPositions: Float32Array, faceIndices: number[]): Float32Array {
-  const out = new Float32Array(faceIndices.length * 9);
-  faceIndices.forEach((fi, i) => out.set(allPositions.slice(fi * 9, fi * 9 + 9), i * 9));
-  return out;
 }
 
 function buildModelXML(

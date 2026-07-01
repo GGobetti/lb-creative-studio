@@ -21,8 +21,10 @@ import {
   floodFillFaces,
   magicWandFill,
   getFacesInLasso,
+  getFaceCentroid,
+  getSharedEdgeMidpoint,
 } from '@/lib/stl-splitter/geometry-utils';
-import type { ConnectorPoint } from '@/types/stl-splitter.types';
+import type { ColorID, ConnectorPoint } from '@/types/stl-splitter.types';
 
 export function STLViewer() {
   const containerRef    = useRef<HTMLDivElement>(null);
@@ -325,41 +327,59 @@ export function STLViewer() {
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
         const hits = raycaster.intersectObject(meshRef.current!);
-        if (!hits.length || hits[0].faceIndex === undefined || !hits[0].face) return;
+        if (!hits.length || hits[0].faceIndex === undefined) return;
 
         const fi = hits[0].faceIndex!;
         const p  = paintingRef.current;
         const hitColorId = p.colorMap.get(fi);
 
-        // Find the adjacent face of a different color to determine partB
-        const adj = adjacencyRef.current;
-        let neighborColorId = hitColorId;
-        if (adj) {
-          for (const nb of (adj.get(fi) || [])) {
-            const nc = p.colorMap.get(nb);
-            if (nc && nc !== hitColorId) { neighborColorId = nc; break; }
-          }
-        }
-
         if (!hitColorId) {
-          console.log('⚠️ Connector: clicked face has no color assigned');
+          useSTLSplitterStore.getState().setError('Clique em uma face pintada, perto da fronteira entre duas partes.');
           return;
         }
 
-        const worldPos = hits[0].point;
-        const faceNormal = hits[0].face!.normal.clone().transformDirection(meshRef.current!.matrixWorld).normalize();
+        // Find the adjacent face of a different color — the connector must
+        // straddle an actual boundary, otherwise it can't connect anything.
+        const adj = adjacencyRef.current;
+        let neighborFaceIndex: number | null = null;
+        let neighborColorId: ColorID | null = null;
+        if (adj) {
+          for (const nb of (adj.get(fi) || [])) {
+            const nc = p.colorMap.get(nb);
+            if (nc && nc !== hitColorId) { neighborColorId = nc; neighborFaceIndex = nb; break; }
+          }
+        }
+
+        if (neighborFaceIndex === null || !neighborColorId) {
+          useSTLSplitterStore.getState().setError('Clique bem na fronteira entre duas partes de cores diferentes.');
+          console.log('⚠️ Connector: no adjacent face of a different color found near', fi);
+          return;
+        }
+
+        const positions = model.geometry!.attributes.position.array as Float32Array;
+        const localMid = getSharedEdgeMidpoint(positions, fi, neighborFaceIndex) ?? getFaceCentroid(positions, fi);
+        const worldMid = localMid.clone().applyMatrix4(meshRef.current!.matrixWorld);
+        const worldA   = getFaceCentroid(positions, fi).applyMatrix4(meshRef.current!.matrixWorld);
+        const worldB   = getFaceCentroid(positions, neighborFaceIndex).applyMatrix4(meshRef.current!.matrixWorld);
+
+        // Tangential direction across the seam (from partB toward partA) —
+        // NOT the surface normal, which points away from the model and was
+        // why connectors used to look like isolated external pins.
+        const axis = worldA.clone().sub(worldB).normalize();
 
         const radius = useSTLSplitterStore.getState().connectorRadius;
+        const gap = worldA.distanceTo(worldB);
+        const depth = Math.max(radius * 4, gap + radius * 3);
 
         addConnector({
-          position: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
-          normal:   { x: faceNormal.x, y: faceNormal.y, z: faceNormal.z },
+          position: { x: worldMid.x, y: worldMid.y, z: worldMid.z },
+          normal:   { x: axis.x, y: axis.y, z: axis.z },
           partAColorId: hitColorId,
-          partBColorId: neighborColorId ?? hitColorId,
+          partBColorId: neighborColorId,
           radius,
-          depth: radius * 2.5,
+          depth,
         });
-        console.log(`🔩 Connector placed at face ${fi}, color ${hitColorId} → ${neighborColorId}`);
+        console.log(`🔩 Connector placed: ${hitColorId} → ${neighborColorId}, depth ${depth.toFixed(2)}mm`);
         return;
       }
 
@@ -509,31 +529,32 @@ export function STLViewer() {
     for (const conn of connectors) {
       if (connectorMeshesRef.current.has(conn.id)) continue;
 
-      // Pin sphere (green) + hole sphere (red)
-      const pinGeo  = new THREE.SphereGeometry(conn.radius * 0.7, 12, 8);
-      const holeGeo = new THREE.SphereGeometry(conn.radius * 0.7, 12, 8);
-      const norm = new THREE.Vector3(conn.normal.x, conn.normal.y, conn.normal.z).normalize();
-      const half = conn.depth / 2;
+      const norm   = new THREE.Vector3(conn.normal.x, conn.normal.y, conn.normal.z).normalize();
+      const up     = new THREE.Vector3(0, 1, 0);
+      const quat   = new THREE.Quaternion().setFromUnitVectors(up, norm);
+      const center = new THREE.Vector3(conn.position.x, conn.position.y, conn.position.z);
+      const half   = conn.depth / 2;
 
-      const pinMesh  = new THREE.Mesh(pinGeo,  new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, roughness: 0.4 }));
-      const holeMesh = new THREE.Mesh(holeGeo, new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, roughness: 0.4 }));
+      // Full pin volume, centered exactly on the seam — matches the export
+      // geometry 1:1, so rotating the model shows the half that's embedded
+      // inside the solid (occluded) vs. the half that protrudes.
+      const pinGeo = new THREE.CylinderGeometry(conn.radius, conn.radius, conn.depth, 16, 1);
+      const pinMat = new THREE.MeshStandardMaterial({
+        color: 0x22c55e, emissive: 0x16a34a, roughness: 0.4,
+        transparent: true, opacity: 0.85,
+      });
+      const pinMesh = new THREE.Mesh(pinGeo, pinMat);
+      pinMesh.quaternion.copy(quat);
+      pinMesh.position.copy(center);
 
-      pinMesh.position.set(conn.position.x, conn.position.y, conn.position.z);
-      pinMesh.position.addScaledVector(norm,  half);
-      holeMesh.position.set(conn.position.x, conn.position.y, conn.position.z);
-      holeMesh.position.addScaledVector(norm, -half);
+      // Small red marker on the hole/socket side so it's clear which end goes where
+      const markerGeo = new THREE.SphereGeometry(conn.radius * 0.9, 10, 8);
+      const markerMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, roughness: 0.4 });
+      const marker = new THREE.Mesh(markerGeo, markerMat);
+      marker.position.copy(center).addScaledVector(norm, -half);
 
-      // Group them
       const group = new THREE.Group();
-      group.add(pinMesh, holeMesh);
-
-      // Direction line between them
-      const lineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
-      const lineGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(conn.position.x, conn.position.y, conn.position.z).addScaledVector(norm,  half),
-        new THREE.Vector3(conn.position.x, conn.position.y, conn.position.z).addScaledVector(norm, -half),
-      ]);
-      group.add(new THREE.Line(lineGeo, lineMat));
+      group.add(pinMesh, marker);
 
       scene.add(group);
       // Store the group by id so we can remove it later

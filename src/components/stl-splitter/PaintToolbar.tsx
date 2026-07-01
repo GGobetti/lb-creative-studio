@@ -40,8 +40,16 @@ export function PaintToolbar() {
     let prevTool: PaintTool | null = null;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore shortcuts when typing in an input/textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Ignore shortcuts only when actually typing text — sliders (range
+      // inputs) and buttons keep focus after being dragged/clicked, and if
+      // we bailed out for those too, Space never got preventDefault()'d,
+      // so the browser fell back to its native "scroll the page" behavior.
+      const target = e.target as HTMLElement;
+      const isTextEntry =
+        (target instanceof HTMLInputElement && !['range', 'checkbox', 'radio', 'color', 'button'].includes(target.type)) ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable;
+      if (isTextEntry) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
