@@ -163,39 +163,46 @@ function getFaceNormal(positions: Float32Array, faceIndex: number): Vector3 {
   return new Vector3().crossVectors(edge1, edge2).normalize();
 }
 
-// Magic wand: flood fill but only expands to adjacent faces whose normal
-// angle relative to the start face is within the given threshold (degrees).
+// Magic wand: BFS expanding to adjacent faces within a normal-angle threshold.
+// mode='local'  → each step compares neighbor vs its parent (follows curves)
+// mode='global' → all steps compare vs the start face (anchored, more predictable)
 export function magicWandFill(
   startFace: number,
   adjacency: Map<number, number[]>,
   geometry: BufferGeometry,
-  thresholdDegrees: number = 30
+  thresholdDegrees: number = 30,
+  mode: 'local' | 'global' = 'local'
 ): number[] {
   const positions = geometry.attributes.position.array as Float32Array;
   const startNormal = getFaceNormal(positions, startFace);
   const cosThreshold = Math.cos((thresholdDegrees * Math.PI) / 180);
 
   const visited = new Set<number>([startFace]);
-  const queue = [startFace];
+  // Queue stores {face, refNormal}: what we compare each neighbor against.
+  // local  → propagate neighbor's own normal so the expansion follows curvature
+  // global → always compare against the original start face normal
+  const queue: Array<{ face: number; refNormal: Vector3 }> = [
+    { face: startFace, refNormal: startNormal },
+  ];
 
   while (queue.length > 0) {
-    const current = queue.shift()!;
+    const { face: current, refNormal } = queue.shift()!;
     const neighbors = adjacency.get(current) || [];
 
     for (const neighbor of neighbors) {
       if (visited.has(neighbor)) continue;
-
       const neighborNormal = getFaceNormal(positions, neighbor);
-      const dot = startNormal.dot(neighborNormal);
-
-      if (dot >= cosThreshold) {
+      if (refNormal.dot(neighborNormal) >= cosThreshold) {
         visited.add(neighbor);
-        queue.push(neighbor);
+        queue.push({
+          face: neighbor,
+          refNormal: mode === 'local' ? neighborNormal : startNormal,
+        });
       }
     }
   }
 
-  console.log(`✨ Magic wand from face ${startFace} (threshold ${thresholdDegrees}°): selected ${visited.size} faces`);
+  console.log(`✨ Magic wand from face ${startFace} (${mode} mode, ${thresholdDegrees}°): selected ${visited.size} faces`);
   return Array.from(visited);
 }
 

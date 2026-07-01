@@ -35,7 +35,7 @@ export interface STLModel {
 /**
  * Represents the painting state - which faces are assigned to which colors
  */
-export type PaintTool = 'brush' | 'bucket' | 'wand';
+export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser';
 
 export interface PaintingState {
   colorMap: Map<FaceIndex, ColorID>; // Maps face index to color ID
@@ -44,7 +44,9 @@ export interface PaintingState {
   selectedColorId: ColorID | null; // Currently selected color for painting
   activeTool: PaintTool;
   wandThreshold: number; // degrees 5-60, angle limit for magic wand
+  wandMode: 'local' | 'global'; // local: compare to parent normal; global: compare to start normal
   bucketThreshold: number; // degrees 0-90, angle limit for flood fill (0 = unlimited)
+  isolatedColorId: ColorID | null; // when set, non-isolated faces render near-black
 }
 
 /**

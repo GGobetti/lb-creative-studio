@@ -5,9 +5,10 @@ import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { PaintTool } from '@/types/stl-splitter.types';
 
 const TOOLS: { id: PaintTool; label: string; icon: string; hint: string }[] = [
-  { id: 'brush',  icon: '🖌️', label: 'Pincel',  hint: 'Clique e pinte faces individuais dentro do raio do pincel' },
+  { id: 'brush',  icon: '🖌️', label: 'Pincel',  hint: 'Clique ou arraste para pintar — círculo mostra o raio' },
   { id: 'bucket', icon: '🪣', label: 'Balde',   hint: 'Preenchimento por região conectada a partir da face clicada' },
-  { id: 'wand',   icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (varinha mágica)' },
+  { id: 'wand',   icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (BFS)' },
+  { id: 'eraser', icon: '🧹', label: 'Borracha', hint: 'Clique ou arraste para apagar cores de faces pintadas' },
 ];
 
 export function PaintToolbar() {
@@ -15,6 +16,7 @@ export function PaintToolbar() {
   const selectedColorId  = useSTLSplitterStore((state) => state.painting.selectedColorId);
   const activeTool       = useSTLSplitterStore((state) => state.painting.activeTool);
   const wandThreshold    = useSTLSplitterStore((state) => state.painting.wandThreshold);
+  const wandMode         = useSTLSplitterStore((state) => state.painting.wandMode);
   const bucketThreshold  = useSTLSplitterStore((state) => state.painting.bucketThreshold);
   const colors           = useSTLSplitterStore((state) => state.painting.colors);
   const colorMapHistory  = useSTLSplitterStore((state) => state.colorMapHistory);
@@ -23,13 +25,14 @@ export function PaintToolbar() {
   const addColor           = useSTLSplitterStore((state) => state.addColor);
   const setActiveTool      = useSTLSplitterStore((state) => state.setActiveTool);
   const setWandThreshold   = useSTLSplitterStore((state) => state.setWandThreshold);
+  const setWandMode        = useSTLSplitterStore((state) => state.setWandMode);
   const setBucketThreshold = useSTLSplitterStore((state) => state.setBucketThreshold);
   const undoPaint          = useSTLSplitterStore((state) => state.undoPaint);
 
   const selectedColor = selectedColorId ? colors.get(selectedColorId) : null;
   const canUndo = colorMapHistory.length > 0;
 
-  // Ctrl+Z global shortcut
+  // Ctrl+Z / Cmd+Z global undo shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -44,8 +47,9 @@ export function PaintToolbar() {
 
   return (
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
+
       {/* Tool selector */}
-      <div className="flex gap-2">
+      <div className="grid grid-cols-4 gap-1.5">
         {TOOLS.map((tool) => (
           <button
             key={tool.id}
@@ -54,78 +58,81 @@ export function PaintToolbar() {
               setActiveTool(tool.id);
               console.log('🔧 Tool selected:', tool.id);
             }}
-            className={`flex-1 flex flex-col items-center py-2 px-1 rounded-lg border-2 transition text-sm font-medium ${
+            className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition text-sm font-medium ${
               activeTool === tool.id
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                 : 'border-gray-200 dark:border-gray-600 hover:border-gray-400 text-gray-600 dark:text-gray-400'
-            }`}
+            } ${tool.id === 'eraser' && activeTool === tool.id ? '!border-red-400 !bg-red-50 dark:!bg-red-950 !text-red-600 dark:!text-red-400' : ''}`}
           >
             <span className="text-xl leading-none mb-1">{tool.icon}</span>
             <span className="text-xs">{tool.label}</span>
           </button>
         ))}
-
-        {/* Undo button */}
-        <button
-          title="Desfazer última pintura (Ctrl+Z)"
-          onClick={() => {
-            console.log('↩️ Undo button clicked');
-            undoPaint();
-          }}
-          disabled={!canUndo}
-          className={`flex flex-col items-center py-2 px-3 rounded-lg border-2 transition text-sm font-medium ${
-            canUndo
-              ? 'border-gray-300 dark:border-gray-500 hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400 text-gray-600 dark:text-gray-400'
-              : 'border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed'
-          }`}
-        >
-          <span className="text-xl leading-none mb-1">↩️</span>
-          <span className="text-xs">Undo</span>
-        </button>
       </div>
 
-      {/* Brush size — only relevant for brush tool */}
-      {activeTool === 'brush' && (
+      {/* Undo button */}
+      <button
+        title="Desfazer última pintura (Ctrl+Z)"
+        onClick={() => { console.log('↩️ Undo clicked'); undoPaint(); }}
+        disabled={!canUndo}
+        className={`w-full py-1.5 rounded-lg border text-xs font-medium transition flex items-center justify-center gap-1.5 ${
+          canUndo
+            ? 'border-gray-300 dark:border-gray-600 hover:border-orange-400 hover:text-orange-600 dark:hover:text-orange-400 text-gray-600 dark:text-gray-300'
+            : 'border-gray-100 dark:border-gray-700 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+        }`}
+      >
+        ↩️ Desfazer {canUndo && <span className="text-gray-400">({colorMapHistory.length})</span>}
+      </button>
+
+      {/* Brush size — only for brush/eraser */}
+      {(activeTool === 'brush' || activeTool === 'eraser') && (
         <div>
           <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
-            Tamanho do pincel: {brushSize}px
+            {activeTool === 'eraser' ? 'Raio da borracha' : 'Tamanho do pincel'}: {brushSize}px
           </label>
           <input
-            type="range"
-            min="5"
-            max="50"
-            step="1"
-            value={brushSize}
+            type="range" min="5" max="50" step="1" value={brushSize}
             onChange={(e) => setBrushSize(parseInt(e.target.value))}
             className="w-full"
           />
         </div>
       )}
 
-      {/* Magic wand threshold */}
+      {/* Magic wand controls */}
       {activeTool === 'wand' && (
-        <div>
-          <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
-            Sensibilidade da varinha: {wandThreshold}°
-            <span className="ml-1 text-gray-400">(menor = mais preciso)</span>
-          </label>
-          <input
-            type="range"
-            min="5"
-            max="60"
-            step="5"
-            value={wandThreshold}
-            onChange={(e) => {
-              const v = parseInt(e.target.value);
-              setWandThreshold(v);
-              console.log('✨ Wand threshold changed to', v, 'degrees');
-            }}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-            <span>5° preciso</span>
-            <span>60° amplo</span>
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
+              Sensibilidade: {wandThreshold}°
+              <span className="ml-1 text-gray-400">(menor = mais preciso)</span>
+            </label>
+            <input
+              type="range" min="5" max="60" step="5" value={wandThreshold}
+              onChange={(e) => {
+                const v = parseInt(e.target.value);
+                setWandThreshold(v);
+                console.log('✨ Wand threshold:', v);
+              }}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-0.5">
+              <span>5° preciso</span><span>60° amplo</span>
+            </div>
           </div>
+          <button
+            onClick={() => {
+              const next = wandMode === 'local' ? 'global' : 'local';
+              setWandMode(next);
+              console.log('✨ Wand mode:', next);
+            }}
+            className="w-full py-1 px-2 rounded border text-xs font-medium transition
+              border-gray-300 dark:border-gray-600 hover:border-blue-400
+              text-gray-700 dark:text-gray-300 text-left"
+          >
+            {wandMode === 'local'
+              ? '🌊 Local — segue curvas (recomendado)'
+              : '📌 Global — âncora no ponto clicado'}
+          </button>
         </div>
       )}
 
@@ -133,25 +140,20 @@ export function PaintToolbar() {
       {activeTool === 'bucket' && (
         <div>
           <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
-            Limite do balde: {bucketThreshold === 0 ? 'sem limite' : `${bucketThreshold}°`}
+            Limite de ângulo: {bucketThreshold === 0 ? 'sem limite' : `${bucketThreshold}°`}
             <span className="ml-1 text-gray-400">(menor = para em curvas)</span>
           </label>
           <input
-            type="range"
-            min="0"
-            max="90"
-            step="10"
-            value={bucketThreshold}
+            type="range" min="0" max="90" step="10" value={bucketThreshold}
             onChange={(e) => {
               const v = parseInt(e.target.value);
               setBucketThreshold(v);
-              console.log('🪣 Bucket threshold changed to', v, 'degrees');
+              console.log('🪣 Bucket threshold:', v);
             }}
             className="w-full"
           />
           <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-            <span>0 sem limite</span>
-            <span>90° só plano</span>
+            <span>0 sem limite</span><span>90° só plano</span>
           </div>
         </div>
       )}
@@ -169,35 +171,36 @@ export function PaintToolbar() {
         ) : (
           <span className="text-sm text-gray-500 flex-1">Nenhuma cor selecionada</span>
         )}
-
         <button
           onClick={() => {
             const id = addColor();
-            console.log('🖍️ Add Color clicked. New color id:', id);
+            console.log('🖍️ Add Color. New id:', id);
           }}
           className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-xs font-medium whitespace-nowrap"
         >
-          + Adicionar Cor
+          + Cor
         </button>
       </div>
 
-      {/* Undo hint */}
-      {canUndo && (
-        <div className="text-xs text-gray-400 dark:text-gray-500">
-          ↩️ {colorMapHistory.length} {colorMapHistory.length === 1 ? 'ação' : 'ações'} para desfazer (Ctrl+Z)
-        </div>
-      )}
-
       {/* Status hint */}
       {selectedColor ? (
-        <div className="text-xs px-3 py-2 rounded bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300">
-          {activeTool === 'brush'  && `🖌️ Clique no modelo para pintar com ${selectedColor.name}`}
-          {activeTool === 'bucket' && `🪣 Clique em qualquer região para preencher área conectada com ${selectedColor.name}`}
-          {activeTool === 'wand'   && `✨ Clique numa superfície para selecionar faces com ângulo similar e pintar com ${selectedColor.name}`}
+        <div className={`text-xs px-3 py-2 rounded ${
+          activeTool === 'eraser'
+            ? 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'
+            : 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+        }`}>
+          {activeTool === 'brush'  && `🖌️ Clique ou arraste para pintar com ${selectedColor.name}`}
+          {activeTool === 'bucket' && `🪣 Clique para preencher região conectada com ${selectedColor.name}`}
+          {activeTool === 'wand'   && `✨ Clique numa superfície — pinta faces de ângulo similar com ${selectedColor.name}`}
+          {activeTool === 'eraser' && `🧹 Clique ou arraste para apagar cores no modelo`}
+        </div>
+      ) : activeTool !== 'eraser' ? (
+        <div className="text-xs px-3 py-2 rounded bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
+          ⚠️ Clique em "+ Cor" para criar uma parte e começar a pintar
         </div>
       ) : (
-        <div className="text-xs px-3 py-2 rounded bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
-          ⚠️ Clique em "+ Adicionar Cor" para criar uma parte e começar a pintar
+        <div className="text-xs px-3 py-2 rounded bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300">
+          🧹 Arraste sobre faces pintadas para apagá-las
         </div>
       )}
     </div>
