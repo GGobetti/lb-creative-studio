@@ -72,13 +72,20 @@ export function PaintToolbar() {
         return;
       }
 
-      // Space held → temporary navigate mode
-      if (e.code === 'Space' && !e.repeat) {
+      // Space held → temporary navigate mode. preventDefault() must run on
+      // EVERY keydown for Space, including the auto-repeat events the OS
+      // fires for as long as the key stays down — not just the first one —
+      // otherwise the browser's native "scroll down" action keeps firing on
+      // every repeat while the key is held, which is exactly what it looks
+      // like when only the first press was ever prevented.
+      if (e.code === 'Space') {
         e.preventDefault();
-        prevTool = useSTLSplitterStore.getState().painting.activeTool;
-        if (prevTool !== 'navigate') {
-          setActiveTool('navigate');
-          console.log('✋ Space held — navigate mode');
+        if (!e.repeat) {
+          prevTool = useSTLSplitterStore.getState().painting.activeTool;
+          if (prevTool !== 'navigate') {
+            setActiveTool('navigate');
+            console.log('✋ Space held — navigate mode');
+          }
         }
         return;
       }
