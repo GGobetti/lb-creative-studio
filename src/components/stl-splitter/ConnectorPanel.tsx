@@ -78,7 +78,7 @@ export function ConnectorPanel() {
             : 'border-gray-200 dark:border-gray-600 hover:border-orange-400 text-gray-600 dark:text-gray-400'
         }`}
       >
-        🔩 {activeTool === 'connector' ? 'Clique no modelo para adicionar' : 'Conector Manual  [C]'}
+        🔩 {activeTool === 'connector' ? 'Passe o mouse e clique para confirmar' : 'Conector Manual  [C]'}
       </button>
 
       {/* Auto connectors */}

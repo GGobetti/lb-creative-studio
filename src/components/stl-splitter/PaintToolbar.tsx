@@ -11,7 +11,7 @@ const TOOLS: { id: PaintTool; label: string; icon: string; hint: string; key: st
   { id: 'wand',     icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (BFS)',       key: 'W' },
   { id: 'eraser',   icon: '🧹', label: 'Borracha', hint: 'Clique ou arraste para apagar cores de faces pintadas',      key: 'E' },
   { id: 'lasso',     icon: '🔵', label: 'Laço',     hint: 'Desenhe uma área livre para pintar todas as faces dentro',    key: 'L' },
-  { id: 'connector', icon: '🔩', label: 'Conector', hint: 'Clique na fronteira entre duas partes para adicionar um pino de alinhamento', key: 'C' },
+  { id: 'connector', icon: '🔩', label: 'Conector', hint: 'Passe o mouse perto de uma junção para ver o pino em preview e clique para confirmar', key: 'C' },
 ];
 
 export function PaintToolbar() {
@@ -264,7 +264,7 @@ export function PaintToolbar() {
           {activeTool === 'wand'   && `✨ Clique numa superfície — pinta faces de ângulo similar com ${selectedColor.name}`}
           {activeTool === 'eraser' && `🧹 Clique ou arraste para apagar cores no modelo`}
           {activeTool === 'lasso'     && `🔵 Segure e arraste para desenhar o laço — pinta tudo dentro com ${selectedColor.name}`}
-          {activeTool === 'connector' && `🔩 Clique na fronteira entre partes para adicionar um pino de alinhamento`}
+          {activeTool === 'connector' && `🔩 Passe o mouse perto de uma junção — o modelo fica translúcido e mostra o pino em preview`}
         </div>
       ) : activeTool !== 'eraser' ? (
         <div className="text-xs px-3 py-2 rounded bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300">

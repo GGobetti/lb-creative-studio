@@ -377,6 +377,62 @@ export function findColorBoundaryEdges(
   return edges;
 }
 
+// Finds the closest color-boundary seam to a clicked point, searching outward
+// from the clicked face through same-colored territory (BFS, capped at
+// maxFaces). Lets the user click anywhere near a joint — not just the exact
+// boundary pixel — and still land a physically correct connector: manual
+// placement no longer requires hitting a razor-thin seam precisely.
+export function findNearestBoundary(
+  startFace: number,
+  hitPoint: Vector3,
+  positions: Float32Array,
+  colorMap: Map<number, ColorID>,
+  adjacency: Map<number, number[]>,
+  maxFaces: number = 600
+): BoundaryEdgeInfo | null {
+  const startColor = colorMap.get(startFace);
+  if (!startColor) return null;
+
+  const visited = new Set<number>([startFace]);
+  const queue = [startFace];
+  let best: BoundaryEdgeInfo | null = null;
+  let bestDist = Infinity;
+  let processed = 0;
+
+  while (queue.length > 0 && processed < maxFaces) {
+    const current = queue.shift()!;
+    processed++;
+    const neighbors = adjacency.get(current) || [];
+
+    for (const nb of neighbors) {
+      const nbColor = colorMap.get(nb);
+
+      if (nbColor && nbColor !== startColor) {
+        const mid = getSharedEdgeMidpoint(positions, current, nb) ?? getFaceCentroid(positions, current);
+        const dist = mid.distanceTo(hitPoint);
+        if (dist < bestDist) {
+          const centroidA = getFaceCentroid(positions, current);
+          const centroidB = getFaceCentroid(positions, nb);
+          const gap = centroidA.distanceTo(centroidB);
+          const normal = gap > 1e-6
+            ? new Vector3().subVectors(centroidA, centroidB).divideScalar(gap)
+            : getFaceNormal(positions, current);
+          best = { midpoint: mid, normal, colorA: startColor, colorB: nbColor, gap };
+          bestDist = dist;
+        }
+        continue; // don't cross into different-colored territory
+      }
+
+      if (!visited.has(nb)) {
+        visited.add(nb);
+        queue.push(nb);
+      }
+    }
+  }
+
+  return best;
+}
+
 // Samples connector positions along boundary edges, spacing them by `minSpacingMm`.
 // Returns deduplicated positions (no two connectors closer than minSpacingMm).
 export function sampleConnectorPositions(

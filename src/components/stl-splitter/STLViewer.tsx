@@ -21,10 +21,9 @@ import {
   floodFillFaces,
   magicWandFill,
   getFacesInLasso,
-  getFaceCentroid,
-  getSharedEdgeMidpoint,
+  findNearestBoundary,
 } from '@/lib/stl-splitter/geometry-utils';
-import type { ColorID, ConnectorPoint } from '@/types/stl-splitter.types';
+import type { ConnectorPoint } from '@/types/stl-splitter.types';
 
 export function STLViewer() {
   const containerRef    = useRef<HTMLDivElement>(null);
@@ -41,6 +40,8 @@ export function STLViewer() {
   const controlsRef     = useRef<OrbitControls | null>(null);
   const wireframeMeshRef    = useRef<THREE.LineSegments | null>(null);
   const connectorMeshesRef  = useRef<Map<string, THREE.Mesh>>(new Map());
+  const connectorPreviewRef = useRef<THREE.Mesh | null>(null);
+  const pendingConnectorRef = useRef<Omit<ConnectorPoint, 'id'> | null>(null);
 
   // Hover / drag-paint state — all refs, zero Zustand in hot paths
   const hoveredFaceRef         = useRef<number | null>(null);
@@ -321,65 +322,16 @@ export function STLViewer() {
       if (tool === 'navigate' || tool === 'lasso') return;
 
       if (tool === 'connector') {
-        // Place connector at clicked face boundary
-        const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
-        const hits = raycaster.intersectObject(meshRef.current!);
-        if (!hits.length || hits[0].faceIndex === undefined) return;
-
-        const fi = hits[0].faceIndex!;
-        const p  = paintingRef.current;
-        const hitColorId = p.colorMap.get(fi);
-
-        if (!hitColorId) {
-          useSTLSplitterStore.getState().setError('Clique em uma face pintada, perto da fronteira entre duas partes.');
+        // Commits whatever connector is currently being previewed under the
+        // cursor (computed continuously in handleMouseMove) — what you see
+        // hovering is exactly what gets placed.
+        const pending = pendingConnectorRef.current;
+        if (!pending) {
+          useSTLSplitterStore.getState().setError('Passe o mouse perto da fronteira entre duas partes para ver o preview do conector antes de clicar.');
           return;
         }
-
-        // Find the adjacent face of a different color — the connector must
-        // straddle an actual boundary, otherwise it can't connect anything.
-        const adj = adjacencyRef.current;
-        let neighborFaceIndex: number | null = null;
-        let neighborColorId: ColorID | null = null;
-        if (adj) {
-          for (const nb of (adj.get(fi) || [])) {
-            const nc = p.colorMap.get(nb);
-            if (nc && nc !== hitColorId) { neighborColorId = nc; neighborFaceIndex = nb; break; }
-          }
-        }
-
-        if (neighborFaceIndex === null || !neighborColorId) {
-          useSTLSplitterStore.getState().setError('Clique bem na fronteira entre duas partes de cores diferentes.');
-          console.log('⚠️ Connector: no adjacent face of a different color found near', fi);
-          return;
-        }
-
-        const positions = model.geometry!.attributes.position.array as Float32Array;
-        const localMid = getSharedEdgeMidpoint(positions, fi, neighborFaceIndex) ?? getFaceCentroid(positions, fi);
-        const worldMid = localMid.clone().applyMatrix4(meshRef.current!.matrixWorld);
-        const worldA   = getFaceCentroid(positions, fi).applyMatrix4(meshRef.current!.matrixWorld);
-        const worldB   = getFaceCentroid(positions, neighborFaceIndex).applyMatrix4(meshRef.current!.matrixWorld);
-
-        // Tangential direction across the seam (from partB toward partA) —
-        // NOT the surface normal, which points away from the model and was
-        // why connectors used to look like isolated external pins.
-        const axis = worldA.clone().sub(worldB).normalize();
-
-        const radius = useSTLSplitterStore.getState().connectorRadius;
-        const gap = worldA.distanceTo(worldB);
-        const depth = Math.max(radius * 4, gap + radius * 3);
-
-        addConnector({
-          position: { x: worldMid.x, y: worldMid.y, z: worldMid.z },
-          normal:   { x: axis.x, y: axis.y, z: axis.z },
-          partAColorId: hitColorId,
-          partBColorId: neighborColorId,
-          radius,
-          depth,
-        });
-        console.log(`🔩 Connector placed: ${hitColorId} → ${neighborColorId}, depth ${depth.toFixed(2)}mm`);
+        addConnector(pending);
+        console.log(`🔩 Connector placed: ${pending.partAColorId} → ${pending.partBColorId}, depth ${pending.depth.toFixed(2)}mm`);
         return;
       }
 
@@ -411,12 +363,73 @@ export function STLViewer() {
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(mouse, camera);
       const hits = raycaster.intersectObject(meshRef.current);
-      applyHoverHighlight(hits.length > 0 && hits[0].faceIndex !== undefined ? hits[0].faceIndex! : null);
+      const fi = hits.length > 0 && hits[0].faceIndex !== undefined ? hits[0].faceIndex! : null;
+      applyHoverHighlight(fi);
+
+      if (paintingRef.current.activeTool === 'connector') {
+        updateConnectorPreview(fi, hits[0]?.point ?? null);
+      } else if (connectorPreviewRef.current) {
+        connectorPreviewRef.current.visible = false;
+        pendingConnectorRef.current = null;
+      }
+    };
+
+    // Recomputes the connector "ghost" preview under the cursor — snaps to
+    // the nearest real color boundary within reach so the user can place a
+    // connector anywhere near a joint, not just on the exact seam pixel.
+    const updateConnectorPreview = (fi: number | null, worldPoint: Vector3 | null | undefined) => {
+      const hide = () => {
+        if (connectorPreviewRef.current) connectorPreviewRef.current.visible = false;
+        pendingConnectorRef.current = null;
+      };
+
+      if (fi === null || !worldPoint || !model.geometry || !adjacencyRef.current) { hide(); return; }
+
+      const p = paintingRef.current;
+      const hitColorId = p.colorMap.get(fi);
+      if (!hitColorId) { hide(); return; }
+
+      const positions = model.geometry.attributes.position.array as Float32Array;
+      const boundary = findNearestBoundary(fi, worldPoint, positions, p.colorMap, adjacencyRef.current);
+      if (!boundary) { hide(); return; }
+
+      const worldMid = boundary.midpoint.clone().applyMatrix4(meshRef.current!.matrixWorld);
+      const axis = boundary.normal.clone().transformDirection(meshRef.current!.matrixWorld).normalize();
+      const radius = useSTLSplitterStore.getState().connectorRadius;
+      const depth = Math.max(radius * 4, boundary.gap + radius * 3);
+
+      if (!connectorPreviewRef.current) {
+        const geo = new THREE.CylinderGeometry(1, 1, 1, 16, 1);
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0xfbbf24, emissive: 0xf59e0b, roughness: 0.3,
+          transparent: true, opacity: 0.65,
+        });
+        connectorPreviewRef.current = new THREE.Mesh(geo, mat);
+        scene.add(connectorPreviewRef.current);
+      }
+
+      const preview = connectorPreviewRef.current;
+      const up = new Vector3(0, 1, 0);
+      preview.quaternion.setFromUnitVectors(up, axis);
+      preview.position.copy(worldMid);
+      preview.scale.set(radius, depth, radius);
+      preview.visible = true;
+
+      pendingConnectorRef.current = {
+        position: { x: worldMid.x, y: worldMid.y, z: worldMid.z },
+        normal:   { x: axis.x, y: axis.y, z: axis.z },
+        partAColorId: hitColorId,
+        partBColorId: boundary.colorB,
+        radius,
+        depth,
+      };
     };
 
     const handleMouseLeave = () => {
       clearHoldTimer();
       applyHoverHighlight(null);
+      if (connectorPreviewRef.current) connectorPreviewRef.current.visible = false;
+      pendingConnectorRef.current = null;
       if (cursorRef.current) cursorRef.current.style.display = 'none';
     };
 
@@ -458,6 +471,8 @@ export function STLViewer() {
       if (wireframeMeshRef.current) { scene.remove(wireframeMeshRef.current); wireframeMeshRef.current = null; }
       connectorMeshesRef.current.forEach((m) => scene.remove(m));
       connectorMeshesRef.current.clear();
+      if (connectorPreviewRef.current) { scene.remove(connectorPreviewRef.current); connectorPreviewRef.current = null; }
+      pendingConnectorRef.current = null;
       if (controlsRef.current) { controlsRef.current.enabled = true; controlsRef.current = null; }
       cameraRef.current = null;
       if (containerRef.current?.contains(renderer.domElement)) {
@@ -579,6 +594,20 @@ export function STLViewer() {
     // Hide custom circle cursor for navigate, lasso and connector
     if (cursorRef.current && (tool === 'navigate' || tool === 'lasso' || tool === 'connector')) {
       cursorRef.current.style.display = 'none';
+    }
+
+    // Semi-transparent model while placing connectors, so the pin preview is
+    // visible sitting inside the material instead of just on the surface.
+    if (meshRef.current) {
+      const mat = meshRef.current.material as MeshStandardMaterial;
+      mat.transparent = tool === 'connector';
+      mat.opacity = tool === 'connector' ? 0.55 : 1;
+      mat.depthWrite = tool !== 'connector';
+    }
+
+    if (tool !== 'connector' && connectorPreviewRef.current) {
+      connectorPreviewRef.current.visible = false;
+      pendingConnectorRef.current = null;
     }
   }, [painting.activeTool]);
 
@@ -724,6 +753,8 @@ export function STLViewer() {
           ? '✋ Arrastar = orbitar · Scroll = zoom · Btn direito = pan  [Space = temporário]'
           : painting.activeTool === 'lasso'
           ? '🔵 Segure e arraste para desenhar o laço de seleção'
+          : painting.activeTool === 'connector'
+          ? '🔩 Passe o mouse perto da junção para ver o pino em preview · Clique para confirmar'
           : 'Clique = pintar · Segurar = pintar arrastando · Space = navegar'}
       </div>
     </div>
