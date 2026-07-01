@@ -119,7 +119,7 @@ export function PaintToolbar() {
   }, [undoPaint, setActiveTool]);
 
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
+    <div className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow space-y-2.5">
 
       {/* Tool selector — 4+3 grid */}
       <div className="grid grid-cols-4 gap-1">
@@ -284,7 +284,7 @@ export function PaintToolbar() {
       {/* Status hint */}
       {activeTool === 'navigate' ? (
         <div className="text-xs px-3 py-2 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-          ✋ Arraste para orbitar · Scroll para zoom · Botão direito para pan · Space = temporário
+          ✋ Arraste para orbitar · Scroll para zoom · Botão direito para pan · dica: ⌥ Alt+arrastar orbita em qualquer ferramenta
         </div>
       ) : selectedColor ? (
         <div className={`text-xs px-3 py-2 rounded ${

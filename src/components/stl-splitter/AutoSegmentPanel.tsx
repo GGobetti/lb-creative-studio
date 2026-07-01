@@ -34,7 +34,7 @@ export function AutoSegmentPanel() {
   if (!model) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div>
         <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
           Ângulo de borda: {threshold === 180 ? 'só componentes' : `${threshold}°`}

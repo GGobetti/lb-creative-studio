@@ -79,7 +79,7 @@ export function ConnectorPanel() {
   if (!model) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {/* Radius */}
       <div>
         <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">

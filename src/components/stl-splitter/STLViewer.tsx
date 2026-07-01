@@ -47,6 +47,7 @@ export function STLViewer() {
   // Hover / drag-paint state — all refs, zero Zustand in hot paths
   const hoveredFaceRef         = useRef<number | null>(null);
   const isPaintingRef          = useRef(false);
+  const tempOrbitActiveRef     = useRef(false);
   const paintedFacesInDragRef  = useRef(new Set<number>());
   const lastPaintTimeRef       = useRef(0);
   const lastHoverTimeRef       = useRef(0);
@@ -316,6 +317,16 @@ export function STLViewer() {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
+      // Alt/Option + drag orbits from ANY tool without switching away from
+      // painting — deliberately not bound to right-click, which needs a
+      // two-finger press held through the whole drag on most trackpads
+      // (MacBook included) and is unreliable there.
+      if (e.button === 0 && e.altKey) {
+        tempOrbitActiveRef.current = true;
+        if (controlsRef.current) controlsRef.current.enabled = true;
+        return;
+      }
+
       if (e.button !== 0) return;
       const tool = paintingRef.current.activeTool;
       if (tool === 'navigate' || tool === 'lasso') return; // navigate = OrbitControls; lasso = canvas
@@ -323,15 +334,22 @@ export function STLViewer() {
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+      if (tempOrbitActiveRef.current) {
+        tempOrbitActiveRef.current = false;
+        if (controlsRef.current) controlsRef.current.enabled = paintingRef.current.activeTool === 'navigate';
+        return;
+      }
+
       if (e.button !== 0) return;
       clearHoldTimer();
       isPaintingRef.current = false;
       paintedFacesInDragRef.current.clear();
-      if (controlsRef.current) controlsRef.current.enabled = true;
+      if (controlsRef.current) controlsRef.current.enabled = paintingRef.current.activeTool === 'navigate';
     };
 
     const handleClick = (e: MouseEvent) => {
       if (e.button !== 0) return;
+      if (e.altKey) return; // Alt is reserved for orbit — never paint on Alt-click
       if (isPaintingRef.current) return;
       const tool = paintingRef.current.activeTool;
       if (tool === 'navigate' || tool === 'lasso') return;
@@ -771,7 +789,7 @@ export function STLViewer() {
           ? '🔵 Segure e arraste para desenhar o laço de seleção'
           : painting.activeTool === 'connector'
           ? '🔩 Passe o mouse perto da junção para ver o pino em preview · Clique para confirmar'
-          : 'Clique = pintar · Segurar = pintar arrastando · Space = navegar'}
+          : 'Clique = pintar · Segurar = pintar arrastando · ⌥ Alt+arrastar ou Space = orbitar'}
       </div>
     </div>
   );

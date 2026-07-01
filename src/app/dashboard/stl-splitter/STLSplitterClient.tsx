@@ -136,7 +136,7 @@ export function STLSplitterClient() {
         </div>
       )}
 
-      <div className="w-80 flex flex-col gap-4 overflow-y-auto">
+      <div className="w-80 flex flex-col gap-2.5 overflow-y-auto">
         <CollapsibleSection title="Novo modelo" icon={<Upload className="h-4 w-4 text-blue-500" />}>
           <STLUploader />
         </CollapsibleSection>
@@ -162,7 +162,7 @@ export function STLSplitterClient() {
         </CollapsibleSection>
 
         <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <h3 className="font-semibold p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+          <h3 className="font-semibold px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm">
             <Palette className="h-4 w-4 text-gray-500" />
             Partes
             {painting.colors.size > 0 && (
@@ -178,14 +178,14 @@ export function STLSplitterClient() {
           <button
             onClick={() => setExportModalOpen(true)}
             disabled={painting.colors.size === 0}
-            className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 transition"
+            className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 transition"
           >
             <Download className="h-5 w-5" />
             Exportar
           </button>
           <button
             onClick={clearAll}
-            className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
+            className="flex-1 px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
           >
             Limpar tudo
           </button>
