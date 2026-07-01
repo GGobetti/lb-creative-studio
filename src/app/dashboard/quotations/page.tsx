@@ -5,6 +5,7 @@ import { getSupabaseBrowser } from "@/lib/supabase"
 import { useAppStore } from "@/store/store"
 import { FileText, Search, Plus, Trash2, Eye, Clock, FileCheck, CheckCircle2, AlertCircle, XCircle } from "lucide-react"
 import Link from "next/link"
+import { useTranslation } from "@/lib/translations"
 
 interface Quotation {
   id: string
@@ -19,33 +20,34 @@ interface Quotation {
 }
 
 function StatusBadge({ status }: { status: Quotation['status'] }) {
+  const { t } = useTranslation()
   switch (status) {
     case 'draft':
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-white/60">
           <Clock size={11} />
-          Rascunho
+          {t('quotationsPage.statusDraft', "Rascunho")}
         </span>
       )
     case 'sent':
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-500">
           <AlertCircle size={11} />
-          Enviada
+          {t('quotationsPage.statusSent', "Enviada")}
         </span>
       )
     case 'approved':
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-500">
           <CheckCircle2 size={11} />
-          Aprovada
+          {t('quotationsPage.statusApproved', "Aprovada")}
         </span>
       )
     case 'rejected':
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-500">
           <XCircle size={11} />
-          Recusada
+          {t('quotationsPage.statusRejected', "Recusada")}
         </span>
       )
   }
@@ -53,6 +55,8 @@ function StatusBadge({ status }: { status: Quotation['status'] }) {
 
 export default function QuotationsPage() {
   const { profile } = useAppStore()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -74,7 +78,7 @@ export default function QuotationsPage() {
       setQuotations((data as any[]) ?? [])
     } catch (err: any) {
       console.error("[Quotations] Failed to fetch:", err)
-      setError("Não foi possível carregar as cotações. Tente novamente.")
+      setError(t('quotationsPage.loadError', "Não foi possível carregar as cotações. Tente novamente."))
     } finally {
       setLoading(false)
     }
@@ -85,7 +89,7 @@ export default function QuotationsPage() {
   }, [profile])
 
   const handleDeleteQuotation = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta cotação?")) return
+    if (!confirm(t('quotationsPage.confirmDelete', "Tem certeza que deseja excluir esta cotação?"))) return
     try {
       const supabase = getSupabaseBrowser()
       const { error: delErr } = await supabase
@@ -97,7 +101,7 @@ export default function QuotationsPage() {
       setQuotations(prev => prev.filter(q => q.id !== id))
     } catch (err: any) {
       console.error("[Quotations] Delete error:", err)
-      alert("Erro ao excluir cotação.")
+      alert(t('quotationsPage.deleteError', "Erro ao excluir cotação."))
     }
   }
 
@@ -123,10 +127,10 @@ export default function QuotationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-foreground flex items-center gap-2">
-            Cotações & Propostas
+            {t('quotationsPage.title', "Cotações & Propostas")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie propostas comerciais, exporte em PDF e compartilhe com seus clientes.
+            {t('quotationsPage.subtitle', "Gerencie propostas comerciais, exporte em PDF e compartilhe com seus clientes.")}
           </p>
         </div>
 
@@ -135,7 +139,7 @@ export default function QuotationsPage() {
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-bold text-sm rounded-xl transition shadow-lg shadow-primary/10 hover:shadow-primary/20 shrink-0 text-center"
         >
           <Plus size={16} />
-          Nova Cotação (Calculadora)
+          {t('quotationsPage.newQuotation', "Nova Cotação (Calculadora)")}
         </Link>
       </div>
 
@@ -147,18 +151,18 @@ export default function QuotationsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar cotação por título ou cliente..."
+            placeholder={t('quotationsPage.searchPlaceholder', "Buscar cotação por título ou cliente...")}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-muted border border-border text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
           />
         </div>
 
         <div className="flex gap-2 w-full md:w-auto shrink-0 overflow-x-auto">
           {["all", "draft", "sent", "approved", "rejected"].map((status) => {
-            const label = 
-              status === "all" ? "Todas" : 
-              status === "draft" ? "Rascunho" : 
-              status === "sent" ? "Enviadas" : 
-              status === "approved" ? "Aprovadas" : "Recusadas"
+            const label =
+              status === "all" ? t('quotationsPage.filterAll', "Todas") :
+              status === "draft" ? t('quotationsPage.filterDraft', "Rascunho") :
+              status === "sent" ? t('quotationsPage.filterSent', "Enviadas") :
+              status === "approved" ? t('quotationsPage.filterApproved', "Aprovadas") : t('quotationsPage.filterRejected', "Recusadas")
             
             return (
               <button
@@ -183,7 +187,7 @@ export default function QuotationsPage() {
           <div className="flex items-center justify-center py-20 text-muted-foreground">
             <div className="flex flex-col items-center gap-3">
               <Clock size={32} className="opacity-30 animate-pulse text-primary" />
-              <span className="text-sm">Carregando cotações...</span>
+              <span className="text-sm">{t('quotationsPage.loading', "Carregando cotações...")}</span>
             </div>
           </div>
         ) : error ? (
@@ -194,10 +198,10 @@ export default function QuotationsPage() {
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-center">
             <FileText size={40} className="opacity-20 mb-3 text-primary" />
             <p className="font-bold text-sm text-foreground">
-              {searchQuery || statusFilter !== "all" ? "Nenhuma cotação atende aos filtros." : "Nenhuma cotação cadastrada."}
+              {searchQuery || statusFilter !== "all" ? t('quotationsPage.noMatchFilters', "Nenhuma cotação atende aos filtros.") : t('quotationsPage.noneRegistered', "Nenhuma cotação cadastrada.")}
             </p>
             <p className="text-xs mt-1 max-w-xs text-muted-foreground">
-              Abra a Calculadora para precificar uma peça e gerar sua primeira cotação formal para clientes.
+              {t('quotationsPage.emptyStateHint', "Abra a Calculadora para precificar uma peça e gerar sua primeira cotação formal para clientes.")}
             </p>
           </div>
         ) : (
@@ -205,12 +209,12 @@ export default function QuotationsPage() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 font-bold">Cotação</th>
-                  <th className="px-6 py-4 font-bold">Cliente</th>
-                  <th className="px-6 py-4 font-bold">Data</th>
-                  <th className="px-6 py-4 font-bold">Valor</th>
-                  <th className="px-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold text-right">Ações</th>
+                  <th className="px-6 py-4 font-bold">{t('quotationsPage.tableQuotation', "Cotação")}</th>
+                  <th className="px-6 py-4 font-bold">{t('quotationsPage.tableCustomer', "Cliente")}</th>
+                  <th className="px-6 py-4 font-bold">{t('quotationsPage.tableDate', "Data")}</th>
+                  <th className="px-6 py-4 font-bold">{t('quotationsPage.tableValue', "Valor")}</th>
+                  <th className="px-6 py-4 font-bold">{t('quotationsPage.tableStatus', "Status")}</th>
+                  <th className="px-6 py-4 font-bold text-right">{t('quotationsPage.tableActions', "Ações")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -243,11 +247,11 @@ export default function QuotationsPage() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic">Sem cliente</span>
+                        <span className="text-xs text-muted-foreground italic">{t('quotationsPage.noCustomer', "Sem cliente")}</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-muted-foreground text-xs">
-                      {new Date(q.created_at).toLocaleDateString("pt-BR")}
+                      {new Date(q.created_at).toLocaleDateString(locale)}
                     </td>
                     <td className="px-6 py-4 font-bold text-foreground tabular-nums">
                       {formatBRL(q.total_value)}
@@ -260,14 +264,14 @@ export default function QuotationsPage() {
                         <Link
                           href={`/dashboard/quotations/${q.id}`}
                           className="p-2 text-muted-foreground hover:bg-muted rounded-xl hover:text-foreground transition-colors flex items-center justify-center"
-                          title="Visualizar Cotação"
+                          title={t('quotationsPage.viewQuotation', "Visualizar Cotação")}
                         >
                           <Eye size={15} />
                         </Link>
                         <button
                           onClick={() => handleDeleteQuotation(q.id)}
                           className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
-                          title="Excluir Cotação"
+                          title={t('quotationsPage.deleteQuotation', "Excluir Cotação")}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -283,7 +287,7 @@ export default function QuotationsPage() {
 
       {filteredQuotations.length > 0 && (
         <p className="text-xs text-muted-foreground text-right">
-          Exibindo {filteredQuotations.length} de {quotations.length} cotações
+          {t('quotationsPage.showingCount', `Exibindo ${filteredQuotations.length} de ${quotations.length} cotações`)}
         </p>
       )}
     </div>

@@ -6,8 +6,11 @@ import { getSupabaseBrowser } from "@/lib/supabase"
 import { ImageIcon, Package, RefreshCw, Loader2, ArrowRight } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getPerceptualHash, hammingDistance } from "@/lib/imageHash"
+import { useTranslation } from "@/lib/translations"
 
 export function AcervoTab() {
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [indexedModels, setIndexedModels] = useState<any[]>([])
   const [indexedError, setIndexedError] = useState<string | null>(null)
   const [isFetchingIndexed, setIsFetchingIndexed] = useState(false)
@@ -101,7 +104,7 @@ export function AcervoTab() {
         if (activePhotoIndex >= newPhotos.length) setActivePhotoIndex(Math.max(0, newPhotos.length - 1))
       }
     } catch {
-      alert("Erro ao remover a foto.")
+      alert(t('adminAcervo.removePhotoError', "Erro ao remover a foto."))
     }
   }
 
@@ -113,12 +116,12 @@ export function AcervoTab() {
       setIndexedModels(prev => prev.filter(m => m.id !== modelId))
       setSelectedIndexedModel(null)
     } catch {
-      alert("Erro ao marcar modelo como revisado.")
+      alert(t('adminAcervo.markReviewedError', "Erro ao marcar modelo como revisado."))
     }
   }
 
   const handleDeleteModel = async (modelId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este modelo inteiro do acervo?")) return
+    if (!confirm(t('adminAcervo.confirmDeleteModel', "Tem certeza que deseja excluir este modelo inteiro do acervo?"))) return
     try {
       const supabase = getSupabaseBrowser()
       const { error } = await supabase.from("telegram_indexed_stls").delete().eq("id", modelId)
@@ -126,7 +129,7 @@ export function AcervoTab() {
       setIndexedModels(prev => prev.filter(m => m.id !== modelId))
       if (selectedIndexedModel?.id === modelId) setSelectedIndexedModel(null)
     } catch {
-      alert("Erro ao excluir o modelo.")
+      alert(t('adminAcervo.deleteModelError', "Erro ao excluir o modelo."))
     }
   }
 
@@ -141,10 +144,10 @@ export function AcervoTab() {
           <div>
             <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
               <ImageIcon className="text-primary" size={20} />
-              Revisão de Fotos Mescladas
+              {t('adminAcervo.title', "Revisão de Fotos Mescladas")}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Gerencie os modelos duplicados que receberam novas fotos do scraper.
+              {t('adminAcervo.subtitle', "Gerencie os modelos duplicados que receberam novas fotos do scraper.")}
             </p>
           </div>
           <button
@@ -152,7 +155,7 @@ export function AcervoTab() {
             className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
           >
             <RefreshCw size={14} className={isFetchingIndexed ? "animate-spin" : ""} />
-            Atualizar Lista
+            {t('adminAcervo.refreshList', "Atualizar Lista")}
           </button>
         </div>
 
@@ -160,15 +163,15 @@ export function AcervoTab() {
           {isFetchingIndexed ? (
             <div className="py-12 flex flex-col items-center justify-center space-y-3">
               <Loader2 className="animate-spin text-primary" size={32} />
-              <p className="text-sm text-muted-foreground">Buscando acervo no banco de dados...</p>
+              <p className="text-sm text-muted-foreground">{t('adminAcervo.loadingAcervo', "Buscando acervo no banco de dados...")}</p>
             </div>
           ) : indexedError ? (
             <div className="p-12 text-center text-sm text-red-400 border border-red-500/20 bg-red-500/5 rounded-xl">
-              Falha ao carregar modelos indexados: {indexedError}
+              {t('adminAcervo.loadError', "Falha ao carregar modelos indexados:")} {indexedError}
             </div>
           ) : indexedModels.length === 0 ? (
             <div className="p-12 text-center text-sm text-muted-foreground">
-              Nenhum modelo indexado encontrado no banco.
+              {t('adminAcervo.noModelsFound', "Nenhum modelo indexado encontrado no banco.")}
             </div>
           ) : (
             <>
@@ -189,7 +192,7 @@ export function AcervoTab() {
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground group-hover:scale-105 transition-transform duration-500">
                             <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
-                            <span className="text-xs font-bold uppercase tracking-wider opacity-50">Sem Foto</span>
+                            <span className="text-xs font-bold uppercase tracking-wider opacity-50">{t('adminAcervo.noPhoto', "Sem Foto")}</span>
                           </div>
                         )}
                         <div className="absolute top-3 right-3 px-2 py-1 rounded bg-black/70 backdrop-blur-sm text-[10px] font-bold text-amber-400 border border-amber-500/30">
@@ -200,14 +203,14 @@ export function AcervoTab() {
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedIndexedModel(model); setActivePhotoIndex(0) }}
                           className="absolute inset-0 z-10 w-full h-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-sm font-bold backdrop-blur-sm cursor-pointer"
                         >
-                          Gerenciar {hasPhotos && `(${model.photos.length} foto${model.photos.length > 1 ? "s" : ""})`}
+                          {t('adminAcervo.manage', "Gerenciar")} {hasPhotos && `(${model.photos.length} ${model.photos.length > 1 ? t('adminAcervo.photosPlural', "fotos") : t('adminAcervo.photoSingular', "foto")})`}
                         </button>
                       </div>
                       <div className="p-4">
                         <h4 className="font-bold text-sm text-foreground line-clamp-2" title={model.file_name}>{model.file_name}</h4>
                         <div className="mt-2 text-[11px] text-muted-foreground flex justify-between items-center">
-                          <span>Indexado em:</span>
-                          <span>{new Date(model.created_at).toLocaleDateString("pt-BR")}</span>
+                          <span>{t('adminAcervo.indexedAt', "Indexado em:")}</span>
+                          <span>{new Date(model.created_at).toLocaleDateString(locale)}</span>
                         </div>
                       </div>
                     </div>
@@ -218,11 +221,11 @@ export function AcervoTab() {
               {totalIndexedPages > 1 && (
                 <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
                   <div className="text-sm text-muted-foreground font-medium">
-                    Página {indexedPage} de {totalIndexedPages} (Total: {indexedModels.length})
+                    {t('adminAcervo.pageOf', "Página")} {indexedPage} {t('adminAcervo.of', "de")} {totalIndexedPages} ({t('adminAcervo.total', "Total:")} {indexedModels.length})
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setIndexedPage(p => Math.max(1, p - 1))} disabled={indexedPage === 1} className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Anterior</button>
-                    <button onClick={() => setIndexedPage(p => Math.min(totalIndexedPages, p + 1))} disabled={indexedPage === totalIndexedPages} className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Próxima</button>
+                    <button onClick={() => setIndexedPage(p => Math.max(1, p - 1))} disabled={indexedPage === 1} className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors">{t('adminAcervo.previous', "Anterior")}</button>
+                    <button onClick={() => setIndexedPage(p => Math.min(totalIndexedPages, p + 1))} disabled={indexedPage === totalIndexedPages} className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-colors">{t('adminAcervo.next', "Próxima")}</button>
                   </div>
                 </div>
               )}
@@ -247,7 +250,7 @@ export function AcervoTab() {
                 <div className="w-full md:w-3/5 bg-muted/50 relative flex items-center justify-center min-h-[300px]">
                   {selectedIndexedModel.photos && selectedIndexedModel.photos.length > 0 ? (
                     <>
-                      <img src={selectedIndexedModel.photos[activePhotoIndex]} alt={`Foto ${activePhotoIndex + 1}`} className="max-w-full max-h-[70vh] object-contain" />
+                      <img src={selectedIndexedModel.photos[activePhotoIndex]} alt={`${t('adminAcervo.photoAlt', "Foto")} ${activePhotoIndex + 1}`} className="max-w-full max-h-[70vh] object-contain" />
                       {selectedIndexedModel.photos.length > 1 && (
                         <>
                           <button onClick={(e) => { e.stopPropagation(); setActivePhotoIndex(prev => prev > 0 ? prev - 1 : selectedIndexedModel.photos.length - 1) }} className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/80 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all cursor-pointer border border-white/10">
@@ -264,10 +267,10 @@ export function AcervoTab() {
                         </>
                       )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm("Excluir apenas esta foto do modelo?")) handleRemovePhoto(selectedIndexedModel.id, activePhotoIndex) }}
+                        onClick={(e) => { e.stopPropagation(); if (confirm(t('adminAcervo.confirmDeletePhoto', "Excluir apenas esta foto do modelo?"))) handleRemovePhoto(selectedIndexedModel.id, activePhotoIndex) }}
                         className="absolute top-4 left-4 bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md"
                       >
-                        Excluir Foto Atual
+                        {t('adminAcervo.deleteCurrentPhoto', "Excluir Foto Atual")}
                       </button>
                     </>
                   ) : (
@@ -275,7 +278,7 @@ export function AcervoTab() {
                       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
                         <Package size={24} />
                       </div>
-                      <p className="text-sm font-medium">Nenhuma imagem disponível</p>
+                      <p className="text-sm font-medium">{t('adminAcervo.noImageAvailable', "Nenhuma imagem disponível")}</p>
                     </div>
                   )}
                 </div>
@@ -283,40 +286,40 @@ export function AcervoTab() {
                 {/* Right: Info & Actions */}
                 <div className="w-full md:w-2/5 p-6 flex flex-col max-h-[50vh] md:max-h-[90vh] overflow-y-auto">
                   <div className="flex items-start justify-between gap-4 mb-6">
-                    <h3 className="text-xl font-bold text-foreground">Gerenciar Modelo</h3>
+                    <h3 className="text-xl font-bold text-foreground">{t('adminAcervo.manageModel', "Gerenciar Modelo")}</h3>
                     <button onClick={() => setSelectedIndexedModel(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-muted hover:bg-muted-foreground/20 text-muted-foreground transition-colors shrink-0">✕</button>
                   </div>
                   <div className="flex-1 space-y-6">
                     <div className="space-y-1 bg-muted/30 p-4 rounded-xl border border-border">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Nome Original (Arquivo)</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('adminAcervo.originalFileName', "Nome Original (Arquivo)")}</p>
                       <p className="text-sm font-medium text-foreground break-all">{selectedIndexedModel.file_name}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1 bg-muted/30 p-4 rounded-xl border border-border">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tamanho Real</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('adminAcervo.realSize', "Tamanho Real")}</p>
                         <p className="text-sm font-bold text-amber-500">
                           {selectedIndexedModel.file_size_bytes ? `${(selectedIndexedModel.file_size_bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` : "---"}
                         </p>
                       </div>
                       <div className="space-y-1 bg-muted/30 p-4 rounded-xl border border-border">
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Origem</p>
-                        <p className="text-sm font-medium text-foreground truncate" title={selectedIndexedModel.chat_title}>{selectedIndexedModel.chat_title || "Desconhecida"}</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('adminAcervo.origin', "Origem")}</p>
+                        <p className="text-sm font-medium text-foreground truncate" title={selectedIndexedModel.chat_title}>{selectedIndexedModel.chat_title || t('adminAcervo.unknownOrigin', "Desconhecida")}</p>
                       </div>
                     </div>
                     <div className="space-y-1 bg-muted/30 p-4 rounded-xl border border-border">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Indexado Em</p>
-                      <p className="text-sm font-medium text-foreground">{new Date(selectedIndexedModel.created_at).toLocaleString("pt-BR")}</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('adminAcervo.indexedOn', "Indexado Em")}</p>
+                      <p className="text-sm font-medium text-foreground">{new Date(selectedIndexedModel.created_at).toLocaleString(locale)}</p>
                     </div>
                   </div>
                   <div className="mt-8 pt-6 border-t border-border flex flex-col gap-3">
                     <button onClick={() => handleMarkAsReviewed(selectedIndexedModel.id)} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
-                      Marcar como Revisado (Ocultar)
+                      {t('adminAcervo.markAsReviewed', "Marcar como Revisado (Ocultar)")}
                     </button>
                     <button onClick={() => handleDeleteModel(selectedIndexedModel.id)} className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
-                      Excluir Modelo Inteiro do Acervo
+                      {t('adminAcervo.deleteEntireModel', "Excluir Modelo Inteiro do Acervo")}
                     </button>
                     <button onClick={() => setSelectedIndexedModel(null)} className="w-full py-2.5 bg-muted hover:bg-border text-foreground text-sm font-bold rounded-xl flex items-center justify-center transition-all cursor-pointer">
-                      Fechar Janela
+                      {t('adminAcervo.closeWindow', "Fechar Janela")}
                     </button>
                   </div>
                 </div>

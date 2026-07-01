@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslation } from "@/lib/translations"
 
 interface Props {
   params: Promise<{ id: string }>
@@ -53,7 +54,9 @@ export default function QuotationDetailPage({ params }: Props) {
   const { id } = React.use(params)
   const { profile } = useAppStore()
   const router = useRouter()
-  
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
+
   const [quotation, setQuotation] = useState<Quotation | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -74,7 +77,7 @@ export default function QuotationDetailPage({ params }: Props) {
       setQuotation(data as Quotation)
     } catch (err: any) {
       console.error("[QuotationDetail] Fetch error:", err)
-      setError("Não foi possível carregar os detalhes da cotação.")
+      setError(t('quotationDetails.loadError', "Não foi possível carregar os detalhes da cotação."))
     } finally {
       setLoading(false)
     }
@@ -98,7 +101,7 @@ export default function QuotationDetailPage({ params }: Props) {
       setQuotation(prev => prev ? { ...prev, status: newStatus } : null)
     } catch (err) {
       console.error("[QuotationStatus] Error:", err)
-      alert("Erro ao atualizar status.")
+      alert(t('quotationDetails.statusUpdateError', "Erro ao atualizar status."))
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -116,19 +119,19 @@ export default function QuotationDetailPage({ params }: Props) {
   const handleShareWhatsApp = () => {
     if (!quotation) return
     
-    const clientName = quotation.customers?.name || "Cliente"
+    const clientName = quotation.customers?.name || t('quotationDetails.defaultClientName', "Cliente")
     const phone = quotation.customers?.phone?.replace(/\D/g, "") || ""
     const appUrl = window.location.origin
-    
+
     const itemNames = quotation.items.map(i => `${i.name} (${i.weight_g}g)`).join(", ")
-    
-    const message = `Olá, ${clientName}! Segue o orçamento da sua peça 3D:\n\n` +
-      `*Proposta:* ${quotation.title}\n` +
-      `*Item(ns):* ${itemNames}\n` +
-      `*Total:* ${formatBRL(quotation.total_value)}\n` +
-      (quotation.notes ? `*Observações:* ${quotation.notes}\n` : "") +
-      `*Visualizar proposta completa:* ${appUrl}/dashboard/quotations/${quotation.id}\n\n` +
-      `Fico à disposição!`;
+
+    const message = t('quotationDetails.whatsappGreeting', `Olá, ${clientName}! Segue o orçamento da sua peça 3D:`) + `\n\n` +
+      `*${t('quotationDetails.whatsappProposalLabel', "Proposta:")}* ${quotation.title}\n` +
+      `*${t('quotationDetails.whatsappItemsLabel', "Item(ns):")}* ${itemNames}\n` +
+      `*${t('quotationDetails.whatsappTotalLabel', "Total:")}* ${formatBRL(quotation.total_value)}\n` +
+      (quotation.notes ? `*${t('quotationDetails.whatsappNotesLabel', "Observações:")}* ${quotation.notes}\n` : "") +
+      `*${t('quotationDetails.whatsappViewProposalLabel', "Visualizar proposta completa:")}* ${appUrl}/dashboard/quotations/${quotation.id}\n\n` +
+      t('quotationDetails.whatsappClosing', "Fico à disposição!");
 
     const encoded = encodeURIComponent(message)
     const url = phone ? `https://wa.me/55${phone}?text=${encoded}` : `https://wa.me/?text=${encoded}`
@@ -139,7 +142,7 @@ export default function QuotationDetailPage({ params }: Props) {
   const handleShareTelegram = () => {
     if (!quotation) return
     const appUrl = window.location.origin
-    const text = `Seguem os detalhes do orçamento *${quotation.title}* no valor de ${formatBRL(quotation.total_value)}: ${appUrl}/dashboard/quotations/${quotation.id}`
+    const text = t('quotationDetails.telegramMessage', `Seguem os detalhes do orçamento *${quotation.title}* no valor de ${formatBRL(quotation.total_value)}: ${appUrl}/dashboard/quotations/${quotation.id}`)
     const encoded = encodeURIComponent(text)
     const phone = quotation.customers?.phone?.replace(/\D/g, "") || ""
     const telegram = (quotation.customers as any)?.telegram || ""
@@ -156,22 +159,22 @@ export default function QuotationDetailPage({ params }: Props) {
   // Envio E-mail
   const handleShareEmail = () => {
     if (!quotation) return
-    const clientName = quotation.customers?.name || "Cliente"
+    const clientName = quotation.customers?.name || t('quotationDetails.defaultClientName', "Cliente")
     const email = quotation.customers?.email || ""
-    const subject = encodeURIComponent(`Orçamento LB Creative Studio — ${quotation.title}`)
+    const subject = encodeURIComponent(t('quotationDetails.emailSubject', `Orçamento LB Creative Studio — ${quotation.title}`))
     const appUrl = window.location.origin
-    
+
     const body = encodeURIComponent(
-      `Olá, ${clientName}!\n\n` +
-      `Espero que esteja bem.\n\n` +
-      `Elaboramos o orçamento referente ao seu pedido de impressão 3D:\n` +
-      `- Proposta: ${quotation.title}\n` +
-      `- Valor Total: ${formatBRL(quotation.total_value)}\n\n` +
-      `Você pode conferir todos os detalhes e breakdown de custos acessando o link:\n` +
+      t('quotationDetails.emailGreeting', `Olá, ${clientName}!`) + `\n\n` +
+      t('quotationDetails.emailIntro', "Espero que esteja bem.") + `\n\n` +
+      t('quotationDetails.emailBody', "Elaboramos o orçamento referente ao seu pedido de impressão 3D:") + `\n` +
+      `- ${t('quotationDetails.emailProposalLine', "Proposta:")} ${quotation.title}\n` +
+      `- ${t('quotationDetails.emailTotalLine', "Valor Total:")} ${formatBRL(quotation.total_value)}\n\n` +
+      t('quotationDetails.emailLinkIntro', "Você pode conferir todos os detalhes e breakdown de custos acessando o link:") + `\n` +
       `${appUrl}/dashboard/quotations/${quotation.id}\n\n` +
-      `Qualquer dúvida, estamos à disposição.\n\n` +
-      `Atenciosamente,\n` +
-      `${profile?.email || "Maker"}`
+      t('quotationDetails.emailClosingQuestion', "Qualquer dúvida, estamos à disposição.") + `\n\n` +
+      t('quotationDetails.emailSignoff', "Atenciosamente,") + `\n` +
+      `${profile?.email || t('quotationDetails.defaultMakerName', "Maker")}`
     )
     
     window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_blank")
@@ -181,7 +184,7 @@ export default function QuotationDetailPage({ params }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-40 text-muted-foreground">
         <div className="w-10 h-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin mb-3" />
-        <span className="text-sm">Carregando detalhes...</span>
+        <span className="text-sm">{t('quotationDetails.loading', "Carregando detalhes...")}</span>
       </div>
     )
   }
@@ -190,9 +193,9 @@ export default function QuotationDetailPage({ params }: Props) {
     return (
       <div className="flex flex-col items-center justify-center py-40 text-red-500 space-y-4">
         <AlertCircle size={40} />
-        <p className="text-sm">{error || "Cotação não encontrada."}</p>
+        <p className="text-sm">{error || t('quotationDetails.notFound', "Cotação não encontrada.")}</p>
         <Link href="/dashboard/quotations" className="text-xs text-primary hover:underline font-bold">
-          Voltar para Cotações
+          {t('quotationDetails.backToQuotations', "Voltar para Cotações")}
         </Link>
       </div>
     )
@@ -213,9 +216,9 @@ export default function QuotationDetailPage({ params }: Props) {
             <ChevronLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-2xl font-black text-foreground">Orçamento Detalhado</h1>
+            <h1 className="text-2xl font-black text-foreground">{t('quotationDetails.pageTitle', "Orçamento Detalhado")}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Cotação emitida em {new Date(quotation.created_at).toLocaleDateString("pt-BR")}
+              {t('quotationDetails.issuedOn', "Cotação emitida em")} {new Date(quotation.created_at).toLocaleDateString(locale)}
             </p>
           </div>
         </div>
@@ -231,7 +234,7 @@ export default function QuotationDetailPage({ params }: Props) {
                 quotation.status === 'draft' ? "bg-white/5 border border-white/10 text-white/80" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Rascunho
+              {t('quotationDetails.statusDraft', "Rascunho")}
             </button>
             <button
               onClick={() => handleUpdateStatus('sent')}
@@ -240,7 +243,7 @@ export default function QuotationDetailPage({ params }: Props) {
                 quotation.status === 'sent' ? "bg-blue-500/15 text-blue-500 font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Enviada
+              {t('quotationDetails.statusSent', "Enviada")}
             </button>
             <button
               onClick={() => handleUpdateStatus('approved')}
@@ -249,7 +252,7 @@ export default function QuotationDetailPage({ params }: Props) {
                 quotation.status === 'approved' ? "bg-emerald-500/15 text-emerald-500 font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Aprovada
+              {t('quotationDetails.statusApproved', "Aprovada")}
             </button>
             <button
               onClick={() => handleUpdateStatus('rejected')}
@@ -258,7 +261,7 @@ export default function QuotationDetailPage({ params }: Props) {
                 quotation.status === 'rejected' ? "bg-red-500/15 text-red-500 font-bold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Recusada
+              {t('quotationDetails.statusRejected', "Recusada")}
             </button>
           </div>
 
@@ -268,7 +271,7 @@ export default function QuotationDetailPage({ params }: Props) {
             className="flex items-center gap-1.5 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 text-white/80 hover:text-white rounded-xl text-xs font-bold transition"
           >
             <Printer size={14} />
-            Imprimir / PDF
+            {t('quotationDetails.printPdf', "Imprimir / PDF")}
           </button>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, Mail, Lock, ArrowRight, Eye, EyeOff, Zap } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase'
+import { useTranslation } from '@/lib/translations'
 
 type Mode = 'login' | 'signup'
 
@@ -11,6 +12,7 @@ function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialMode = (searchParams.get('mode') as Mode) || 'login'
+  const { t } = useTranslation()
 
   // Limpa o cache local ao carregar a página de login para evitar o "auth lock bug" do Supabase
   useEffect(() => {
@@ -43,10 +45,10 @@ function LoginContent() {
           options: { emailRedirectTo: `${window.location.origin}/` },
         })
         if (error) throw error
-        setSuccess('Conta criada! Verifique seu email para confirmar o cadastro.')
+        setSuccess(t('login.signupSuccess', 'Conta criada! Verifique seu email para confirmar o cadastro.'))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+      setError(err instanceof Error ? err.message : t('login.unknownError', 'Erro desconhecido'))
     } finally {
       setLoading(false)
     }
@@ -64,7 +66,7 @@ function LoginContent() {
   }
 
   const handleForgotPassword = async () => {
-    if (!email) { setError('Digite seu email para redefinir a senha.'); return }
+    if (!email) { setError(t('login.enterEmailForReset', 'Digite seu email para redefinir a senha.')); return }
     setLoading(true)
     setError(null)
     const supabase = getSupabaseBrowser()
@@ -73,11 +75,11 @@ function LoginContent() {
     })
     setLoading(false)
     if (error) setError(error.message)
-    else setSuccess('Email de redefinição enviado! Verifique sua caixa de entrada.')
+    else setSuccess(t('login.resetEmailSent', 'Email de redefinição enviado! Verifique sua caixa de entrada.'))
   }
 
   const handleMagicLink = async () => {
-    if (!email) { setError('Digite seu email antes de continuar.'); return }
+    if (!email) { setError(t('login.enterEmailForMagicLink', 'Digite seu email antes de continuar.')); return }
     setLoading(true)
     setError(null)
     const supabase = getSupabaseBrowser()
@@ -87,7 +89,7 @@ function LoginContent() {
     })
     setLoading(false)
     if (error) setError(error.message)
-    else setSuccess('Link mágico enviado! Verifique seu email.')
+    else setSuccess(t('login.magicLinkSent', 'Link mágico enviado! Verifique seu email.'))
   }
 
   return (
@@ -121,7 +123,7 @@ function LoginContent() {
             LB Creative <span className="text-foreground/60">Studio</span>
           </h1>
           <p className="text-sm text-white/40 mt-1.5">
-            {mode === 'login' ? 'Acesse sua conta de Maker' : 'Crie sua conta gratuita'}
+            {mode === 'login' ? t('login.subtitleLogin', 'Acesse sua conta de Maker') : t('login.subtitleSignup', 'Crie sua conta gratuita')}
           </p>
         </div>
 
@@ -131,7 +133,7 @@ function LoginContent() {
 
             {/* Email */}
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-label text-white/50">Email</label>
+              <label htmlFor="email" className="text-label text-white/50">{t('login.emailLabel', 'Email')}</label>
               <div className="relative">
                 <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
                 <input
@@ -151,7 +153,7 @@ function LoginContent() {
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-label text-white/50">Senha</label>
+              <label htmlFor="password" className="text-label text-white/50">{t('login.passwordLabel', 'Senha')}</label>
               <div className="relative">
                 <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" />
                 <input
@@ -186,7 +188,7 @@ function LoginContent() {
                   disabled={loading}
                   className="text-xs text-white/35 hover:text-primary transition-colors"
                 >
-                  Esqueci minha senha
+                  {t('login.forgotPassword', 'Esqueci minha senha')}
                 </button>
               </div>
             )}
@@ -219,7 +221,7 @@ function LoginContent() {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? 'Entrar' : 'Criar conta'}
+                  {mode === 'login' ? t('login.submitLogin', 'Entrar') : t('login.submitSignup', 'Criar conta')}
                   <ArrowRight size={15} />
                 </>
               )}
@@ -229,7 +231,7 @@ function LoginContent() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-4">
             <div className="flex-1 h-px bg-white/8" />
-            <span className="text-xs text-white/25">ou</span>
+            <span className="text-xs text-white/25">{t('login.or', 'ou')}</span>
             <div className="flex-1 h-px bg-white/8" />
           </div>
 
@@ -247,7 +249,7 @@ function LoginContent() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
             </svg>
-            Entrar com o Google
+            {t('login.googleLogin', 'Entrar com o Google')}
           </button>
 
           {/* Magic Link */}
@@ -260,29 +262,29 @@ function LoginContent() {
                        transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Zap size={13} className="text-primary" />
-            Entrar com link mágico
+            {t('login.magicLinkLogin', 'Entrar com link mágico')}
           </button>
 
           {/* Toggle mode */}
           <p className="text-center text-xs text-white/35 mt-5">
             {mode === 'login' ? (
               <>
-                Não tem conta?{' '}
+                {t('login.noAccount', 'Não tem conta?')}{' '}
                 <button
                   onClick={() => { setMode('signup'); setError(null); setSuccess(null) }}
                   className="text-primary hover:text-primary/80 font-semibold transition-colors"
                 >
-                  Cadastre-se grátis
+                  {t('login.signupFree', 'Cadastre-se grátis')}
                 </button>
               </>
             ) : (
               <>
-                Já tem conta?{' '}
+                {t('login.hasAccount', 'Já tem conta?')}{' '}
                 <button
                   onClick={() => { setMode('login'); setError(null); setSuccess(null) }}
                   className="text-primary hover:text-primary/80 font-semibold transition-colors"
                 >
-                  Entrar
+                  {t('login.submitLogin', 'Entrar')}
                 </button>
               </>
             )}
@@ -291,7 +293,7 @@ function LoginContent() {
 
         {/* Footer note */}
         <p className="text-center text-xs text-foreground/20 mt-6">
-          LB Creative Studio · Para Makers Brasileiros
+          LB Creative Studio · {t('login.footerNote', 'Para Makers Brasileiros')}
         </p>
       </div>
     </div>

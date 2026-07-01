@@ -9,12 +9,15 @@ import {
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { getPerceptualHash, hammingDistance } from "@/lib/imageHash"
+import { useTranslation } from "@/lib/translations"
 
 interface ScraperTabProps {
   onHeartbeatChange: (heartbeat: string | null) => void
 }
 
 export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [scraperJobs, setScraperJobs] = useState<any[]>([])
   const [scraperError, setScraperError] = useState<string | null>(null)
   const [actingJobId, setActingJobId] = useState<string | null>(null)
@@ -137,7 +140,7 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
       }
       checkAndFilterBanned(jobs)
     } catch (err: any) {
-      setScraperError(err.message || "Erro desconhecido")
+      setScraperError(err.message || t('adminScraper.unknownError', "Erro desconhecido"))
     }
   }, [])
 
@@ -210,9 +213,9 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
         .update({ groups_config: scraperGroupsConfig, size_limit_mb: scraperSizeLimit, updated_at: new Date().toISOString() })
         .eq("id", "default")
       if (error) throw error
-      alert("Configurações do scraper salvas com sucesso!")
+      alert(t('adminScraper.settingsSaved', "Configurações do scraper salvas com sucesso!"))
     } catch (err: any) {
-      alert(`Erro ao salvar configurações: ${err.message || err}`)
+      alert(`${t('adminScraper.settingsSaveError', "Erro ao salvar configurações")}: ${err.message || err}`)
     } finally {
       setIsSavingSettings(false)
     }
@@ -225,7 +228,7 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
       const supabase = getSupabaseBrowser()
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
-      if (!token) throw new Error("Sessão não encontrada.")
+      if (!token) throw new Error(t('adminScraper.sessionNotFound', "Sessão não encontrada."))
       const res = await fetch("/api/telegram/backfill", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
@@ -235,7 +238,7 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`)
       setBackfillResult({ ok: true, message: data.message, cutoff_date: data.cutoff_date })
     } catch (err: any) {
-      setBackfillResult({ ok: false, message: err.message || "Erro desconhecido." })
+      setBackfillResult({ ok: false, message: err.message || t('adminScraper.unknownErrorDot', "Erro desconhecido.") })
     } finally {
       setIsRunningBackfill(false)
     }
@@ -247,7 +250,7 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
       const supabase = getSupabaseBrowser()
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
-      if (!token) throw new Error("Sessão não encontrada.")
+      if (!token) throw new Error(t('adminScraper.sessionNotFound', "Sessão não encontrada."))
       const res = await fetch("/api/telegram/jobs", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
@@ -255,11 +258,11 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || `Erro do servidor (${res.status})`)
+        throw new Error(errData.error || `${t('adminScraper.serverError', "Erro do servidor")} (${res.status})`)
       }
       await fetchScraperJobs()
     } catch (err: any) {
-      alert(`Falha ao realizar ação: ${err.message}`)
+      alert(`${t('adminScraper.actionFailed', "Falha ao realizar ação")}: ${err.message}`)
     } finally {
       setActingJobId(null)
     }
@@ -280,12 +283,12 @@ export function ScraperTab({ onHeartbeatChange }: ScraperTabProps) {
         if (activePhotoIndex >= newPhotos.length) setActivePhotoIndex(Math.max(0, newPhotos.length - 1))
       }
     } catch (err) {
-      alert("Erro ao remover a foto.")
+      alert(t('adminScraper.removePhotoError', "Erro ao remover a foto."))
     }
   }
 
   const handleAddJobPhotoUrl = async (jobId: string) => {
-    const url = prompt("Digite a URL da imagem:")
+    const url = prompt(t('adminScraper.enterImageUrl', "Digite a URL da imagem:"))
     if (!url?.trim()) return
     try {
       const job = scraperJobs.find(j => j.id === jobId)

@@ -36,7 +36,8 @@ import { AffiliateProductsTab } from "@/components/admin/AffiliateProductsTab"
 
 export default function AdminPage() {
   const { profile } = useAppStore()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [activeTab, setActiveTab] = useState<"features" | "models" | "users" | "analytics" | "tickets" | "flags" | "xp" | "affiliate">("features")
   const [loading, setLoading] = useState(true)
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -88,9 +89,9 @@ export default function AdminPage() {
         id: h.id,
         downloaded_at: h.downloaded_at,
         user_email: h.profiles?.email || "desconhecido@lb.com",
-        file_name: h.telegram_indexed_stls?.file_name || "Arquivo excluído",
-        chat_title: h.telegram_indexed_stls?.telegram_group_name || "Canal desconhecido",
-        title: h.telegram_indexed_stls?.title || "Modelo Sem Título"
+        file_name: h.telegram_indexed_stls?.file_name || t('admin.deletedFile', "Arquivo excluído"),
+        chat_title: h.telegram_indexed_stls?.telegram_group_name || t('admin.unknownChannel', "Canal desconhecido"),
+        title: h.telegram_indexed_stls?.title || t('admin.untitledModel', "Modelo Sem Título")
       }))
       setDownloadHistory(mappedHistory)
     } catch (err: any) {
@@ -101,7 +102,7 @@ export default function AdminPage() {
         code: err.code,
         error: err
       })
-      setAnalyticsError(err.message || err.details || JSON.stringify(err) || "Erro ao consultar banco de dados")
+      setAnalyticsError(err.message || err.details || JSON.stringify(err) || t('admin.dbQueryError', "Erro ao consultar banco de dados"))
     } finally {
       setIsLoadingAnalytics(false)
     }
@@ -156,7 +157,7 @@ export default function AdminPage() {
 
     } catch (err: any) {
       console.error("[Admin fetch error]:", err)
-      setErrorMsg(err.message || "Falha ao carregar dados do painel.")
+      setErrorMsg(err.message || t('admin.loadFailError', "Falha ao carregar dados do painel."))
     } finally {
       setLoading(false)
     }
@@ -185,7 +186,7 @@ export default function AdminPage() {
     for (let i = 6; i >= 0; i--) {
       const d = new Date()
       d.setDate(d.getDate() - i)
-      const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      const dateStr = d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })
       const keyStr = d.toISOString().split('T')[0]
       days.push({ label: dateStr, key: keyStr, count: 0 })
     }
@@ -208,7 +209,7 @@ export default function AdminPage() {
     const counts: Record<string, number> = {}
     downloadHistory.forEach(h => {
       if (!h) return
-      const channel = h.chat_title || "Outros"
+      const channel = h.chat_title || t('admin.othersChannel', "Outros")
       counts[channel] = (counts[channel] || 0) + 1
     })
 
@@ -225,9 +226,9 @@ export default function AdminPage() {
         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mb-6 ring-4 ring-red-500/5">
           <Lock size={32} />
         </div>
-        <h1 className="text-2xl font-black text-foreground tracking-tight">Acesso Restrito</h1>
+        <h1 className="text-2xl font-black text-foreground tracking-tight">{t('admin.restrictedAccessTitle', "Acesso Restrito")}</h1>
         <p className="text-muted-foreground mt-2 max-w-sm text-sm">
-          Esta área é exclusiva para administradores (sysadmin) do LB Creative Studio. Faça login com um perfil sysadmin.
+          {t('admin.restrictedAccessDesc', "Esta área é exclusiva para administradores (sysadmin) do LB Creative Studio. Faça login com um perfil sysadmin.")}
         </p>
       </div>
     )
@@ -253,7 +254,7 @@ export default function AdminPage() {
       setSaveSuccessId(featureKey)
       setTimeout(() => setSaveSuccessId(null), 2000)
     } catch (err: any) {
-      alert("Erro ao salvar: " + err.message)
+      alert(t('admin.saveFeatureError', "Erro ao salvar: ") + err.message)
     } finally {
       setSavingId(null)
     }
@@ -280,7 +281,7 @@ export default function AdminPage() {
       setTimeout(() => setSaveSuccessId(null), 2000)
     } catch (err: any) {
       console.error("Error saving model price:", err)
-      alert("Erro ao salvar preços: " + err.message)
+      alert(t('admin.saveModelPriceError', "Erro ao salvar preços: ") + err.message)
     } finally {
       setSavingId(null)
     }
@@ -311,17 +312,17 @@ export default function AdminPage() {
         await supabase.from("transactions").insert({
           user_id: userId,
           credits_added: diff,
-          description: diff > 0 ? `Créditos adicionados manualmente pelo sysadmin` : `Créditos removidos manualmente pelo sysadmin`
+          description: diff > 0 ? t('admin.creditsAddedBySysadmin', "Créditos adicionados manualmente pelo sysadmin") : t('admin.creditsRemovedBySysadmin', "Créditos removidos manualmente pelo sysadmin")
         })
       }
-      
+
       // Refresh local user state list
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan, credits } : u))
-      
+
       setSaveSuccessId(userId)
       setTimeout(() => setSaveSuccessId(null), 2000)
     } catch (err: any) {
-      alert("Erro ao atualizar usuário: " + err.message)
+      alert(t('admin.updateUserError', "Erro ao atualizar usuário: ") + err.message)
     } finally {
       setSavingId(null)
     }
@@ -353,7 +354,7 @@ export default function AdminPage() {
         [key]: newVal
       })
     } catch (err: any) {
-      alert("Erro ao alterar feature flag: " + err.message)
+      alert(t('admin.toggleFlagError', "Erro ao alterar feature flag: ") + err.message)
     }
   }
 
@@ -364,8 +365,8 @@ export default function AdminPage() {
     { key: "analytics", icon: Activity,     label: t('admin.tabAnalytics', "Uso da Plataforma") },
     { key: "tickets",   icon: LifeBuoy,     label: t('admin.tabTickets', "Chamados") },
     { key: "flags",     icon: ToggleRight,  label: t('admin.tabFlags', "Feature Flags") },
-    { key: "xp",        icon: Zap,          label: "XP & Badges" },
-    { key: "affiliate", icon: ShoppingCart, label: "Produtos Afiliados" },
+    { key: "xp",        icon: Zap,          label: t('admin.tabXp', "XP & Badges") },
+    { key: "affiliate", icon: ShoppingCart, label: t('admin.tabAffiliate', "Produtos Afiliados") },
   ]
 
   return (
@@ -380,7 +381,7 @@ export default function AdminPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
               <ShieldAlert size={12} />
-              Painel Administrativo
+              {t('admin.headerBadge', "Painel Administrativo")}
             </div>
             <h1 className="text-display text-2xl text-white">{t('admin.title', "Admin")}</h1>
             <p className="text-white/50 max-w-lg text-sm leading-relaxed">
@@ -431,16 +432,16 @@ export default function AdminPage() {
       {loading ? (
         <div className="h-64 flex flex-col items-center justify-center border border-border bg-card/20 rounded-2xl">
           <Loader2 className="w-10 h-10 animate-spin text-primary mb-3" />
-          <span className="text-sm text-muted-foreground">Carregando dados administrativos...</span>
+          <span className="text-sm text-muted-foreground">{t('admin.loadingAdminData', "Carregando dados administrativos...")}</span>
         </div>
       ) : errorMsg ? (
         <div className="p-6 border border-red-500/20 bg-red-500/5 rounded-2xl text-center">
           <p className="text-red-400 font-medium">{errorMsg}</p>
-          <button 
+          <button
             onClick={fetchData}
             className="mt-4 px-4 py-2 bg-red-500/10 text-red-400 text-xs font-bold rounded-lg border border-red-500/20 hover:bg-red-500/20 transition-all cursor-pointer"
           >
-            Tentar Novamente
+            {t('admin.tryAgain', "Tentar Novamente")}
           </button>
         </div>
       ) : (
@@ -492,19 +493,19 @@ export default function AdminPage() {
               className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm"
             >
               <div className="p-6 border-b border-border bg-muted/20">
-                <h3 className="font-bold text-base">Gerenciador de Planos de Usuários</h3>
+                <h3 className="font-bold text-base">{t('admin.userPlanManagerTitle', "Gerenciador de Planos de Usuários")}</h3>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Mude o plano de qualquer usuário ou injete créditos para testar as regras de cobrança dinâmica criadas.
+                  {t('admin.userPlanManagerDesc', "Mude o plano de qualquer usuário ou injete créditos para testar as regras de cobrança dinâmica criadas.")}
                 </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/10 text-muted-foreground font-semibold">
-                      <th className="px-6 py-4">Email do Usuário</th>
-                      <th className="px-6 py-4">Plano Atual</th>
-                      <th className="px-6 py-4">Créditos</th>
-                      <th className="px-6 py-4 text-right">Ações</th>
+                      <th className="px-6 py-4">{t('admin.colUserEmail', "Email do Usuário")}</th>
+                      <th className="px-6 py-4">{t('admin.colCurrentPlan', "Plano Atual")}</th>
+                      <th className="px-6 py-4">{t('admin.colCredits', "Créditos")}</th>
+                      <th className="px-6 py-4 text-right">{t('admin.colActions', "Ações")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -599,6 +600,7 @@ interface FeatureCostCardProps {
 }
 
 function FeatureCostCard({ feature, onSave, isSaving, isSuccess }: FeatureCostCardProps) {
+  const { t } = useTranslation()
   const [free, setFree] = useState(feature.cost_free)
   const [pro, setPro] = useState(feature.cost_pro)
   const [max, setMax] = useState(feature.cost_max)
@@ -612,17 +614,17 @@ function FeatureCostCard({ feature, onSave, isSaving, isSuccess }: FeatureCostCa
           </div>
           <h3 className="font-bold text-base text-foreground">{feature.display_name}</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-6">Chave: <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{feature.feature_key}</code></p>
-        
+        <p className="text-xs text-muted-foreground mb-6">{t('admin.keyLabel', "Chave")}: <code className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{feature.feature_key}</code></p>
+
         {/* Tier Costs */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase">Plano Free</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('admin.planFree', "Plano Free")}</label>
             <div className="relative flex items-center">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min={0}
-                value={free} 
+                value={free}
                 onChange={(e) => setFree(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
               />
@@ -630,12 +632,12 @@ function FeatureCostCard({ feature, onSave, isSaving, isSuccess }: FeatureCostCa
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase">Plano Pro</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('admin.planPro', "Plano Pro")}</label>
             <div className="relative flex items-center">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min={0}
-                value={pro} 
+                value={pro}
                 onChange={(e) => setPro(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
               />
@@ -643,12 +645,12 @@ function FeatureCostCard({ feature, onSave, isSaving, isSuccess }: FeatureCostCa
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-muted-foreground uppercase">Plano Max</label>
+            <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('admin.planMax', "Plano Max")}</label>
             <div className="relative flex items-center">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min={0}
-                value={max} 
+                value={max}
                 onChange={(e) => setMax(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-primary"
               />
@@ -662,8 +664,8 @@ function FeatureCostCard({ feature, onSave, isSaving, isSuccess }: FeatureCostCa
         onClick={() => onSave(feature.feature_key, free, pro, max)}
         disabled={isSaving}
         className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer
-          ${isSuccess 
-            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+          ${isSuccess
+            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             : "bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           }`}
       >
@@ -674,7 +676,7 @@ function FeatureCostCard({ feature, onSave, isSaving, isSuccess }: FeatureCostCa
         ) : (
           <Save size={14} />
         )}
-        {isSaving ? "Salvando..." : isSuccess ? "Preços Salvos!" : "Salvar Preços"}
+        {isSaving ? t('admin.savingBtn', "Salvando...") : isSuccess ? t('admin.pricesSavedBtn', "Preços Salvos!") : t('admin.savePricesBtn', "Salvar Preços")}
       </button>
     </div>
   )
@@ -688,6 +690,7 @@ interface ModelPriceCardProps {
 }
 
 function ModelPriceCard({ model, onSave, isSaving, isSuccess }: ModelPriceCardProps) {
+  const { t } = useTranslation()
   const [free, setFree] = useState(model.price_free)
   const [pro, setPro] = useState(model.price_pro)
   const [max, setMax] = useState(model.price_max)
@@ -701,41 +704,41 @@ function ModelPriceCard({ model, onSave, isSaving, isSuccess }: ModelPriceCardPr
           </div>
           <h3 className="font-bold text-sm text-foreground truncate">{model.title}</h3>
         </div>
-        <p className="text-[11px] text-muted-foreground mb-4 capitalize">Tipo: {model.type.replace('_', ' ')}</p>
-        
+        <p className="text-[11px] text-muted-foreground mb-4 capitalize">{t('admin.typeLabel', "Tipo")}: {model.type.replace('_', ' ')}</p>
+
         {/* Tier Costs */}
         <div className="grid grid-cols-3 gap-2.5 mb-5">
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-muted-foreground uppercase">Free</label>
+            <label className="text-[9px] font-bold text-muted-foreground uppercase">{t('admin.tierFree', "Free")}</label>
             <div className="relative flex items-center">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min={0}
-                value={free} 
+                value={free}
                 onChange={(e) => setFree(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full bg-muted border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-muted-foreground uppercase">Pro</label>
+            <label className="text-[9px] font-bold text-muted-foreground uppercase">{t('admin.tierPro', "Pro")}</label>
             <div className="relative flex items-center">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min={0}
-                value={pro} 
+                value={pro}
                 onChange={(e) => setPro(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full bg-muted border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[9px] font-bold text-muted-foreground uppercase">Max</label>
+            <label className="text-[9px] font-bold text-muted-foreground uppercase">{t('admin.tierMax', "Max")}</label>
             <div className="relative flex items-center">
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min={0}
-                value={max} 
+                value={max}
                 onChange={(e) => setMax(Math.max(0, parseInt(e.target.value) || 0))}
                 className="w-full bg-muted border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
               />
@@ -748,8 +751,8 @@ function ModelPriceCard({ model, onSave, isSaving, isSuccess }: ModelPriceCardPr
         onClick={() => onSave(model.id, free, pro, max)}
         disabled={isSaving}
         className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer
-          ${isSuccess 
-            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+          ${isSuccess
+            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
             : "bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
           }`}
       >
@@ -760,7 +763,7 @@ function ModelPriceCard({ model, onSave, isSaving, isSuccess }: ModelPriceCardPr
         ) : (
           <Save size={12} />
         )}
-        {isSaving ? "Salvando..." : isSuccess ? "Salvo!" : "Salvar Custo"}
+        {isSaving ? t('admin.savingBtn', "Salvando...") : isSuccess ? t('admin.savedBtn', "Salvo!") : t('admin.saveCostBtn', "Salvar Custo")}
       </button>
     </div>
   )
@@ -775,6 +778,7 @@ interface UserRowProps {
 }
 
 function UserRow({ user, onSave, isSaving, isSuccess, onOpenModal }: UserRowProps) {
+  const { t } = useTranslation()
   const [plan, setPlan] = useState<"free" | "pro" | "max">(user.plan as any || "free")
   const [credits, setCredits] = useState(user.credits)
 
@@ -792,7 +796,7 @@ function UserRow({ user, onSave, isSaving, isSuccess, onOpenModal }: UserRowProp
               <span className="font-bold">{user.full_name || user.email.split('@')[0]}</span>
               {user.role === "sysadmin" && (
                 <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-px uppercase">
-                  Sysadmin
+                  {t('admin.sysadminBadge', "Sysadmin")}
                 </span>
               )}
             </div>
@@ -806,9 +810,9 @@ function UserRow({ user, onSave, isSaving, isSuccess, onOpenModal }: UserRowProp
           onChange={(e) => setPlan(e.target.value as any)}
           className="bg-muted border border-border rounded-lg text-xs px-2.5 py-1.5 text-foreground outline-none focus:ring-1 focus:ring-primary capitalize cursor-pointer"
         >
-          <option value="free">Free</option>
-          <option value="pro">Pro</option>
-          <option value="max">Max</option>
+          <option value="free">{t('admin.tierFree', "Free")}</option>
+          <option value="pro">{t('admin.tierPro', "Pro")}</option>
+          <option value="max">{t('admin.tierMax', "Max")}</option>
         </select>
       </td>
       <td className="px-6 py-4">
@@ -824,7 +828,7 @@ function UserRow({ user, onSave, isSaving, isSuccess, onOpenModal }: UserRowProp
           <button
             onClick={() => onOpenModal(user)}
             className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
-            title="Ver detalhes do usuário"
+            title={t('admin.viewUserDetails', "Ver detalhes do usuário")}
           >
             <Activity size={16} />
           </button>
@@ -846,7 +850,7 @@ function UserRow({ user, onSave, isSaving, isSuccess, onOpenModal }: UserRowProp
             ) : (
               <Save size={12} />
             )}
-            {isSaving ? "Aplicando..." : isSuccess ? "Aplicado!" : "Aplicar"}
+            {isSaving ? t('admin.applyingBtn', "Aplicando...") : isSuccess ? t('admin.appliedBtn', "Aplicado!") : t('admin.applyBtn', "Aplicar")}
           </button>
         </div>
       </td>

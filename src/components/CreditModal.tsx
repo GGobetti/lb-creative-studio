@@ -10,6 +10,7 @@ import { getSupabaseBrowser } from '@/lib/supabase'
 import type { CatalogItem } from '@/lib/supabase'
 import { triggerConfetti } from '@/lib/confetti'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from '@/lib/translations'
 
 interface PricingPlan {
   id: number
@@ -30,6 +31,8 @@ interface CreditModalProps {
 
 export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
   const { profile, refreshCredits } = useAppStore()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [packages, setPackages] = useState<PricingPlan[]>([])
   const [selectedPkgId, setSelectedPkgId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
@@ -79,7 +82,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
 
   const handlePurchase = async () => {
     if (!selectedPackage) {
-      setError('Selecione um pacote')
+      setError(t('creditModal.selectPackage', 'Selecione um pacote'))
       return
     }
 
@@ -89,7 +92,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
     try {
       const supabase = getSupabaseBrowser()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Sessão expirada')
+      if (!session) throw new Error(t('creditModal.sessionExpired', 'Sessão expirada'))
 
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -98,7 +101,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
       })
 
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Falha na compra')
+      if (!res.ok) throw new Error(json.error || t('creditModal.purchaseFailed', 'Falha na compra'))
 
       // Redireciona para o Stripe Checkout
       if (json.url) {
@@ -116,7 +119,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
         onOpenChange(false)
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+      setError(err instanceof Error ? err.message : t('creditModal.unknownError', 'Erro desconhecido'))
     } finally {
       setLoading(false)
     }
@@ -150,16 +153,16 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Zap size={18} className="text-violet-400" />
-                    <h2 className="text-lg font-bold text-white">Créditos Insuficientes</h2>
+                    <h2 className="text-lg font-bold text-white">{t('creditModal.insufficientCredits', 'Créditos Insuficientes')}</h2>
                   </div>
                   <p className="text-sm text-white/50 text-left">
                     {item
-                      ? `Exportar "${item.title}" custa ${currentCost} crédito${currentCost !== 1 ? 's' : ''}.`
-                      : 'Você precisa de mais créditos para continuar.'
+                      ? `${t('creditModal.exportCostPrefix', 'Exportar')} "${item.title}" ${t('creditModal.costsLabel', 'custa')} ${currentCost} ${currentCost !== 1 ? t('creditModal.creditsPlural', 'créditos') : t('creditModal.creditSingular', 'crédito')}.`
+                      : t('creditModal.needMoreCredits', 'Você precisa de mais créditos para continuar.')
                     }
                     {profile && (
                       <span className="block mt-0.5">
-                        Saldo atual: <strong className="text-white">{profile.credits}</strong> crédito{profile.credits !== 1 ? 's' : ''}
+                        {t('creditModal.currentBalance', 'Saldo atual:')} <strong className="text-white">{profile.credits}</strong> {profile.credits !== 1 ? t('creditModal.creditsPlural', 'créditos') : t('creditModal.creditSingular', 'crédito')}
                       </span>
                     )}
                   </p>
@@ -180,7 +183,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                   <Loader2 size={20} className="animate-spin" />
                 </div>
               ) : creditPlans.length === 0 ? (
-                <p className="text-center text-white/50 text-sm py-8">Nenhum plano disponível</p>
+                <p className="text-center text-white/50 text-sm py-8">{t('creditModal.noPlansAvailable', 'Nenhum plano disponível')}</p>
               ) : (
                 creditPlans.map((pkg) => {
                   const priceInReais = (pkg.price_cents / 100).toLocaleString('pt-BR', {
@@ -213,7 +216,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                       <div className="flex-1 text-left">
                         <span className="font-semibold text-white">{pkg.name}</span>
                         <span className="text-xs text-white/50 block">
-                          {pkg.credits === 999 ? '∞ créditos' : `${pkg.credits} créditos • R$ ${pricePerCredit}/crd`}
+                          {pkg.credits === 999 ? t('creditModal.infiniteCredits', '∞ créditos') : `${pkg.credits} ${t('creditModal.creditsPlural', 'créditos')} • R$ ${pricePerCredit}/crd`}
                         </span>
                       </div>
 
@@ -235,7 +238,7 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
               {success ? (
                 <div className="flex items-center justify-center gap-2 py-3 text-green-400 font-medium animate-pulse">
                   <Check size={18} />
-                  Créditos adicionados! Fechando...
+                  {t('creditModal.creditsAddedClosing', 'Créditos adicionados! Fechando...')}
                 </div>
               ) : (
                 <motion.button
@@ -255,12 +258,12 @@ export function CreditModal({ open, onOpenChange, item }: CreditModalProps) {
                   {loading ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      Processando...
+                      {t('creditModal.processing', 'Processando...')}
                     </>
                   ) : (
                     <>
                       <Zap size={16} />
-                      Comprar {selectedPackage?.credits === 999 ? '∞' : selectedPackage?.credits} Créditos
+                      {t('creditModal.buyPrefix', 'Comprar')} {selectedPackage?.credits === 999 ? '∞' : selectedPackage?.credits} {t('creditModal.creditsPlural', 'créditos')}
                     </>
                   )}
                 </motion.button>

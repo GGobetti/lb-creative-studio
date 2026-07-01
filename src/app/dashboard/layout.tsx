@@ -39,7 +39,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   )
   const handleLogout = useLogout()
   const router = useRouter()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
 
   useEffect(() => {
     const fetchFlags = async () => {
@@ -57,8 +58,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     fetchFlags()
   }, [])
 
-  const displayName = profile?.full_name || profile?.email?.split("@")[0] || "Maker"
-  const planLabel = profile?.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) : "Free"
+  const displayName = profile?.full_name || profile?.email?.split("@")[0] || t('dashboardLayout.defaultDisplayName', "Maker")
+  const planLabel = profile?.plan ? profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1) : t('dashboardLayout.defaultPlanLabel', "Free")
 
   const planColor = {
     free:  "text-muted-foreground",
@@ -148,7 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                            transition-all shadow-sm"
               >
                 <span>{xpSummary.current_level.badge_icon}</span>
-                <span className="text-amber-500">{xpSummary.xp_total.toLocaleString('pt-BR')} XP</span>
+                <span className="text-amber-500">{xpSummary.xp_total.toLocaleString(locale)} XP</span>
                 <span className="text-amber-500/60 font-normal hidden sm:inline">· {xpSummary.current_level.name}</span>
               </Link>
             )}
@@ -200,7 +201,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <div className="px-4 py-3 border-b border-border">
                           <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
                           {profile.role === "sysadmin" && (
-                            <span className="text-[10px] text-warning font-bold uppercase tracking-wider">Sysadmin</span>
+                            <span className="text-[10px] text-warning font-bold uppercase tracking-wider">{t('dashboardLayout.sysadminBadge', "Sysadmin")}</span>
                           )}
                         </div>
 

@@ -4,14 +4,17 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { ArrowRight, Zap, Search, Calculator, Boxes } from "lucide-react"
 import { RetroGrid } from "@/components/ui/RetroGrid"
-
-const floatingCards = [
-  { icon: Search, label: "Busca STL", sub: "12.847 modelos", color: "from-indigo-500/20 to-primary/20", delay: 0 },
-  { icon: Calculator, label: "Calculadora", sub: "Precificação real", color: "from-violet-500/20 to-purple-500/20", delay: 0.15 },
-  { icon: Boxes, label: "Portfólio & Vendas", sub: "Catálogo integrado", color: "from-fuchsia-500/20 to-pink-500/20", delay: 0.3 },
-]
+import { useTranslation } from "@/lib/translations"
 
 export function Hero() {
+  const { t } = useTranslation()
+
+  const floatingCards = [
+    { icon: Search, label: t('landingHero.cardSearchLabel', "Busca STL"), sub: t('landingHero.cardSearchSub', "12.847 modelos"), color: "from-indigo-500/20 to-primary/20", delay: 0 },
+    { icon: Calculator, label: t('landingHero.cardCalculatorLabel', "Calculadora"), sub: t('landingHero.cardCalculatorSub', "Precificação real"), color: "from-violet-500/20 to-purple-500/20", delay: 0.15 },
+    { icon: Boxes, label: t('landingHero.cardPortfolioLabel', "Portfólio & Vendas"), sub: t('landingHero.cardPortfolioSub', "Catálogo integrado"), color: "from-fuchsia-500/20 to-pink-500/20", delay: 0.3 },
+  ]
+
   return (
     <section className="relative min-h-[92vh] flex items-center overflow-hidden bg-background">
       <RetroGrid className="opacity-30 dark:opacity-20" />
@@ -38,17 +41,17 @@ export function Hero() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 text-primary font-semibold text-sm"
             >
               <Zap size={15} className="fill-current" />
-              <span>A plataforma completa para Makers 3D</span>
+              <span>{t('landingHero.badge', "A plataforma completa para Makers 3D")}</span>
             </motion.div>
 
             <h1 className="text-display text-[clamp(2.4rem,5vw,4.2rem)] text-foreground mb-6">
-              Encontre, imprima, venda.{" "}
+              {t('landingHero.titleLine1', "Encontre, imprima, venda.")}{" "}
               <br />
-              <span className="gradient-text">O seu garimpo de STLs preferido é aqui.</span>
+              <span className="gradient-text">{t('landingHero.titleLine2', "O seu garimpo de STLs preferido é aqui.")}</span>
             </h1>
 
             <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-lg">
-              Garimpo de STLs, Calculadora de custos, CRM de clientes, portfólio personalizado, cotações em PDF — tudo integrado para seu negócio 3D crescer.
+              {t('landingHero.subtitle', "Garimpo de STLs, Calculadora de custos, CRM de clientes, portfólio personalizado, cotações em PDF — tudo integrado para seu negócio 3D crescer.")}
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -56,7 +59,7 @@ export function Hero() {
                 href="/login"
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-primary text-primary-foreground font-bold text-base shadow-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
-                Começar Grátis
+                {t('landingHero.ctaStart', "Começar Grátis")}
                 <ArrowRight size={18} />
               </Link>
 
@@ -64,7 +67,7 @@ export function Hero() {
                 href="#features"
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-card border border-border text-foreground font-semibold text-base hover:bg-muted transition-colors"
               >
-                Ver funcionalidades
+                {t('landingHero.ctaFeatures', "Ver funcionalidades")}
               </Link>
             </div>
 
@@ -76,10 +79,10 @@ export function Hero() {
                     <div key={i} className={`w-6 h-6 rounded-full border-2 border-background ${c}`} />
                   ))}
                 </div>
-                <span>+850 makers ativos</span>
+                <span>{t('landingHero.activeMakers', "+850 makers ativos")}</span>
               </div>
               <div className="w-px h-4 bg-border" />
-              <span>✅ Grátis para começar</span>
+              <span>{t('landingHero.freeToStart', "✅ Grátis para começar")}</span>
             </div>
           </motion.div>
 
@@ -101,7 +104,7 @@ export function Hero() {
                     </div>
                     <div>
                       <p className="text-heading text-sm text-foreground">Creative Studio</p>
-                      <p className="text-[10px] text-muted-foreground">Dashboard</p>
+                      <p className="text-[10px] text-muted-foreground">{t('landingHero.dashboardLabel', "Dashboard")}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/10 border border-primary/20">
@@ -112,9 +115,9 @@ export function Hero() {
 
                 <div className="grid grid-cols-3 gap-3 mb-5">
                   {[
-                    { label: "Portfólio", value: "47 itens" },
-                    { label: "Clientes", value: "12" },
-                    { label: "Faturado", value: "R$ 3.240" },
+                    { label: t('landingHero.statPortfolio', "Portfólio"), value: t('landingHero.statPortfolioValue', "47 itens") },
+                    { label: t('landingHero.statClients', "Clientes"), value: "12" },
+                    { label: t('landingHero.statBilled', "Faturado"), value: "R$ 3.240" },
                   ].map((stat) => (
                     <div key={stat.label} className="bg-muted/60 rounded-xl p-3 text-center">
                       <p className="text-heading text-sm text-foreground">{stat.value}</p>
@@ -156,8 +159,8 @@ export function Hero() {
                 <span className="text-success text-sm font-bold">↑</span>
               </div>
               <div>
-                <p className="text-xs font-bold text-foreground">+2.400 STLs</p>
-                <p className="text-[10px] text-muted-foreground">indexados hoje</p>
+                <p className="text-xs font-bold text-foreground">{t('landingHero.stlsCount', "+2.400 STLs")}</p>
+                <p className="text-[10px] text-muted-foreground">{t('landingHero.indexedToday', "indexados hoje")}</p>
               </div>
             </motion.div>
           </motion.div>

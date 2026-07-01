@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react"
 import { getSupabaseBrowser } from "@/lib/supabase"
 import { useAppStore } from "@/store/store"
 import { Users, Search, Plus, Trash2, Edit, X, Phone, Mail, Send, Clock, UserCheck } from "lucide-react"
+import { useTranslation } from "@/lib/translations"
 
 interface Customer {
   id: string
@@ -17,6 +18,8 @@ interface Customer {
 
 export default function CustomersPage() {
   const { profile } = useAppStore()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -63,7 +66,7 @@ export default function CustomersPage() {
       }
     } catch (err: any) {
       console.error("[Customers] Failed to fetch:", err)
-      setError("Não foi possível carregar os clientes. Tente novamente.")
+      setError(t('customersPage.loadError', "Não foi possível carregar os clientes. Tente novamente."))
     } finally {
       setLoading(false)
     }
@@ -75,7 +78,7 @@ export default function CustomersPage() {
 
   const handleOpenNewModal = () => {
     if (clientLimit !== null && customers.length >= clientLimit) {
-      alert(`Seu plano atual permite apenas ${clientLimit} clientes. Faça upgrade para adicionar mais.`)
+      alert(t('customersPage.limitReached', `Seu plano atual permite apenas ${clientLimit} clientes. Faça upgrade para adicionar mais.`))
       return
     }
     setEditingCustomer(null)
@@ -130,14 +133,14 @@ export default function CustomersPage() {
       fetchCustomers()
     } catch (err: any) {
       console.error("[Customers] Save error:", err)
-      alert("Erro ao salvar cliente.")
+      alert(t('customersPage.saveError', "Erro ao salvar cliente."))
     } finally {
       setIsSaving(false)
     }
   }
 
   const handleDeleteCustomer = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este cliente? Todas as cotações vinculadas a ele ficarão órfãs.")) return
+    if (!confirm(t('customersPage.confirmDelete', "Tem certeza que deseja excluir este cliente? Todas as cotações vinculadas a ele ficarão órfãs."))) return
     try {
       const supabase = getSupabaseBrowser()
       const { error: delErr } = await supabase
@@ -149,7 +152,7 @@ export default function CustomersPage() {
       setCustomers(prev => prev.filter(c => c.id !== id))
     } catch (err: any) {
       console.error("[Customers] Delete error:", err)
-      alert("Erro ao excluir cliente.")
+      alert(t('customersPage.deleteError', "Erro ao excluir cliente."))
     }
   }
 
@@ -169,10 +172,10 @@ export default function CustomersPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-foreground flex items-center gap-2">
-            CRM de Clientes
+            {t('customersPage.title', "CRM de Clientes")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Cadastre seus clientes para associar a cotações e gerenciar contatos de vendas.
+            {t('customersPage.subtitle', "Cadastre seus clientes para associar a cotações e gerenciar contatos de vendas.")}
           </p>
         </div>
 
@@ -181,7 +184,7 @@ export default function CustomersPage() {
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-bold text-sm rounded-xl transition shadow-lg shadow-primary/10 hover:shadow-primary/20 shrink-0"
         >
           <Plus size={16} />
-          Novo Cliente
+          {t('customersPage.newCustomer', "Novo Cliente")}
         </button>
       </div>
 
@@ -192,7 +195,7 @@ export default function CustomersPage() {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Buscar cliente por nome, e-mail, celular..."
+          placeholder={t('customersPage.searchPlaceholder', "Buscar cliente por nome, e-mail, celular...")}
           className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-muted border border-border text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
         />
       </div>
@@ -203,7 +206,7 @@ export default function CustomersPage() {
           <div className="flex items-center justify-center py-20 text-muted-foreground">
             <div className="flex flex-col items-center gap-3">
               <Clock size={32} className="opacity-30 animate-pulse text-primary" />
-              <span className="text-sm">Carregando clientes...</span>
+              <span className="text-sm">{t('customersPage.loading', "Carregando clientes...")}</span>
             </div>
           </div>
         ) : error ? (
@@ -214,10 +217,10 @@ export default function CustomersPage() {
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-center">
             <Users size={40} className="opacity-20 mb-3 text-primary" />
             <p className="font-bold text-sm text-foreground">
-              {searchQuery ? "Nenhum cliente atende aos filtros." : "Nenhum cliente cadastrado."}
+              {searchQuery ? t('customersPage.noMatchFilters', "Nenhum cliente atende aos filtros.") : t('customersPage.noneRegistered', "Nenhum cliente cadastrado.")}
             </p>
             <p className="text-xs mt-1 max-w-xs text-muted-foreground">
-              Cadastre seu primeiro cliente para vinculá-lo a cotações de forma rápida.
+              {t('customersPage.emptyStateHint', "Cadastre seu primeiro cliente para vinculá-lo a cotações de forma rápida.")}
             </p>
           </div>
         ) : (
@@ -225,10 +228,10 @@ export default function CustomersPage() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 font-bold">Cliente</th>
-                  <th className="px-6 py-4 font-bold">Contato</th>
-                  <th className="px-6 py-4 font-bold">Notas</th>
-                  <th className="px-6 py-4 font-bold text-right">Ações</th>
+                  <th className="px-6 py-4 font-bold">{t('customersPage.tableCustomer', "Cliente")}</th>
+                  <th className="px-6 py-4 font-bold">{t('customersPage.tableContact', "Contato")}</th>
+                  <th className="px-6 py-4 font-bold">{t('customersPage.tableNotes', "Notas")}</th>
+                  <th className="px-6 py-4 font-bold text-right">{t('customersPage.tableActions', "Ações")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -245,7 +248,7 @@ export default function CustomersPage() {
                         <div>
                           <div className="font-bold text-foreground">{c.name}</div>
                           <div className="text-[10px] text-muted-foreground mt-0.5">
-                            Cadastrado em {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                            {t('customersPage.registeredOn', "Cadastrado em")} {new Date(c.created_at).toLocaleDateString(locale)}
                           </div>
                         </div>
                       </div>
@@ -270,7 +273,7 @@ export default function CustomersPage() {
                         </div>
                       )}
                       {!c.phone && !c.email && !c.telegram && (
-                        <span className="text-xs text-muted-foreground italic">Sem contatos</span>
+                        <span className="text-xs text-muted-foreground italic">{t('customersPage.noContacts', "Sem contatos")}</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -283,14 +286,14 @@ export default function CustomersPage() {
                         <button
                           onClick={() => handleOpenEditModal(c)}
                           className="p-2 text-muted-foreground hover:bg-muted rounded-xl hover:text-foreground transition-colors"
-                          title="Editar"
+                          title={t('customersPage.edit', "Editar")}
                         >
                           <Edit size={15} />
                         </button>
                         <button
                           onClick={() => handleDeleteCustomer(c.id)}
                           className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
-                          title="Excluir"
+                          title={t('customersPage.delete', "Excluir")}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -311,7 +314,7 @@ export default function CustomersPage() {
             <div className="flex justify-between items-center border-b border-white/5 pb-3">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <UserCheck size={18} className="text-primary" />
-                {editingCustomer ? "Editar Cliente" : "Adicionar Cliente"}
+                {editingCustomer ? t('customersPage.editCustomer', "Editar Cliente") : t('customersPage.addCustomer', "Adicionar Cliente")}
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -323,59 +326,59 @@ export default function CustomersPage() {
 
             <form onSubmit={handleSaveCustomer} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs text-white/60">Nome Completo *</label>
+                <label className="text-xs text-white/60">{t('customersPage.fullName', "Nome Completo")} *</label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                  placeholder="Nome do Cliente"
+                  placeholder={t('customersPage.customerNamePlaceholder', "Nome do Cliente")}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-white/60">WhatsApp / Celular</label>
+                  <label className="text-xs text-white/60">{t('customersPage.whatsapp', "WhatsApp / Celular")}</label>
                   <input
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                    placeholder="Ex: (11) 99999-9999"
+                    placeholder={t('customersPage.phonePlaceholder', "Ex: (11) 99999-9999")}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs text-white/60">Telegram (Username)</label>
+                  <label className="text-xs text-white/60">{t('customersPage.telegramUsername', "Telegram (Username)")}</label>
                   <input
                     type="text"
                     value={formData.telegram}
                     onChange={(e) => setFormData({ ...formData, telegram: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                    placeholder="Ex: maker_username"
+                    placeholder={t('customersPage.telegramPlaceholder', "Ex: maker_username")}
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs text-white/60">E-mail</label>
+                <label className="text-xs text-white/60">{t('customersPage.email', "E-mail")}</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                  placeholder="Ex: cliente@email.com"
+                  placeholder={t('customersPage.emailPlaceholder', "Ex: cliente@email.com")}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs text-white/60">Notas / Preferências</label>
+                <label className="text-xs text-white/60">{t('customersPage.notesPreferences', "Notas / Preferências")}</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50 resize-none"
-                  placeholder="Ex: Prefere material PLA, cores escuras..."
+                  placeholder={t('customersPage.notesPlaceholder', "Ex: Prefere material PLA, cores escuras...")}
                 />
               </div>
 
@@ -385,14 +388,14 @@ export default function CustomersPage() {
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-xs text-white/80 hover:bg-white/10"
                 >
-                  Cancelar
+                  {t('customersPage.cancel', "Cancelar")}
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving || !formData.name.trim()}
                   className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/95 text-xs text-primary-foreground font-bold disabled:opacity-50"
                 >
-                  {isSaving ? "Gravando..." : "Gravar"}
+                  {isSaving ? t('customersPage.saving', "Gravando...") : t('customersPage.save', "Gravar")}
                 </button>
               </div>
             </form>

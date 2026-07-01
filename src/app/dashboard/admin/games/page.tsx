@@ -7,17 +7,19 @@ import Link from 'next/link'
 import { useAppStore } from '@/store/store'
 import { Lock } from 'lucide-react'
 import { GamesLimitsPanel } from '@/components/admin/GamesLimitsPanel'
+import { useTranslation } from '@/lib/translations'
 
 type TabType = 'limits' | 'moderation'
 
-const tabs: { key: TabType; label: string; icon: any }[] = [
-  { key: 'limits', label: 'Limites e Recompensas', icon: Settings },
-  { key: 'moderation', label: 'Moderação de Auditorias', icon: ShieldCheck },
-]
-
 export default function GamesAdminPage() {
   const { profile } = useAppStore()
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>('limits')
+
+  const tabs: { key: TabType; label: string; icon: any }[] = [
+    { key: 'limits', label: t('adminGames.tabLimits', 'Limites e Recompensas'), icon: Settings },
+    { key: 'moderation', label: t('adminGames.tabModeration', 'Moderação de Auditorias'), icon: ShieldCheck },
+  ]
 
   if (!profile || profile.role !== 'sysadmin') {
     return (
@@ -25,9 +27,9 @@ export default function GamesAdminPage() {
         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 mb-6 ring-4 ring-red-500/5">
           <Lock size={32} />
         </div>
-        <h1 className="text-2xl font-black text-foreground tracking-tight">Acesso Restrito</h1>
+        <h1 className="text-2xl font-black text-foreground tracking-tight">{t('adminGames.accessRestricted', 'Acesso Restrito')}</h1>
         <p className="text-muted-foreground mt-2 max-w-sm text-sm">
-          Esta área é exclusiva para administradores (sysadmin).
+          {t('adminGames.accessRestrictedMessage', 'Esta área é exclusiva para administradores (sysadmin).')}
         </p>
       </div>
     )
@@ -44,9 +46,9 @@ export default function GamesAdminPage() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="text-display text-2xl gradient-text">Admin de Games</h1>
+          <h1 className="text-display text-2xl gradient-text">{t('adminGames.pageTitle', 'Admin de Games')}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Gerencie limites, recompensas e moderação de auditorias
+            {t('adminGames.pageSubtitle', 'Gerencie limites, recompensas e moderação de auditorias')}
           </p>
         </div>
       </div>
@@ -93,30 +95,30 @@ export default function GamesAdminPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-foreground">
-                      Moderação de Auditorias
+                      {t('adminGames.moderationTitle', 'Moderação de Auditorias')}
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Revise e aprove STLs com votações contestadas (30-70% consenso)
+                      {t('adminGames.moderationSubtitle', 'Revise e aprove STLs com votações contestadas (30-70% consenso)')}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-3 mt-6">
                   <p className="text-sm text-muted-foreground">
-                    O painel de moderação permite que você:
+                    {t('adminGames.moderationPanelIntro', 'O painel de moderação permite que você:')}
                   </p>
                   <ul className="text-sm space-y-2 text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <span className="text-primary font-bold mt-0.5">•</span>
-                      <span>Visualizar STLs com votações contestadas (status não definido)</span>
+                      <span>{t('adminGames.moderationFeature1', 'Visualizar STLs com votações contestadas (status não definido)')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary font-bold mt-0.5">•</span>
-                      <span>Ver detalhes de cada voto e motivos de rejeição</span>
+                      <span>{t('adminGames.moderationFeature2', 'Ver detalhes de cada voto e motivos de rejeição')}</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-primary font-bold mt-0.5">•</span>
-                      <span>Aprovar ou rejeitar manualmente (sobrescreve o consenso)</span>
+                      <span>{t('adminGames.moderationFeature3', 'Aprovar ou rejeitar manualmente (sobrescreve o consenso)')}</span>
                     </li>
                   </ul>
                 </div>
@@ -125,7 +127,7 @@ export default function GamesAdminPage() {
                   href="/dashboard/admin/audit-moderation"
                   className="inline-block mt-6 px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold text-sm hover:opacity-90 transition-all"
                 >
-                  Ir para Painel de Moderação →
+                  {t('adminGames.goToModerationPanel', 'Ir para Painel de Moderação →')}
                 </Link>
               </div>
             </div>

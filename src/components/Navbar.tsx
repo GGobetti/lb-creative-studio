@@ -17,7 +17,8 @@ export function Navbar() {
   const { profile, logout, xpSummary, refreshXpSummary } = useAppStore()
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
 
   useEffect(() => {
     if (profile) refreshXpSummary()
@@ -84,7 +85,7 @@ export function Navbar() {
         >
           <span className="text-sm">{xpSummary.current_level.badge_icon}</span>
           <span className="text-sm font-semibold text-amber-500">
-            {xpSummary.xp_total.toLocaleString('pt-BR')} XP
+            {xpSummary.xp_total.toLocaleString(locale)} XP
           </span>
           <span className="text-xs text-amber-500/60 hidden sm:inline">
             · {xpSummary.current_level.name}
@@ -105,7 +106,7 @@ export function Navbar() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={profile.avatar_url}
-                alt="Avatar"
+                alt={t('navbar.avatarAlt', "Avatar")}
                 className="w-6 h-6 rounded-full object-cover border border-primary/20"
               />
             ) : (
@@ -127,7 +128,7 @@ export function Navbar() {
                   <p className="text-xs text-muted-foreground">{t('profile.email', 'Email')}</p>
                   <p className="text-sm text-card-foreground font-medium truncate">{profile.email}</p>
                   {profile.role === 'sysadmin' && (
-                    <span className="text-[10px] text-amber-500 font-semibold">SYSADMIN</span>
+                    <span className="text-[10px] text-amber-500 font-semibold">{t('navbar.sysadminBadge', "SYSADMIN")}</span>
                   )}
                 </div>
                 

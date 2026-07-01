@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Download, MessageSquare, Heart, ChevronLeft, ChevronRight, Layers, ImageIcon, Calendar, Check } from "lucide-react";
 import { StlItem } from "@/lib/mockStlData";
 import { useAppStore } from "@/store/store";
+import { useTranslation } from "@/lib/translations";
 
 /**
- * Format date to Portuguese locale (pt-BR)
+ * Format date to the active locale
  * Example: "2026-06-25T10:30:00Z" → "25 jun 2026"
  */
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("pt-BR", {
+function formatDate(dateString: string, locale: string): string {
+  return new Date(dateString).toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -40,6 +41,8 @@ export function StlCard({
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const { profile } = useAppStore();
   const isAdmin = profile?.role === "sysadmin";
+  const { t, language } = useTranslation();
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR';
 
   const handleNextPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,7 +72,7 @@ export function StlCard({
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground group-hover:scale-105 transition-transform duration-300">
             <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
-            <span className="text-xs font-bold uppercase tracking-wider opacity-50">Sem Foto</span>
+            <span className="text-xs font-bold uppercase tracking-wider opacity-50">{t("stlCard.noPhoto", "Sem Foto")}</span>
           </div>
         )}
 
@@ -84,7 +87,7 @@ export function StlCard({
               ? "bg-red-500/20 border-red-500/40 text-red-500"
               : "bg-background/60 border-border/80 text-muted-foreground hover:text-foreground hover:bg-background/80"
           }`}
-          title={isFavorited ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
+          title={isFavorited ? t("stlSearch.removeFavorite", "Remover dos Favoritos") : t("stlSearch.addFavorite", "Adicionar aos Favoritos")}
         >
           <Heart className={`w-4 h-4 ${isFavorited ? "fill-current" : ""}`} />
         </button>
@@ -93,7 +96,7 @@ export function StlCard({
         {item.parts_count && item.parts_count > 0 ? (
           <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-md text-primary-foreground text-[10px] px-2.5 py-1 rounded-full font-bold border border-primary/30 shadow-lg shadow-primary/20 flex items-center gap-1.5">
             <Layers className="w-3 h-3" />
-            {item.parts_count + 1} partes
+            {t("stlCard.partsCount", "{count} partes").replace("{count}", String(item.parts_count + 1))}
           </div>
         ) : (
           <div className="absolute top-3 right-3 bg-background/60 backdrop-blur-md text-foreground text-xs px-2 py-1 rounded-md font-medium border border-border/60">
@@ -105,7 +108,7 @@ export function StlCard({
         {hasAccess && (
           <div className="absolute top-3 left-3 bg-green-900/40 border border-green-500/50 text-green-200 text-[9px] px-2 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 backdrop-blur-sm">
             <Check className="w-3 h-3" />
-            Desbloqueado
+            {t("stlSearch.unlocked", "Desbloqueado")}
           </div>
         )}
 
@@ -167,7 +170,7 @@ export function StlCard({
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
-            <span className="font-semibold">{formatDate(item.addedAt)}</span>
+            <span className="font-semibold">{formatDate(item.addedAt, locale)}</span>
           </div>
         </div>
 

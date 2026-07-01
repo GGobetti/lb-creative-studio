@@ -14,6 +14,7 @@ import { SessionProgress } from './shared/SessionProgress'
 import { CreditsPopup } from './shared/CreditsPopup'
 import { SessionResult } from './shared/SessionResult'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/translations'
 
 const TIMER_SECONDS = 30
 const SESSION_SIZE = 10
@@ -21,6 +22,7 @@ const POINTS_PER_ACTION = 10
 
 export function PhotoMatch() {
   const router = useRouter()
+  const { t } = useTranslation()
   const accessTokenRef = useRef<string | null>(null)
 
   const [questions, setQuestions] = useState<PhotoMatchQuestion[]>([])
@@ -150,7 +152,7 @@ export function PhotoMatch() {
     return (
       <div className="flex flex-col h-full items-center justify-center gap-4">
         <div className="w-8 h-8 rounded-full border-2 border-border border-t-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Carregando STLs...</p>
+        <p className="text-sm text-muted-foreground">{t('gamePhotoMatch.loading', 'Carregando STLs...')}</p>
       </div>
     )
   }
@@ -192,26 +194,26 @@ export function PhotoMatch() {
               {currentQuestion.imageUrl ? (
                 <img
                   src={currentQuestion.imageUrl}
-                  alt="Preview STL"
+                  alt={t('gamePhotoMatch.previewAlt', 'Preview STL')}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
                   <ImageIcon size={48} />
-                  <span className="text-xs">Preview</span>
+                  <span className="text-xs">{t('gamePhotoMatch.preview', 'Preview')}</span>
                 </div>
               )}
             </div>
 
             <div className="flex flex-col gap-3 flex-1">
               <div>
-                <p className="text-label text-muted-foreground mb-1">Nome do arquivo</p>
+                <p className="text-label text-muted-foreground mb-1">{t('gamePhotoMatch.fileName', 'Nome do arquivo')}</p>
                 <h2 className="text-heading text-lg text-foreground leading-snug">
                   {currentQuestion.title}
                 </h2>
               </div>
               <div>
-                <p className="text-label text-muted-foreground mb-1">Descrição</p>
+                <p className="text-label text-muted-foreground mb-1">{t('gamePhotoMatch.description', 'Descrição')}</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {currentQuestion.description}
                 </p>
@@ -221,7 +223,7 @@ export function PhotoMatch() {
         </AnimatePresence>
 
         <p className="text-sm text-center text-muted-foreground">
-          A foto representa o modelo descrito?
+          {t('gamePhotoMatch.question', 'A foto representa o modelo descrito?')}
         </p>
 
         <div className="grid grid-cols-2 gap-3">
@@ -236,7 +238,7 @@ export function PhotoMatch() {
             )}
           >
             <Check size={18} />
-            Sim, confere
+            {t('gamePhotoMatch.matches', 'Sim, confere')}
           </motion.button>
 
           <motion.button
@@ -250,7 +252,7 @@ export function PhotoMatch() {
             )}
           >
             <X size={18} />
-            Não confere
+            {t('gamePhotoMatch.doesNotMatch', 'Não confere')}
           </motion.button>
         </div>
 
@@ -260,7 +262,7 @@ export function PhotoMatch() {
           whileTap={{ scale: 0.97 }}
           className="w-full py-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent hover:bg-muted/40 font-medium text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Pular
+          {t('gamePhotoMatch.skip', 'Pular')}
         </motion.button>
       </div>
 

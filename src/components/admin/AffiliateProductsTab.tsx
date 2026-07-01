@@ -6,10 +6,12 @@ import { getSupabaseBrowser } from '@/lib/supabase';
 import { AffiliateProductForm } from './AffiliateProductForm';
 import { AffiliateProductsList } from './AffiliateProductsList';
 import { MercadoLivreImportForm } from './MercadoLivreImportForm';
+import { useTranslation } from '@/lib/translations';
 
 type Marketplace = 'mercado_livre' | 'aliexpress' | 'shopee' | 'amazon';
 
 export function AffiliateProductsTab() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<AffiliateProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<AffiliateProduct | null>(
@@ -59,7 +61,7 @@ export function AffiliateProductsTab() {
       const userId = sessionData.session?.user?.id;
 
       if (!userId) {
-        alert('Você precisa estar autenticado');
+        alert(t('adminAffiliateTab.mustBeAuthenticated', 'Você precisa estar autenticado'));
         return;
       }
 
@@ -72,10 +74,10 @@ export function AffiliateProductsTab() {
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        alert('Erro ao gerar URL de autorização');
+        alert(t('adminAffiliateTab.authUrlError', 'Erro ao gerar URL de autorização'));
       }
     } catch (err) {
-      alert('Erro ao conectar');
+      alert(t('adminAffiliateTab.connectError', 'Erro ao conectar'));
       console.error(err);
     }
   };
@@ -87,18 +89,17 @@ export function AffiliateProductsTab() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-amber-300 mb-1">
-              ⚠️ Conectar ao Mercado Livre
+              ⚠️ {t('adminAffiliateTab.connectToML', 'Conectar ao Mercado Livre')}
             </h3>
             <p className="text-sm text-amber-100">
-              Para importar produtos, você precisa conectar sua conta do Mercado
-              Livre. Clique abaixo para autorizar.
+              {t('adminAffiliateTab.connectMLDescription', 'Para importar produtos, você precisa conectar sua conta do Mercado Livre. Clique abaixo para autorizar.')}
             </p>
           </div>
           <button
             onClick={handleMLAuth}
             className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded font-medium whitespace-nowrap ml-4"
           >
-            Conectar ao ML
+            {t('adminAffiliateTab.connectToMLButton', 'Conectar ao ML')}
           </button>
         </div>
       </div>
@@ -107,20 +108,20 @@ export function AffiliateProductsTab() {
       {showMarketplaceSelector && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">Importar Produto</h3>
-            <p className="text-sm text-slate-400 mb-4">Atualmente, apenas Mercado Livre permite importação via API. Outros marketplaces podem ser adicionados no futuro.</p>
+            <h3 className="text-xl font-semibold mb-4">{t('adminAffiliateTab.importProduct', 'Importar Produto')}</h3>
+            <p className="text-sm text-slate-400 mb-4">{t('adminAffiliateTab.mlOnlyNotice', 'Atualmente, apenas Mercado Livre permite importação via API. Outros marketplaces podem ser adicionados no futuro.')}</p>
             <button
               onClick={() => handleMarketplaceSelect('mercado_livre')}
               className="w-full text-left px-4 py-3 bg-cyan-500/20 hover:bg-cyan-500/30 rounded transition border border-cyan-500/50"
             >
-              <div className="font-medium text-cyan-300">🇧🇷 Mercado Livre</div>
-              <div className="text-xs text-slate-400">Cole o link do produto para importar dados automaticamente</div>
+              <div className="font-medium text-cyan-300">🇧🇷 {t('adminAffiliateTab.mercadoLivre', 'Mercado Livre')}</div>
+              <div className="text-xs text-slate-400">{t('adminAffiliateTab.pasteLinkHint', 'Cole o link do produto para importar dados automaticamente')}</div>
             </button>
             <button
               onClick={() => setShowMarketplaceSelector(false)}
               className="w-full mt-4 px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition"
             >
-              Cancelar
+              {t('adminAffiliateTab.cancel', 'Cancelar')}
             </button>
           </div>
         </div>
@@ -129,7 +130,7 @@ export function AffiliateProductsTab() {
       {/* Mercado Livre Import Form */}
       {selectedMarketplace === 'mercado_livre' && (
         <div className="glass-panel p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Importar do Mercado Livre</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('adminAffiliateTab.importFromML', 'Importar do Mercado Livre')}</h3>
           <MercadoLivreImportForm
             onSuccess={() => {
               setSelectedMarketplace(null);
@@ -140,7 +141,7 @@ export function AffiliateProductsTab() {
             onClick={() => setSelectedMarketplace(null)}
             className="mt-4 px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600"
           >
-            ← Voltar
+            {t('adminAffiliateTab.back', '← Voltar')}
           </button>
         </div>
       )}
@@ -148,7 +149,7 @@ export function AffiliateProductsTab() {
       {/* Edit Form */}
       {editingProduct && showForm && (
         <div className="glass-panel p-6 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Editar Produto</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('adminAffiliateTab.editProduct', 'Editar Produto')}</h3>
           <AffiliateProductForm
             product={editingProduct}
             onSuccess={handleFormSuccess}
@@ -160,20 +161,20 @@ export function AffiliateProductsTab() {
       {/* List */}
       <div className="glass-panel p-6 rounded-lg">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Produtos Afiliados</h3>
+          <h3 className="text-lg font-semibold">{t('adminAffiliateTab.affiliateProducts', 'Produtos Afiliados')}</h3>
           {!showForm && !showMarketplaceSelector && selectedMarketplace === null && (
             <button
               onClick={() => setShowMarketplaceSelector(true)}
               className="px-4 py-2 bg-cyan-500 text-white rounded font-medium hover:bg-cyan-600"
             >
-              + Novo Produto
+              {t('adminAffiliateTab.newProduct', '+ Novo Produto')}
             </button>
           )}
         </div>
 
         {isLoading ? (
           <div className="text-center py-8 text-slate-400">
-            Carregando produtos...
+            {t('adminAffiliateTab.loadingProducts', 'Carregando produtos...')}
           </div>
         ) : (
           <AffiliateProductsList

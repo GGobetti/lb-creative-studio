@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslation } from '@/lib/translations'
 
 interface AuditStats {
   contested: number
@@ -13,6 +14,7 @@ interface AuditStats {
 }
 
 export function AuditStatsCard() {
+  const { t } = useTranslation()
   const supabase = getSupabaseBrowser()
   const [stats, setStats] = useState<AuditStats>({
     contested: 0,
@@ -64,14 +66,14 @@ export function AuditStatsCard() {
   return (
     <Link href="/dashboard/admin/audit-moderation">
       <div className="p-4 rounded-lg border border-border bg-card hover:border-warning/50 hover:bg-warning/5 transition-all cursor-pointer">
-        <h3 className="text-sm font-semibold mb-3">Auditorias Pendentes</h3>
+        <h3 className="text-sm font-semibold mb-3">{t('gameAuditStats.title', 'Auditorias Pendentes')}</h3>
         <div className="grid grid-cols-2 gap-3">
           {stats.contested > 0 && (
             <div className="flex items-center gap-2 p-2 rounded bg-destructive/5 border border-destructive/20">
               <AlertTriangle size={14} className="text-destructive" />
               <div>
                 <p className="text-xs text-destructive font-bold">{stats.contested}</p>
-                <p className="text-[10px] text-muted-foreground">Contestadas</p>
+                <p className="text-[10px] text-muted-foreground">{t('gameAuditStats.contested', 'Contestadas')}</p>
               </div>
             </div>
           )}
@@ -80,7 +82,7 @@ export function AuditStatsCard() {
               <Clock size={14} className="text-warning" />
               <div>
                 <p className="text-xs text-warning font-bold">{stats.pending}</p>
-                <p className="text-[10px] text-muted-foreground">Pendentes</p>
+                <p className="text-[10px] text-muted-foreground">{t('gameAuditStats.pending', 'Pendentes')}</p>
               </div>
             </div>
           )}
@@ -89,7 +91,7 @@ export function AuditStatsCard() {
               <CheckCircle2 size={14} className="text-success" />
               <div>
                 <p className="text-xs text-success font-bold">{stats.approved}</p>
-                <p className="text-[10px] text-muted-foreground">Aprovadas</p>
+                <p className="text-[10px] text-muted-foreground">{t('gameAuditStats.approved', 'Aprovadas')}</p>
               </div>
             </div>
           )}

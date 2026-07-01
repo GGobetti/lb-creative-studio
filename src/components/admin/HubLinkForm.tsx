@@ -5,13 +5,17 @@ import { HubLink, HubTheme, HubTag, CreateHubLinkSchema, PREDEFINED_TAGS } from 
 import { AlertCircle, Wand2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getYouTubeThumbnail, isYouTubeUrl } from "@/lib/youtube"
+import { useTranslation } from "@/lib/translations"
 
-const THEMES: { value: HubTheme; label: string }[] = [
-  { value: "tutoriais", label: "Tutoriais" },
-  { value: "ia", label: "Ferramentas IA" },
-  { value: "calibracao", label: "Calibração" },
-  { value: "comunidade", label: "Comunidade" },
-]
+function useThemeOptions(): { value: HubTheme; label: string }[] {
+  const { t } = useTranslation()
+  return [
+    { value: "tutoriais", label: t("adminHubLinkForm.themeTutorials", "Tutoriais") },
+    { value: "ia", label: t("adminHubLinkForm.themeAiTools", "Ferramentas IA") },
+    { value: "calibracao", label: t("adminHubLinkForm.themeCalibration", "Calibração") },
+    { value: "comunidade", label: t("adminHubLinkForm.themeCommunity", "Comunidade") },
+  ]
+}
 
 interface HubLinkFormProps {
   link?: HubLink | null
@@ -22,6 +26,8 @@ interface HubLinkFormProps {
 }
 
 export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }: HubLinkFormProps) {
+  const { t } = useTranslation()
+  const THEMES = useThemeOptions()
   const [formData, setFormData] = useState({
     theme: theme || ("tutoriais" as HubTheme),
     title: link?.title || "",
@@ -100,7 +106,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
       )}
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-200">Tema</label>
+        <label className="mb-2 block text-sm font-medium text-slate-200">{t("adminHubLinkForm.themeLabel", "Tema")}</label>
         <select
           value={formData.theme}
           onChange={(e) => setFormData({ ...formData, theme: e.target.value as HubTheme })}
@@ -117,13 +123,13 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-200">
-          Título {errors.title && <span className="text-red-400">({errors.title})</span>}
+          {t("adminHubLinkForm.titleLabel", "Título")} {errors.title && <span className="text-red-400">({errors.title})</span>}
         </label>
         <input
           type="text"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          placeholder="Ex: Como precificar corretamente"
+          placeholder={t("adminHubLinkForm.titlePlaceholder", "Ex: Como precificar corretamente")}
           disabled={submitting || loading}
           className={inputClass}
         />
@@ -131,12 +137,12 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-200">
-          Descrição {errors.description && <span className="text-red-400">({errors.description})</span>}
+          {t("adminHubLinkForm.descriptionLabel", "Descrição")} {errors.description && <span className="text-red-400">({errors.description})</span>}
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Ex: Tutorial completo sobre estratégias de precificação"
+          placeholder={t("adminHubLinkForm.descriptionPlaceholder", "Ex: Tutorial completo sobre estratégias de precificação")}
           rows={3}
           disabled={submitting || loading}
           className={inputClass}
@@ -151,7 +157,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
           type="text"
           value={formData.url}
           onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-          placeholder="Ex: https://youtube.com/watch?v=..."
+          placeholder={t("adminHubLinkForm.urlPlaceholder", "Ex: https://youtube.com/watch?v=...")}
           disabled={submitting || loading}
           className={inputClass}
         />
@@ -159,14 +165,14 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-200">
-          Thumbnail (opcional) {errors.thumbnail_url && <span className="text-red-400">({errors.thumbnail_url})</span>}
+          {t("adminHubLinkForm.thumbnailLabel", "Thumbnail (opcional)")} {errors.thumbnail_url && <span className="text-red-400">({errors.thumbnail_url})</span>}
         </label>
         <div className="flex gap-2">
           <input
             type="text"
             value={formData.thumbnail_url}
             onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-            placeholder="https://... (URL da imagem de capa)"
+            placeholder={t("adminHubLinkForm.thumbnailPlaceholder", "https://... (URL da imagem de capa)")}
             disabled={submitting || loading}
             className={cn(inputClass, "flex-1")}
           />
@@ -175,18 +181,18 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
               type="button"
               onClick={handleAutoDetect}
               disabled={submitting || loading}
-              title="Auto-detectar thumbnail do YouTube"
+              title={t("adminHubLinkForm.autoDetectYoutubeTitle", "Auto-detectar thumbnail do YouTube")}
               className="flex items-center gap-1.5 rounded border border-cyan-600 bg-cyan-600/20 px-3 py-2 text-xs text-cyan-300 hover:bg-cyan-600/40 transition-colors disabled:opacity-50 whitespace-nowrap"
             >
               <Wand2 size={14} />
-              Auto YouTube
+              {t("adminHubLinkForm.autoYoutube", "Auto YouTube")}
             </button>
           )}
         </div>
         {formData.thumbnail_url && (
           <img
             src={formData.thumbnail_url}
-            alt="Preview thumbnail"
+            alt={t("adminHubLinkForm.previewThumbnailAlt", "Preview thumbnail")}
             className="mt-2 h-24 w-auto rounded border border-slate-600 object-cover"
             onError={(e) => (e.currentTarget.style.display = "none")}
           />
@@ -195,7 +201,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
 
       <div>
         <label className="mb-3 block text-sm font-medium text-slate-200">
-          Tags (opcional)
+          {t("adminHubLinkForm.tagsLabel", "Tags (opcional)")}
         </label>
         <div className="flex flex-wrap gap-2">
           {PREDEFINED_TAGS.map((tag) => (
@@ -224,7 +230,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
           disabled={submitting || loading}
           className="rounded px-4 py-2 font-medium transition-colors bg-cyan-500 text-white hover:bg-cyan-600 disabled:opacity-50"
         >
-          {link ? "Salvar Alterações" : "Adicionar Link"}
+          {link ? t("adminHubLinkForm.saveChanges", "Salvar Alterações") : t("adminHubLinkForm.addLink", "Adicionar Link")}
         </button>
         {onCancel && (
           <button
@@ -233,7 +239,7 @@ export function HubLinkForm({ link, theme, onSubmit, onCancel, loading = false }
             disabled={submitting || loading}
             className="rounded px-4 py-2 font-medium transition-colors bg-slate-700 text-white hover:bg-slate-600 disabled:opacity-50"
           >
-            Cancelar
+            {t("adminHubLinkForm.cancel", "Cancelar")}
           </button>
         )}
       </div>

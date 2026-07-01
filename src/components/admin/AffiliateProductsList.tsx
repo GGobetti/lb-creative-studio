@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { AffiliateProduct, deleteProduct, updateProduct } from '@/lib/api/affiliate';
 import { getSupabaseBrowser } from '@/lib/supabase';
 import { Trash2, Edit2 } from 'lucide-react';
+import { useTranslation } from '@/lib/translations';
 
 interface AffiliateProductsListProps {
   products: AffiliateProduct[];
@@ -16,6 +17,7 @@ export function AffiliateProductsList({
   onEdit,
   onProductsChange,
 }: AffiliateProductsListProps) {
+  const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isToggling, setIsToggling] = useState<string | null>(null);
 
@@ -28,7 +30,7 @@ export function AffiliateProductsList({
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Deletar este produto?')) return;
+    if (!confirm(t('adminAffiliateList.confirmDelete', 'Deletar este produto?'))) return;
 
     setIsDeleting(id);
     try {
@@ -36,7 +38,7 @@ export function AffiliateProductsList({
       await deleteProduct(id, token);
       onProductsChange();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao deletar');
+      alert(err instanceof Error ? err.message : t('adminAffiliateList.deleteError', 'Erro ao deletar'));
     } finally {
       setIsDeleting(null);
     }
@@ -53,7 +55,7 @@ export function AffiliateProductsList({
       );
       onProductsChange();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao atualizar');
+      alert(err instanceof Error ? err.message : t('adminAffiliateList.updateError', 'Erro ao atualizar'));
     } finally {
       setIsToggling(null);
     }
@@ -62,7 +64,7 @@ export function AffiliateProductsList({
   if (products.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400">
-        Nenhum produto ainda. Crie o primeiro!
+        {t('adminAffiliateList.noProductsYet', 'Nenhum produto ainda. Crie o primeiro!')}
       </div>
     );
   }
@@ -72,11 +74,11 @@ export function AffiliateProductsList({
       <table className="w-full text-sm">
         <thead className="border-b border-slate-700">
           <tr>
-            <th className="text-left py-3 px-4">Nome</th>
-            <th className="text-left py-3 px-4">Preço</th>
-            <th className="text-left py-3 px-4">Marketplace</th>
-            <th className="text-center py-3 px-4">Status</th>
-            <th className="text-right py-3 px-4">Ações</th>
+            <th className="text-left py-3 px-4">{t('adminAffiliateList.name', 'Nome')}</th>
+            <th className="text-left py-3 px-4">{t('adminAffiliateList.price', 'Preço')}</th>
+            <th className="text-left py-3 px-4">{t('adminAffiliateList.marketplace', 'Marketplace')}</th>
+            <th className="text-center py-3 px-4">{t('adminAffiliateList.status', 'Status')}</th>
+            <th className="text-right py-3 px-4">{t('adminAffiliateList.actions', 'Ações')}</th>
           </tr>
         </thead>
         <tbody>
@@ -89,7 +91,7 @@ export function AffiliateProductsList({
                 <div>
                   <div className="font-medium">{product.name}</div>
                   <div className="text-xs text-slate-500 truncate max-w-xs">
-                    {product.details?.description || 'Sem descrição'}
+                    {product.details?.description || t('adminAffiliateList.noDescription', 'Sem descrição')}
                   </div>
                 </div>
               </td>
@@ -107,14 +109,14 @@ export function AffiliateProductsList({
                       : 'bg-slate-700/30 text-slate-400'
                   } disabled:opacity-50`}
                 >
-                  {product.is_active ? 'Ativo' : 'Inativo'}
+                  {product.is_active ? t('adminAffiliateList.activeStatus', 'Ativo') : t('adminAffiliateList.inactiveStatus', 'Inativo')}
                 </button>
               </td>
               <td className="py-3 px-4 text-right flex gap-2 justify-end">
                 <button
                   onClick={() => onEdit(product)}
                   className="p-1.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300"
-                  title="Editar"
+                  title={t('adminAffiliateList.editTitle', 'Editar')}
                 >
                   <Edit2 size={16} />
                 </button>
@@ -122,7 +124,7 @@ export function AffiliateProductsList({
                   onClick={() => handleDelete(product.id)}
                   disabled={isDeleting === product.id}
                   className="p-1.5 rounded bg-slate-700 hover:bg-red-900/30 text-slate-300 hover:text-red-400 disabled:opacity-50"
-                  title="Deletar"
+                  title={t('adminAffiliateList.deleteTitle', 'Deletar')}
                 >
                   <Trash2 size={16} />
                 </button>

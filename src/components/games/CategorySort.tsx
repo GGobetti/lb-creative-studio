@@ -14,12 +14,14 @@ import { SessionProgress } from './shared/SessionProgress'
 import { CreditsPopup } from './shared/CreditsPopup'
 import { SessionResult } from './shared/SessionResult'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/translations'
 
 const POINTS_PER_ROUND = 25
 const SESSION_SIZE = 8
 
 export function CategorySort() {
   const router = useRouter()
+  const { t } = useTranslation()
   const accessTokenRef = useRef<string | null>(null)
 
   const [stls, setStls] = useState<SortableStl[]>([])
@@ -134,7 +136,7 @@ export function CategorySort() {
     return (
       <div className="flex flex-col h-full items-center justify-center gap-4">
         <div className="w-8 h-8 rounded-full border-2 border-border border-t-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Carregando STLs...</p>
+        <p className="text-sm text-muted-foreground">{t('gameCategorySort.loading', 'Carregando STLs...')}</p>
       </div>
     )
   }
@@ -179,7 +181,7 @@ export function CategorySort() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-label text-muted-foreground mb-0.5">Modelo</p>
+              <p className="text-label text-muted-foreground mb-0.5">{t('gameCategorySort.model', 'Modelo')}</p>
               <h2 className="text-heading text-base text-foreground leading-snug line-clamp-2">{currentStl.title}</h2>
               {currentStl.description && (
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{currentStl.description}</p>
@@ -189,7 +191,7 @@ export function CategorySort() {
         </AnimatePresence>
 
         <p className="text-sm text-muted-foreground">
-          Selecione <span className="text-foreground font-semibold">uma ou mais categorias</span> que descrevem este modelo:
+          {t('gameCategorySort.selectPrefix', 'Selecione')} <span className="text-foreground font-semibold">{t('gameCategorySort.selectHighlight', 'uma ou mais categorias')}</span> {t('gameCategorySort.selectSuffix', 'que descrevem este modelo:')}
         </p>
 
         {/* Category grid */}
@@ -250,7 +252,7 @@ export function CategorySort() {
               value={suggestion}
               onChange={(e) => setSuggestion(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSuggestion()}
-              placeholder="Ex: Cosplay, Peças de Carro..."
+              placeholder={t('gameCategorySort.suggestionPlaceholder', 'Ex: Cosplay, Peças de Carro...')}
               autoFocus
               className="flex-1 px-3 py-2 rounded-xl border-2 border-primary/40 bg-background text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
             />
@@ -259,7 +261,7 @@ export function CategorySort() {
               disabled={!suggestion.trim()}
               className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40"
             >
-              Adicionar
+              {t('gameCategorySort.add', 'Adicionar')}
             </button>
             <button
               onClick={() => { setShowSuggestionInput(false); setSuggestion('') }}
@@ -275,7 +277,7 @@ export function CategorySort() {
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors disabled:pointer-events-none"
           >
             <Plus size={14} />
-            Sugerir outra categoria
+            {t('gameCategorySort.suggestOther', 'Sugerir outra categoria')}
           </button>
         )}
 
@@ -287,10 +289,10 @@ export function CategorySort() {
             className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {confirmed
-              ? 'Registrando...'
+              ? t('gameCategorySort.registering', 'Registrando...')
               : selectedCategories.size === 0
-                ? 'Selecione ao menos uma categoria'
-                : `Confirmar (${selectedCategories.size} categoria${selectedCategories.size > 1 ? 's' : ''})`}
+                ? t('gameCategorySort.selectAtLeastOne', 'Selecione ao menos uma categoria')
+                : `${t('gameCategorySort.confirm', 'Confirmar')} (${selectedCategories.size} ${selectedCategories.size > 1 ? t('gameCategorySort.categoriesPlural', 'categorias') : t('gameCategorySort.categorySingular', 'categoria')})`}
           </button>
 
           <motion.button
@@ -299,7 +301,7 @@ export function CategorySort() {
             whileTap={{ scale: 0.97 }}
             className="w-full py-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent hover:bg-muted/40 font-medium text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Pular (sem pontos)
+            {t('gameCategorySort.skipNoPoints', 'Pular (sem pontos)')}
           </motion.button>
         </div>
       </div>

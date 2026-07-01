@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { AffiliateProduct, createProduct, updateProduct } from '@/lib/api/affiliate';
 import { getSupabaseBrowser } from '@/lib/supabase';
+import { useTranslation } from '@/lib/translations';
 
 interface AffiliateProductFormProps {
   product?: AffiliateProduct;
@@ -19,6 +20,7 @@ export function AffiliateProductForm({
   onSuccess,
   onCancel,
 }: AffiliateProductFormProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,10 +69,10 @@ export function AffiliateProductForm({
         );
         onSuccess();
       } else {
-        setError('Criação de produtos deve ser feita via importação de API (Mercado Livre)');
+        setError(t('adminAffiliateForm.creationViaImportError', 'Criação de produtos deve ser feita via importação de API (Mercado Livre)'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar');
+      setError(err instanceof Error ? err.message : t('adminAffiliateForm.saveError', 'Erro ao salvar'));
     } finally {
       setIsLoading(false);
     }
@@ -79,8 +81,8 @@ export function AffiliateProductForm({
   if (!product) {
     return (
       <div className="p-4 bg-slate-800/50 rounded text-slate-300">
-        <p>Produtos devem ser criados via importação de API (Mercado Livre).</p>
-        <p className="text-sm text-slate-400 mt-2">Clique "+ Novo Produto" e selecione Mercado Livre para importar.</p>
+        <p>{t('adminAffiliateForm.mustCreateViaImport', 'Produtos devem ser criados via importação de API (Mercado Livre).')}</p>
+        <p className="text-sm text-slate-400 mt-2">{t('adminAffiliateForm.clickNewProductHint', 'Clique "+ Novo Produto" e selecione Mercado Livre para importar.')}</p>
       </div>
     );
   }
@@ -90,14 +92,14 @@ export function AffiliateProductForm({
       {error && <div className="p-3 bg-red-900/30 text-red-300 rounded">{error}</div>}
 
       <div>
-        <label className="block text-sm font-medium mb-1">Nome</label>
+        <label className="block text-sm font-medium mb-1">{t('adminAffiliateForm.nameLabel', 'Nome')}</label>
         <input
           type="text"
           name="name"
           value={formData.name}
           onChange={handleChange}
           className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-slate-400 border border-slate-600 focus:border-cyan-500 outline-none"
-          placeholder="Nome do produto"
+          placeholder={t('adminAffiliateForm.namePlaceholder', 'Nome do produto')}
         />
       </div>
 
@@ -111,21 +113,21 @@ export function AffiliateProductForm({
           className="rounded"
         />
         <label htmlFor="is_active" className="text-sm">
-          Ativo (visível aos usuários)
+          {t('adminAffiliateForm.activeLabel', 'Ativo (visível aos usuários)')}
         </label>
       </div>
 
       <div className="space-y-2 p-3 bg-slate-800/50 rounded text-sm text-slate-400">
         <div>
-          <span className="font-medium">Preço:</span> R$ {formData.price}
+          <span className="font-medium">{t('adminAffiliateForm.priceLabel', 'Preço:')}</span> R$ {formData.price}
         </div>
         <div>
-          <span className="font-medium">Marketplace:</span> {formData.marketplace.replace('_', ' ').toUpperCase()}
+          <span className="font-medium">{t('adminAffiliateForm.marketplaceLabel', 'Marketplace:')}</span> {formData.marketplace.replace('_', ' ').toUpperCase()}
         </div>
         <div>
-          <span className="font-medium">Link:</span>{' '}
+          <span className="font-medium">{t('adminAffiliateForm.linkLabel', 'Link:')}</span>{' '}
           <a href={formData.affiliate_link} target="_blank" rel="noopener" className="text-cyan-400 hover:underline">
-            Abrir
+            {t('adminAffiliateForm.openLink', 'Abrir')}
           </a>
         </div>
       </div>
@@ -136,14 +138,14 @@ export function AffiliateProductForm({
           disabled={isLoading}
           className="px-4 py-2 bg-cyan-500 text-white rounded font-medium hover:bg-cyan-600 disabled:opacity-50"
         >
-          {isLoading ? 'Salvando...' : 'Atualizar'}
+          {isLoading ? t('adminAffiliateForm.saving', 'Salvando...') : t('adminAffiliateForm.update', 'Atualizar')}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-4 py-2 bg-slate-700 text-white rounded font-medium hover:bg-slate-600"
         >
-          Cancelar
+          {t('adminAffiliateForm.cancel', 'Cancelar')}
         </button>
       </div>
     </form>

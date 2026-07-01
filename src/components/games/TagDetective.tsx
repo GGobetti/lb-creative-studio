@@ -13,11 +13,13 @@ import { SessionProgress } from './shared/SessionProgress'
 import { CreditsPopup } from './shared/CreditsPopup'
 import { SessionResult } from './shared/SessionResult'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/translations'
 
 const POINTS_PER_ACTION = 5
 
 export function TagDetective() {
   const router = useRouter()
+  const { t } = useTranslation()
   const accessTokenRef = useRef<string | null>(null)
 
   const [questions, setQuestions] = useState<TagDetectiveQuestion[]>([])
@@ -117,7 +119,7 @@ export function TagDetective() {
     return (
       <div className="flex flex-col h-full items-center justify-center gap-4">
         <div className="w-8 h-8 rounded-full border-2 border-border border-t-primary animate-spin" />
-        <p className="text-sm text-muted-foreground">Carregando STLs...</p>
+        <p className="text-sm text-muted-foreground">{t('gameTagDetective.loading', 'Carregando STLs...')}</p>
       </div>
     )
   }
@@ -171,14 +173,14 @@ export function TagDetective() {
                 )}
               </div>
               <div>
-                <p className="text-label text-muted-foreground mb-0.5">Modelo</p>
+                <p className="text-label text-muted-foreground mb-0.5">{t('gameTagDetective.model', 'Modelo')}</p>
                 <h2 className="text-heading text-base text-foreground">{currentQuestion.title}</h2>
               </div>
             </div>
 
             <div>
               <p className="text-sm text-muted-foreground mb-3">
-                Marque as tags que <span className="text-destructive font-semibold">não fazem sentido</span> para este modelo:
+                {t('gameTagDetective.instructionPrefix', 'Marque as tags que')} <span className="text-destructive font-semibold">{t('gameTagDetective.instructionHighlight', 'não fazem sentido')}</span> {t('gameTagDetective.instructionSuffix', 'para este modelo:')}
               </p>
 
               <div className="flex flex-wrap gap-2">
@@ -213,7 +215,7 @@ export function TagDetective() {
             disabled={confirmed || markedIndices.size === 0}
             className="w-full py-3.5 rounded-2xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {confirmed ? 'Registrando...' : 'Confirmar seleção'}
+            {confirmed ? t('gameTagDetective.registering', 'Registrando...') : t('gameTagDetective.confirmSelection', 'Confirmar seleção')}
           </button>
 
           <motion.button
@@ -222,7 +224,7 @@ export function TagDetective() {
             whileTap={{ scale: 0.97 }}
             className="w-full py-3 rounded-2xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground bg-transparent hover:bg-muted/40 font-medium text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Pular (sem pontos)
+            {t('gameTagDetective.skipNoPoints', 'Pular (sem pontos)')}
           </motion.button>
         </div>
       </div>

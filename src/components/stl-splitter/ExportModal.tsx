@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { export3MF } from '@/lib/stl-splitter/3mf-exporter';
 import { Download, AlertCircle } from 'lucide-react';
+import { useTranslation } from '@/lib/translations';
 
 interface ExportModalProps {
   open: boolean;
@@ -11,6 +12,7 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ open, onOpenChange }: ExportModalProps) {
+  const { t } = useTranslation();
   const model           = useSTLSplitterStore((state) => state.model);
   const painting        = useSTLSplitterStore((state) => state.painting);
   const connectors      = useSTLSplitterStore((state) => state.connectors);
@@ -21,7 +23,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
 
   const handleExport = async () => {
     if (!model || !model.geometry || painting.colors.size === 0) {
-      setExportError('Nenhum modelo ou cor para exportar.');
+      setExportError(t('stlSplitterExport.noModelOrColor', 'Nenhum modelo ou cor para exportar.'));
       return;
     }
 
@@ -49,7 +51,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         // Some connector(s) failed to embed — keep the modal open so the
         // user actually sees which part(s), instead of silently shipping a
         // file that's missing them.
-        setExportError(`Exportado com avisos:\n${warnings.join('\n')}`);
+        setExportError(`${t('stlSplitterExport.exportedWithWarnings', 'Exportado com avisos:')}\n${warnings.join('\n')}`);
         setExportProgress(0);
       } else {
         setTimeout(() => {
@@ -58,7 +60,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         }, 500);
       }
     } catch (error) {
-      setExportError('Falha na exportação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      setExportError(t('stlSplitterExport.exportFailed', 'Falha na exportação: ') + (error instanceof Error ? error.message : t('stlSplitterExport.unknownError', 'Erro desconhecido')));
       setExportProgress(0);
     } finally {
       setIsExporting(false);
@@ -70,9 +72,9 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full">
-        <h2 className="text-lg font-bold mb-2">Exportar para 3MF</h2>
+        <h2 className="text-lg font-bold mb-2">{t('stlSplitterExport.exportTo3mf', 'Exportar para 3MF')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Seu modelo será salvo como {filename}.3mf com {painting.colors.size} partes separadas.
+          {t('stlSplitterExport.modelWillBeSaved', 'Seu modelo será salvo como {filename}.3mf com {count} partes separadas.').replace('{filename}', filename).replace('{count}', String(painting.colors.size))}
         </p>
 
         {exportError && (
@@ -83,17 +85,17 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         )}
 
         <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg mb-4">
-          <p className="text-sm font-medium mb-2">Resumo da exportação</p>
+          <p className="text-sm font-medium mb-2">{t('stlSplitterExport.exportSummary', 'Resumo da exportação')}</p>
           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>📦 Partes: {painting.colors.size}</li>
-            <li>📐 Vértices: {model?.vertexCount?.toLocaleString() || '0'}</li>
-            <li>🔺 Faces: {model?.faceCount?.toLocaleString() || '0'}</li>
-            {connectors.length > 0 && <li>🔩 Conectores: {connectors.length} (CSG aplicado no export)</li>}
+            <li>📦 {t('stlSplitterExport.parts', 'Partes')}: {painting.colors.size}</li>
+            <li>📐 {t('stlSplitterExport.vertices', 'Vértices')}: {model?.vertexCount?.toLocaleString() || '0'}</li>
+            <li>🔺 {t('stlSplitterExport.faces', 'Faces')}: {model?.faceCount?.toLocaleString() || '0'}</li>
+            {connectors.length > 0 && <li>🔩 {t('stlSplitterExport.connectors', 'Conectores')}: {connectors.length} ({t('stlSplitterExport.csgAppliedOnExport', 'CSG aplicado no export')})</li>}
           </ul>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Nome do arquivo</label>
+          <label className="block text-sm font-medium mb-1">{t('stlSplitterExport.fileName', 'Nome do arquivo')}</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -118,7 +120,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
             disabled={isExporting}
             className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
           >
-            Cancelar
+            {t('common.cancel', 'Cancelar')}
           </button>
           <button
             onClick={handleExport}
@@ -126,7 +128,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
-            {isExporting ? 'Exportando...' : 'Exportar'}
+            {isExporting ? t('stlSplitterExport.exporting', 'Exportando...') : t('stlSplitterExport.export', 'Exportar')}
           </button>
         </div>
       </div>
