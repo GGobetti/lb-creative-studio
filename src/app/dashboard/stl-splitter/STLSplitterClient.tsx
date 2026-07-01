@@ -231,7 +231,7 @@ export function STLSplitterClient() {
 
       <div className="flex-1 flex gap-2.5 min-h-0">
         {/* Left — active tool controls, used constantly while working */}
-        <div className="w-64 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0">
+        <div className="w-64 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0 min-h-0">
           <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
             <PaintToolbar />
           </div>
@@ -243,7 +243,7 @@ export function STLSplitterClient() {
         </div>
 
         {/* Right — setup/organization panels */}
-        <div className="w-80 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0">
+        <div className="w-80 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0 min-h-0">
           <CollapsibleSection title="Auto-segmentação" icon={<Wand2 className="h-4 w-4 text-purple-500" />}>
             <AutoSegmentPanel />
           </CollapsibleSection>
