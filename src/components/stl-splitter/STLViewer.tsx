@@ -22,6 +22,7 @@ import {
   magicWandFill,
   getFacesInLasso,
 } from '@/lib/stl-splitter/geometry-utils';
+import type { ConnectorPoint } from '@/types/stl-splitter.types';
 
 export function STLViewer() {
   const containerRef    = useRef<HTMLDivElement>(null);
@@ -36,7 +37,8 @@ export function STLViewer() {
   const cameraRef       = useRef<PerspectiveCamera | null>(null);
   const axesCameraRef   = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef     = useRef<OrbitControls | null>(null);
-  const wireframeMeshRef = useRef<THREE.LineSegments | null>(null);
+  const wireframeMeshRef    = useRef<THREE.LineSegments | null>(null);
+  const connectorMeshesRef  = useRef<Map<string, THREE.Mesh>>(new Map());
 
   // Hover / drag-paint state — all refs, zero Zustand in hot paths
   const hoveredFaceRef         = useRef<number | null>(null);
@@ -45,13 +47,16 @@ export function STLViewer() {
   const lastPaintTimeRef       = useRef(0);
   const lastHoverTimeRef       = useRef(0);
 
-  const model           = useSTLSplitterStore((state) => state.model);
-  const painting        = useSTLSplitterStore((state) => state.painting);
-  const isolatedColorId = useSTLSplitterStore((state) => state.painting.isolatedColorId);
-  const showWireframe   = useSTLSplitterStore((state) => state.ui.showWireframe);
+  const model            = useSTLSplitterStore((state) => state.model);
+  const painting         = useSTLSplitterStore((state) => state.painting);
+  const isolatedColorId  = useSTLSplitterStore((state) => state.painting.isolatedColorId);
+  const showWireframe    = useSTLSplitterStore((state) => state.ui.showWireframe);
   const setShowWireframe = useSTLSplitterStore((state) => state.setShowWireframe);
-  const paintFaces      = useSTLSplitterStore((state) => state.paintFaces);
-  const eraseFaces      = useSTLSplitterStore((state) => state.eraseFaces);
+  const connectors       = useSTLSplitterStore((state) => state.connectors);
+  const connectorRadius  = useSTLSplitterStore((state) => state.connectorRadius);
+  const addConnector     = useSTLSplitterStore((state) => state.addConnector);
+  const paintFaces       = useSTLSplitterStore((state) => state.paintFaces);
+  const eraseFaces       = useSTLSplitterStore((state) => state.eraseFaces);
 
   // Always-fresh painting state for handlers registered once at model load
   const paintingRef = useRef(painting);
@@ -162,8 +167,8 @@ export function STLViewer() {
       const tool = paintingRef.current.activeTool;
       const size = paintingRef.current.brushSize * 2;
 
-      if (tool === 'navigate' || tool === 'lasso') {
-        el.style.display = 'none'; // navigate uses system grab cursor; lasso uses crosshair canvas
+      if (tool === 'navigate' || tool === 'lasso' || tool === 'connector') {
+        el.style.display = 'none';
       } else if (tool === 'brush') {
         el.style.width  = `${size}px`;
         el.style.height = `${size}px`;
@@ -312,6 +317,52 @@ export function STLViewer() {
       if (isPaintingRef.current) return;
       const tool = paintingRef.current.activeTool;
       if (tool === 'navigate' || tool === 'lasso') return;
+
+      if (tool === 'connector') {
+        // Place connector at clicked face boundary
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(meshRef.current!);
+        if (!hits.length || hits[0].faceIndex === undefined || !hits[0].face) return;
+
+        const fi = hits[0].faceIndex!;
+        const p  = paintingRef.current;
+        const hitColorId = p.colorMap.get(fi);
+
+        // Find the adjacent face of a different color to determine partB
+        const adj = adjacencyRef.current;
+        let neighborColorId = hitColorId;
+        if (adj) {
+          for (const nb of (adj.get(fi) || [])) {
+            const nc = p.colorMap.get(nb);
+            if (nc && nc !== hitColorId) { neighborColorId = nc; break; }
+          }
+        }
+
+        if (!hitColorId) {
+          console.log('⚠️ Connector: clicked face has no color assigned');
+          return;
+        }
+
+        const worldPos = hits[0].point;
+        const faceNormal = hits[0].face!.normal.clone().transformDirection(meshRef.current!.matrixWorld).normalize();
+
+        const radius = useSTLSplitterStore.getState().connectorRadius;
+
+        addConnector({
+          position: { x: worldPos.x, y: worldPos.y, z: worldPos.z },
+          normal:   { x: faceNormal.x, y: faceNormal.y, z: faceNormal.z },
+          partAColorId: hitColorId,
+          partBColorId: neighborColorId ?? hitColorId,
+          radius,
+          depth: radius * 2.5,
+        });
+        console.log(`🔩 Connector placed at face ${fi}, color ${hitColorId} → ${neighborColorId}`);
+        return;
+      }
+
       performPaint(e.clientX, e.clientY);
     };
 
@@ -385,6 +436,8 @@ export function STLViewer() {
       renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
       clearHoldTimer();
       if (wireframeMeshRef.current) { scene.remove(wireframeMeshRef.current); wireframeMeshRef.current = null; }
+      connectorMeshesRef.current.forEach((m) => scene.remove(m));
+      connectorMeshesRef.current.clear();
       if (controlsRef.current) { controlsRef.current.enabled = true; controlsRef.current = null; }
       cameraRef.current = null;
       if (containerRef.current?.contains(renderer.domElement)) {
@@ -439,6 +492,55 @@ export function STLViewer() {
     }
   }, [showWireframe, model?.geometry]);
 
+  // ── Connector preview spheres ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+
+    // Remove meshes for connectors that were deleted
+    connectorMeshesRef.current.forEach((mesh, id) => {
+      if (!connectors.find((c) => c.id === id)) {
+        scene.remove(mesh);
+        connectorMeshesRef.current.delete(id);
+      }
+    });
+
+    // Add meshes for new connectors
+    for (const conn of connectors) {
+      if (connectorMeshesRef.current.has(conn.id)) continue;
+
+      // Pin sphere (green) + hole sphere (red)
+      const pinGeo  = new THREE.SphereGeometry(conn.radius * 0.7, 12, 8);
+      const holeGeo = new THREE.SphereGeometry(conn.radius * 0.7, 12, 8);
+      const norm = new THREE.Vector3(conn.normal.x, conn.normal.y, conn.normal.z).normalize();
+      const half = conn.depth / 2;
+
+      const pinMesh  = new THREE.Mesh(pinGeo,  new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x16a34a, roughness: 0.4 }));
+      const holeMesh = new THREE.Mesh(holeGeo, new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, roughness: 0.4 }));
+
+      pinMesh.position.set(conn.position.x, conn.position.y, conn.position.z);
+      pinMesh.position.addScaledVector(norm,  half);
+      holeMesh.position.set(conn.position.x, conn.position.y, conn.position.z);
+      holeMesh.position.addScaledVector(norm, -half);
+
+      // Group them
+      const group = new THREE.Group();
+      group.add(pinMesh, holeMesh);
+
+      // Direction line between them
+      const lineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24 });
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(conn.position.x, conn.position.y, conn.position.z).addScaledVector(norm,  half),
+        new THREE.Vector3(conn.position.x, conn.position.y, conn.position.z).addScaledVector(norm, -half),
+      ]);
+      group.add(new THREE.Line(lineGeo, lineMat));
+
+      scene.add(group);
+      // Store the group by id so we can remove it later
+      connectorMeshesRef.current.set(conn.id, group as unknown as THREE.Mesh);
+    }
+  }, [connectors]);
+
   // ── OrbitControls + system cursor based on active tool ────────────────────
   useEffect(() => {
     const tool = painting.activeTool;
@@ -449,11 +551,12 @@ export function STLViewer() {
     // Update WebGL canvas system cursor
     if (rendererRef.current) {
       rendererRef.current.domElement.style.cursor =
-        tool === 'navigate' ? 'grab' : 'none';
+        tool === 'navigate'  ? 'grab'      :
+        tool === 'connector' ? 'crosshair' : 'none';
     }
 
-    // Hide custom circle cursor for navigate and lasso
-    if (cursorRef.current && (tool === 'navigate' || tool === 'lasso')) {
+    // Hide custom circle cursor for navigate, lasso and connector
+    if (cursorRef.current && (tool === 'navigate' || tool === 'lasso' || tool === 'connector')) {
       cursorRef.current.style.display = 'none';
     }
   }, [painting.activeTool]);

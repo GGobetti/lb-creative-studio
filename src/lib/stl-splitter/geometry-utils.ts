@@ -1,4 +1,5 @@
-import { Raycaster, Mesh, Vector2, BufferGeometry, Vector3 } from 'three';
+import { Raycaster, Mesh, Vector2, BufferGeometry, Vector3, Matrix4 } from 'three';
+import type { ColorID } from '@/types/stl-splitter.types';
 
 export function pickFaceAtRaycast(
   raycaster: Raycaster,
@@ -271,6 +272,84 @@ export function autoSegmentBySharpEdges(
 
   console.log(`🔷 Auto-segment (threshold ${thresholdDegrees}°): ${segmentId} segments, ${totalFaces} faces`);
   return faceToSegment;
+}
+
+// ── Connector helpers ─────────────────────────────────────────────────────────
+
+export interface BoundaryEdgeInfo {
+  midpoint: Vector3;
+  normal: Vector3;       // face normal at midpoint, pointing from faceB toward faceA
+  colorA: ColorID;       // face that will receive the pin
+  colorB: ColorID;       // face that will receive the hole
+}
+
+// Finds all shared edges between faces of different colors.
+// Returns one entry per adjacent pair of differently-colored faces.
+export function findColorBoundaryEdges(
+  colorMap: Map<number, ColorID>,
+  geometry: BufferGeometry
+): BoundaryEdgeInfo[] {
+  const positions = geometry.attributes.position.array as Float32Array;
+  const edgeToFaces = new Map<string, number[]>();
+
+  const totalFaces = Math.floor(positions.length / 9);
+  for (let fi = 0; fi < totalFaces; fi++) {
+    for (let ei = 0; ei < 3; ei++) {
+      const va = fi * 9 + ei * 3;
+      const vb = fi * 9 + ((ei + 1) % 3) * 3;
+      const ka = `${positions[va].toFixed(4)},${positions[va+1].toFixed(4)},${positions[va+2].toFixed(4)}`;
+      const kb = `${positions[vb].toFixed(4)},${positions[vb+1].toFixed(4)},${positions[vb+2].toFixed(4)}`;
+      const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      const entry = edgeToFaces.get(key);
+      if (entry) entry.push(fi); else edgeToFaces.set(key, [fi]);
+    }
+  }
+
+  const edges: BoundaryEdgeInfo[] = [];
+  for (const [key, faces] of edgeToFaces.entries()) {
+    if (faces.length < 2) continue;
+    for (let i = 0; i < faces.length; i++) {
+      for (let j = i + 1; j < faces.length; j++) {
+        const fA = faces[i], fB = faces[j];
+        const cA = colorMap.get(fA), cB = colorMap.get(fB);
+        if (!cA || !cB || cA === cB) continue;
+
+        // Midpoint: average of the two shared edge vertices
+        const parts = key.split('|');
+        const [ax, ay, az] = parts[0].split(',').map(Number);
+        const [bx, by, bz] = parts[1].split(',').map(Number);
+        const midpoint = new Vector3((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
+        const normal = getFaceNormal(positions, fA);
+
+        edges.push({ midpoint, normal, colorA: cA, colorB: cB });
+      }
+    }
+  }
+
+  return edges;
+}
+
+// Samples connector positions along boundary edges, spacing them by `minSpacingMm`.
+// Returns deduplicated positions (no two connectors closer than minSpacingMm).
+export function sampleConnectorPositions(
+  edges: BoundaryEdgeInfo[],
+  minSpacingMm: number
+): BoundaryEdgeInfo[] {
+  const result: BoundaryEdgeInfo[] = [];
+
+  for (const edge of edges) {
+    let tooClose = false;
+    for (const placed of result) {
+      if (placed.midpoint.distanceTo(edge.midpoint) < minSpacingMm) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (!tooClose) result.push(edge);
+  }
+
+  console.log(`🔩 Sampled ${result.length} connector positions from ${edges.length} boundary edges`);
+  return result;
 }
 
 // Returns true if point (px, py) is inside the polygon using ray-casting.

@@ -1,4 +1,4 @@
-import { BufferGeometry, Box3 } from 'three';
+import { BufferGeometry, Box3, Vector3 } from 'three';
 
 /**
  * Branded string type for ColorID to prevent mixing with other ID types
@@ -35,7 +35,7 @@ export interface STLModel {
 /**
  * Represents the painting state - which faces are assigned to which colors
  */
-export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser' | 'lasso' | 'navigate';
+export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser' | 'lasso' | 'navigate' | 'connector';
 
 export interface PaintingState {
   colorMap: Map<FaceIndex, ColorID>; // Maps face index to color ID
@@ -48,6 +48,20 @@ export interface PaintingState {
   bucketThreshold: number; // degrees 0-90, angle limit for flood fill (0 = unlimited)
   isolatedColorId: ColorID | null; // when set, non-isolated faces render near-black
   autoSegmentThreshold: number; // degrees 10-180: edges sharper than this split segments
+}
+
+/**
+ * A connector pin placed between two painted parts.
+ * partAColorId receives the protrusion (+); partBColorId receives the hole (−).
+ */
+export interface ConnectorPoint {
+  id: string;
+  position: { x: number; y: number; z: number }; // world-space position (serializable)
+  normal: { x: number; y: number; z: number };   // points from B toward A
+  partAColorId: ColorID; // pin side
+  partBColorId: ColorID; // hole side
+  radius: number; // mm
+  depth: number;  // mm total length (split equally between the two parts)
 }
 
 /**
@@ -82,18 +96,11 @@ export interface STLSplitterUIState {
  * Complete state for the STL splitter store
  */
 export interface STLSplitterState {
-  // Model state
   model: STLModel | null;
-
-  // Painting state
   painting: PaintingState;
-
-  // Undo history (snapshots of colorMap before each paint operation)
   colorMapHistory: Map<FaceIndex, ColorID>[];
-
-  // History/Sessions
   sessions: SavedSession[];
-
-  // UI state
   ui: STLSplitterUIState;
+  connectors: ConnectorPoint[];
+  connectorRadius: number; // default radius in mm (shared setting)
 }

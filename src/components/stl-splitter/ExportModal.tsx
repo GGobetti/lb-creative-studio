@@ -11,8 +11,9 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ open, onOpenChange }: ExportModalProps) {
-  const model = useSTLSplitterStore((state) => state.model);
-  const painting = useSTLSplitterStore((state) => state.painting);
+  const model           = useSTLSplitterStore((state) => state.model);
+  const painting        = useSTLSplitterStore((state) => state.painting);
+  const connectors      = useSTLSplitterStore((state) => state.connectors);
   const setExportProgress = useSTLSplitterStore((state) => state.setExportProgress);
   const [filename, setFilename] = useState('model_split');
   const [isExporting, setIsExporting] = useState(false);
@@ -27,8 +28,9 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       setIsExporting(true);
       setExportProgress(0);
 
-      setExportProgress(50);
-      const blob = export3MF(model.geometry, painting.colorMap, painting.colors);
+      setExportProgress(30);
+      if (connectors.length > 0) setExportProgress(40); // CSG will take longer
+      const blob = await export3MF(model.geometry, painting.colorMap, painting.colors, connectors);
 
       setExportProgress(75);
       const url = URL.createObjectURL(blob);
@@ -69,6 +71,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
             <li>📦 Parts: {painting.colors.size}</li>
             <li>📐 Vertices: {model?.vertexCount?.toLocaleString() || '0'}</li>
             <li>🔺 Faces: {model?.faceCount?.toLocaleString() || '0'}</li>
+            {connectors.length > 0 && <li>🔩 Conectores: {connectors.length} (CSG aplicado no export)</li>}
           </ul>
         </div>
 

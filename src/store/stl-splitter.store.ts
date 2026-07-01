@@ -6,6 +6,7 @@ import {
   ColorID,
   FaceIndex,
   ColorGroup,
+  ConnectorPoint,
   PaintTool,
   STLModel,
   PaintingState,
@@ -126,6 +127,8 @@ const initialState: STLSplitterState = {
   colorMapHistory: [],
   sessions: [],
   ui: initialUIState,
+  connectors: [],
+  connectorRadius: 1.5,
 };
 
 interface STLSplitterStoreActions {
@@ -161,6 +164,12 @@ interface STLSplitterStoreActions {
   addSession: (session: SavedSession) => void;
   loadSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
+
+  // Connector actions
+  addConnector: (connector: Omit<ConnectorPoint, 'id'>) => void;
+  removeConnector: (id: string) => void;
+  clearConnectors: () => void;
+  setConnectorRadius: (radius: number) => void;
 
   // Utility
   clearAll: () => void;
@@ -510,6 +519,27 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== sessionId),
     }));
+  },
+
+  // Connector actions
+  addConnector: (connector) => {
+    const id = `conn-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    set((state) => ({ connectors: [...state.connectors, { ...connector, id }] }));
+    console.log('🔩 Connector added:', id);
+  },
+
+  removeConnector: (id) => {
+    set((state) => ({ connectors: state.connectors.filter((c) => c.id !== id) }));
+    console.log('🗑️ Connector removed:', id);
+  },
+
+  clearConnectors: () => {
+    set({ connectors: [] });
+    console.log('🗑️ All connectors cleared');
+  },
+
+  setConnectorRadius: (radius) => {
+    set({ connectorRadius: Math.max(0.5, Math.min(5, radius)) });
   },
 
   // Utility

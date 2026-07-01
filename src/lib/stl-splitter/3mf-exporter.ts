@@ -1,25 +1,73 @@
+import * as THREE from 'three';
 import { BufferGeometry } from 'three';
 import { zipSync, strToU8 } from 'fflate';
-import { FaceIndex, ColorID, ColorGroup } from '@/types/stl-splitter.types';
+import { FaceIndex, ColorID, ColorGroup, ConnectorPoint } from '@/types/stl-splitter.types';
+import { applyConnectorsCSG } from './connector-csg';
 
 // 3MF is a ZIP package — slicers like Bambu Studio / PrusaSlicer will reject
 // raw XML files that are only renamed to .3mf. This exporter creates a proper
 // ZIP with the required [Content_Types].xml, _rels/.rels, and 3D/3dmodel.model.
+//
+// If connectors are provided, CSG is applied before export:
+//   - partA → ADDITION of a cylinder  (the protruding pin)
+//   - partB → SUBTRACTION of a wider cylinder (the matching hole)
 
-export function export3MF(
+export async function export3MF(
   geometry: BufferGeometry,
   colorMap: Map<FaceIndex, ColorID>,
-  colors: Map<ColorID, ColorGroup>
-): Blob {
+  colors: Map<ColorID, ColorGroup>,
+  connectors: ConnectorPoint[] = []
+): Promise<Blob> {
   const positions = geometry.getAttribute('position').array as Float32Array;
 
+  // Collect face indices per color
   const facesByColor = new Map<ColorID, number[]>();
   colors.forEach((color) => facesByColor.set(color.id, []));
   colorMap.forEach((colorId, faceIndex) => {
     facesByColor.get(colorId)?.push(faceIndex);
   });
 
-  const modelXML = buildModelXML(positions, facesByColor, colors);
+  // Build per-part geometries, applying CSG for connectors when present
+  const partGeometries = new Map<ColorID, Float32Array>();
+
+  for (const [colorId, faceIndices] of facesByColor.entries()) {
+    if (faceIndices.length === 0) continue;
+
+    if (connectors.length > 0) {
+      // Build a sub-geometry for this part
+      const partPositions = new Float32Array(faceIndices.length * 9);
+      faceIndices.forEach((fi, i) => {
+        partPositions.set(positions.slice(fi * 9, fi * 9 + 9), i * 9);
+      });
+      const partGeo = new THREE.BufferGeometry();
+      partGeo.setAttribute('position', new THREE.BufferAttribute(partPositions, 3));
+      partGeo.computeVertexNormals();
+
+      try {
+        // Determine role: if this part is referenced as partA in any connector → pin; partB → hole
+        const asPin  = connectors.filter((c) => c.partAColorId === colorId);
+        const asHole = connectors.filter((c) => c.partBColorId === colorId);
+
+        let geo = partGeo;
+        if (asPin.length > 0) {
+          geo = await applyConnectorsCSG(geo, asPin, colorId, 'pin');
+          console.log(`🔩 Export: applied ${asPin.length} pins to ${colors.get(colorId)?.name}`);
+        }
+        if (asHole.length > 0) {
+          geo = await applyConnectorsCSG(geo, asHole, colorId, 'hole');
+          console.log(`🔩 Export: applied ${asHole.length} holes to ${colors.get(colorId)?.name}`);
+        }
+        partGeometries.set(colorId, geo.getAttribute('position').array as Float32Array);
+      } catch (err) {
+        console.warn(`⚠️ CSG failed for ${colors.get(colorId)?.name}, falling back to raw faces:`, err);
+        partGeometries.set(colorId, buildPartPositions(positions, faceIndices));
+      }
+    } else {
+      partGeometries.set(colorId, buildPartPositions(positions, faceIndices));
+    }
+  }
+
+  const modelXML = buildModelXML(partGeometries, colors);
 
   const contentTypesXML = `<?xml version="1.0" encoding="UTF-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -38,32 +86,34 @@ export function export3MF(
       '_rels/.rels': strToU8(relsXML),
       '3D/3dmodel.model': strToU8(modelXML),
     },
-    { level: 0 } // no compression — faster and slicers don't care
+    { level: 0 }
   );
 
   return new Blob([zip], { type: 'application/zip' });
 }
 
+function buildPartPositions(allPositions: Float32Array, faceIndices: number[]): Float32Array {
+  const out = new Float32Array(faceIndices.length * 9);
+  faceIndices.forEach((fi, i) => out.set(allPositions.slice(fi * 9, fi * 9 + 9), i * 9));
+  return out;
+}
+
 function buildModelXML(
-  positions: Float32Array,
-  facesByColor: Map<ColorID, number[]>,
+  partGeometries: Map<ColorID, Float32Array>,
   colors: Map<ColorID, ColorGroup>
 ): string {
   let objectId = 1;
   let resourcesXML = '';
   let buildXML = '';
 
-  facesByColor.forEach((faceIndices, colorId) => {
-    if (faceIndices.length === 0) return;
-
+  partGeometries.forEach((partPositions, colorId) => {
     const color = colors.get(colorId);
-    const name = color?.name ?? `Part ${objectId}`;
-    const meshXML = buildMeshXML(positions, faceIndices);
+    const name  = color?.name ?? `Part ${objectId}`;
+    const meshXML = buildMeshXML(partPositions);
 
     resourcesXML += `    <object id="${objectId}" type="model" name="${name}">\n`;
     resourcesXML += `      ${meshXML}\n`;
     resourcesXML += `    </object>\n`;
-
     buildXML += `    <item objectid="${objectId}"/>\n`;
     objectId++;
   });
@@ -77,20 +127,21 @@ ${buildXML}  </build>
 </model>`;
 }
 
-function buildMeshXML(allPositions: Float32Array, faceIndices: number[]): string {
-  const vertices: number[] = [];
-  // Re-map global vertex keys to local indices (deduplicates shared vertices)
+// Builds mesh XML from a flat Float32Array of positions (9 floats per triangle, no dedup needed pre-CSG).
+function buildMeshXML(partPositions: Float32Array): string {
   const vertexMap = new Map<string, number>();
+  const vertices: number[] = [];
   const triangles: string[] = [];
+  const totalFaces = Math.floor(partPositions.length / 9);
 
-  for (const faceIndex of faceIndices) {
-    const base = faceIndex * 9;
+  for (let fi = 0; fi < totalFaces; fi++) {
+    const base = fi * 9;
     const localIndices: number[] = [];
 
     for (let v = 0; v < 3; v++) {
-      const px = allPositions[base + v * 3];
-      const py = allPositions[base + v * 3 + 1];
-      const pz = allPositions[base + v * 3 + 2];
+      const px = partPositions[base + v * 3];
+      const py = partPositions[base + v * 3 + 1];
+      const pz = partPositions[base + v * 3 + 2];
       const key = `${px.toFixed(6)},${py.toFixed(6)},${pz.toFixed(6)}`;
 
       if (!vertexMap.has(key)) {
@@ -99,13 +150,12 @@ function buildMeshXML(allPositions: Float32Array, faceIndices: number[]): string
       }
       localIndices.push(vertexMap.get(key)!);
     }
-
     triangles.push(`        <triangle v1="${localIndices[0]}" v2="${localIndices[1]}" v3="${localIndices[2]}"/>`);
   }
 
   let verticesXML = '      <vertices>\n';
   for (let i = 0; i < vertices.length; i += 3) {
-    verticesXML += `        <vertex x="${vertices[i].toFixed(6)}" y="${vertices[i + 1].toFixed(6)}" z="${vertices[i + 2].toFixed(6)}"/>\n`;
+    verticesXML += `        <vertex x="${vertices[i].toFixed(6)}" y="${vertices[i+1].toFixed(6)}" z="${vertices[i+2].toFixed(6)}"/>\n`;
   }
   verticesXML += '      </vertices>';
 

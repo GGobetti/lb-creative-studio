@@ -10,7 +10,8 @@ const TOOLS: { id: PaintTool; label: string; icon: string; hint: string; key: st
   { id: 'bucket',   icon: '🪣', label: 'Balde',   hint: 'Preenchimento por região conectada a partir da face clicada', key: 'G' },
   { id: 'wand',     icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (BFS)',       key: 'W' },
   { id: 'eraser',   icon: '🧹', label: 'Borracha', hint: 'Clique ou arraste para apagar cores de faces pintadas',      key: 'E' },
-  { id: 'lasso',    icon: '🔵', label: 'Laço',    hint: 'Desenhe uma área livre para pintar todas as faces dentro',    key: 'L' },
+  { id: 'lasso',     icon: '🔵', label: 'Laço',     hint: 'Desenhe uma área livre para pintar todas as faces dentro',    key: 'L' },
+  { id: 'connector', icon: '🔩', label: 'Conector', hint: 'Clique na fronteira entre duas partes para adicionar um pino de alinhamento', key: 'C' },
 ];
 
 export function PaintToolbar() {
@@ -63,12 +64,13 @@ export function PaintToolbar() {
       if (e.repeat) return;
 
       const MAP: Record<string, PaintTool> = {
-        h: 'navigate', H: 'navigate',
-        b: 'brush',    B: 'brush',
-        g: 'bucket',   G: 'bucket',
-        w: 'wand',     W: 'wand',
-        e: 'eraser',   E: 'eraser',
-        l: 'lasso',    L: 'lasso',
+        h: 'navigate',  H: 'navigate',
+        b: 'brush',     B: 'brush',
+        g: 'bucket',    G: 'bucket',
+        w: 'wand',      W: 'wand',
+        e: 'eraser',    E: 'eraser',
+        l: 'lasso',     L: 'lasso',
+        c: 'connector', C: 'connector',
       };
       const tool = MAP[e.key];
       if (tool) {
@@ -253,7 +255,8 @@ export function PaintToolbar() {
           {activeTool === 'bucket' && `🪣 Clique para preencher região conectada com ${selectedColor.name}`}
           {activeTool === 'wand'   && `✨ Clique numa superfície — pinta faces de ângulo similar com ${selectedColor.name}`}
           {activeTool === 'eraser' && `🧹 Clique ou arraste para apagar cores no modelo`}
-          {activeTool === 'lasso'  && `🔵 Segure e arraste para desenhar o laço — pinta tudo dentro com ${selectedColor.name}`}
+          {activeTool === 'lasso'     && `🔵 Segure e arraste para desenhar o laço — pinta tudo dentro com ${selectedColor.name}`}
+          {activeTool === 'connector' && `🔩 Clique na fronteira entre partes para adicionar um pino de alinhamento`}
         </div>
       ) : activeTool !== 'eraser' ? (
         <div className="text-xs px-3 py-2 rounded bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300">
