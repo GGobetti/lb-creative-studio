@@ -4,12 +4,13 @@ import React, { useEffect } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { PaintTool } from '@/types/stl-splitter.types';
 
-const TOOLS: { id: PaintTool; label: string; icon: string; hint: string }[] = [
-  { id: 'brush',  icon: '🖌️', label: 'Pincel',  hint: 'Clique ou arraste para pintar — círculo mostra o raio' },
-  { id: 'bucket', icon: '🪣', label: 'Balde',   hint: 'Preenchimento por região conectada a partir da face clicada' },
-  { id: 'wand',   icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (BFS)' },
-  { id: 'eraser', icon: '🧹', label: 'Borracha', hint: 'Clique ou arraste para apagar cores de faces pintadas' },
-  { id: 'lasso',  icon: '🔵', label: 'Laço',    hint: 'Desenhe uma área livre para pintar todas as faces dentro' },
+const TOOLS: { id: PaintTool; label: string; icon: string; hint: string; key: string }[] = [
+  { id: 'navigate', icon: '✋', label: 'Navegar', hint: 'Orbitar/girar livremente sem pintar (Space = temporário)',    key: 'H' },
+  { id: 'brush',    icon: '🖌️', label: 'Pincel',  hint: 'Clique ou arraste para pintar — círculo mostra o raio',       key: 'B' },
+  { id: 'bucket',   icon: '🪣', label: 'Balde',   hint: 'Preenchimento por região conectada a partir da face clicada', key: 'G' },
+  { id: 'wand',     icon: '✨', label: 'Varinha',  hint: 'Preenche faces com ângulo de superfície similar (BFS)',       key: 'W' },
+  { id: 'eraser',   icon: '🧹', label: 'Borracha', hint: 'Clique ou arraste para apagar cores de faces pintadas',      key: 'E' },
+  { id: 'lasso',    icon: '🔵', label: 'Laço',    hint: 'Desenhe uma área livre para pintar todas as faces dentro',    key: 'L' },
 ];
 
 export function PaintToolbar() {
@@ -33,40 +34,94 @@ export function PaintToolbar() {
   const selectedColor = selectedColorId ? colors.get(selectedColorId) : null;
   const canUndo = colorMapHistory.length > 0;
 
-  // Ctrl+Z / Cmd+Z global undo shortcut
+  // Keyboard shortcuts: Ctrl+Z undo, H/B/G/W/E/L tool switch, Space = temp navigate
   useEffect(() => {
+    let prevTool: PaintTool | null = null;
+
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore shortcuts when typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        console.log('↩️ Ctrl+Z pressed — undoing last paint');
+        console.log('↩️ Ctrl+Z — undo');
         undoPaint();
+        return;
+      }
+
+      // Space held → temporary navigate mode
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        prevTool = useSTLSplitterStore.getState().painting.activeTool;
+        if (prevTool !== 'navigate') {
+          setActiveTool('navigate');
+          console.log('✋ Space held — navigate mode');
+        }
+        return;
+      }
+
+      if (e.repeat) return;
+
+      const MAP: Record<string, PaintTool> = {
+        h: 'navigate', H: 'navigate',
+        b: 'brush',    B: 'brush',
+        g: 'bucket',   G: 'bucket',
+        w: 'wand',     W: 'wand',
+        e: 'eraser',   E: 'eraser',
+        l: 'lasso',    L: 'lasso',
+      };
+      const tool = MAP[e.key];
+      if (tool) {
+        e.preventDefault();
+        setActiveTool(tool);
+        console.log(`🔧 Shortcut: ${e.key} → ${tool}`);
       }
     };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && prevTool !== null) {
+        setActiveTool(prevTool);
+        console.log('✋ Space released — back to', prevTool);
+        prevTool = null;
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undoPaint]);
+    window.addEventListener('keyup',   handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup',   handleKeyUp);
+    };
+  }, [undoPaint, setActiveTool]);
 
   return (
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
 
-      {/* Tool selector */}
-      <div className="grid grid-cols-5 gap-1">
+      {/* Tool selector — 3+3 grid */}
+      <div className="grid grid-cols-3 gap-1">
         {TOOLS.map((tool) => (
           <button
             key={tool.id}
-            title={tool.hint}
+            title={`${tool.hint} [${tool.key}]`}
             onClick={() => {
               setActiveTool(tool.id);
               console.log('🔧 Tool selected:', tool.id);
             }}
-            className={`flex flex-col items-center py-2 px-1 rounded-lg border-2 transition text-sm font-medium ${
+            className={`relative flex flex-col items-center py-2 px-1 rounded-lg border-2 transition text-sm font-medium ${
               activeTool === tool.id
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                ? tool.id === 'navigate'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300'
+                  : tool.id === 'eraser'
+                  ? 'border-red-400 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400'
+                  : 'border-blue-500 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                 : 'border-gray-200 dark:border-gray-600 hover:border-gray-400 text-gray-600 dark:text-gray-400'
-            } ${tool.id === 'eraser' && activeTool === tool.id ? '!border-red-400 !bg-red-50 dark:!bg-red-950 !text-red-600 dark:!text-red-400' : ''}`}
+            }`}
           >
-            <span className="text-xl leading-none mb-1">{tool.icon}</span>
-            <span className="text-xs">{tool.label}</span>
+            <span className="text-xl leading-none mb-0.5">{tool.icon}</span>
+            <span className="text-xs leading-none">{tool.label}</span>
+            <span className="absolute top-1 right-1.5 text-[9px] text-gray-400 dark:text-gray-500 font-mono leading-none">
+              {tool.key}
+            </span>
           </button>
         ))}
       </div>
@@ -184,7 +239,11 @@ export function PaintToolbar() {
       </div>
 
       {/* Status hint */}
-      {selectedColor ? (
+      {activeTool === 'navigate' ? (
+        <div className="text-xs px-3 py-2 rounded bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+          ✋ Arraste para orbitar · Scroll para zoom · Botão direito para pan · Space = temporário
+        </div>
+      ) : selectedColor ? (
         <div className={`text-xs px-3 py-2 rounded ${
           activeTool === 'eraser'
             ? 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300'

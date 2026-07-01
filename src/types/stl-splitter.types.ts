@@ -35,7 +35,7 @@ export interface STLModel {
 /**
  * Represents the painting state - which faces are assigned to which colors
  */
-export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser' | 'lasso';
+export type PaintTool = 'brush' | 'bucket' | 'wand' | 'eraser' | 'lasso' | 'navigate';
 
 export interface PaintingState {
   colorMap: Map<FaceIndex, ColorID>; // Maps face index to color ID

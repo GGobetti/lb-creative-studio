@@ -162,7 +162,9 @@ export function STLViewer() {
       const tool = paintingRef.current.activeTool;
       const size = paintingRef.current.brushSize * 2;
 
-      if (tool === 'brush') {
+      if (tool === 'navigate' || tool === 'lasso') {
+        el.style.display = 'none'; // navigate uses system grab cursor; lasso uses crosshair canvas
+      } else if (tool === 'brush') {
         el.style.width  = `${size}px`;
         el.style.height = `${size}px`;
         el.style.border = '2px solid rgba(255,255,255,0.9)';
@@ -172,8 +174,6 @@ export function STLViewer() {
         el.style.height = `${size}px`;
         el.style.border = '2px dashed rgba(255,80,80,0.95)';
         el.style.boxShadow = '0 0 0 1.5px rgba(0,0,0,0.7)';
-      } else if (tool === 'lasso') {
-        el.style.display = 'none'; // lasso canvas uses crosshair
       } else {
         el.style.width  = '10px';
         el.style.height = '10px';
@@ -227,7 +227,7 @@ export function STLViewer() {
 
       const p    = paintingRef.current;
       const tool = p.activeTool;
-      if (tool === 'lasso') return; // handled by lasso canvas
+      if (tool === 'navigate' || tool === 'lasso') return;
       if (tool !== 'eraser' && !p.selectedColorId) { console.log('⚠️ No color selected'); return; }
       if (!meshRef.current) return;
 
@@ -294,7 +294,8 @@ export function STLViewer() {
 
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return;
-      if (paintingRef.current.activeTool === 'lasso') return; // lasso handled separately
+      const tool = paintingRef.current.activeTool;
+      if (tool === 'navigate' || tool === 'lasso') return; // navigate = OrbitControls; lasso = canvas
       startHoldTimer(e.clientX, e.clientY);
     };
 
@@ -309,7 +310,8 @@ export function STLViewer() {
     const handleClick = (e: MouseEvent) => {
       if (e.button !== 0) return;
       if (isPaintingRef.current) return;
-      if (paintingRef.current.activeTool === 'lasso') return;
+      const tool = paintingRef.current.activeTool;
+      if (tool === 'navigate' || tool === 'lasso') return;
       performPaint(e.clientX, e.clientY);
     };
 
@@ -437,11 +439,21 @@ export function STLViewer() {
     }
   }, [showWireframe, model?.geometry]);
 
-  // ── Disable OrbitControls when lasso is active ─────────────────────────────
+  // ── OrbitControls + system cursor based on active tool ────────────────────
   useEffect(() => {
-    if (!controlsRef.current) return;
-    controlsRef.current.enabled = painting.activeTool !== 'lasso';
-    if (cursorRef.current && painting.activeTool === 'lasso') {
+    const tool = painting.activeTool;
+
+    // Orbit only when in navigate mode
+    if (controlsRef.current) controlsRef.current.enabled = tool === 'navigate';
+
+    // Update WebGL canvas system cursor
+    if (rendererRef.current) {
+      rendererRef.current.domElement.style.cursor =
+        tool === 'navigate' ? 'grab' : 'none';
+    }
+
+    // Hide custom circle cursor for navigate and lasso
+    if (cursorRef.current && (tool === 'navigate' || tool === 'lasso')) {
       cursorRef.current.style.display = 'none';
     }
   }, [painting.activeTool]);
@@ -569,10 +581,12 @@ export function STLViewer() {
       </button>
 
       {/* Tip overlay */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-black/40 px-3 py-1 rounded-full pointer-events-none select-none">
-        {painting.activeTool === 'lasso'
-          ? 'Segure e arraste para desenhar o laço de seleção'
-          : 'Arrastar = orbitar · Clique = pintar · Segurar = pintar arrastando'}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 text-xs text-gray-400 bg-black/40 px-3 py-1 rounded-full pointer-events-none select-none whitespace-nowrap">
+        {painting.activeTool === 'navigate'
+          ? '✋ Arrastar = orbitar · Scroll = zoom · Btn direito = pan  [Space = temporário]'
+          : painting.activeTool === 'lasso'
+          ? '🔵 Segure e arraste para desenhar o laço de seleção'
+          : 'Clique = pintar · Segurar = pintar arrastando · Space = navegar'}
       </div>
     </div>
   );
