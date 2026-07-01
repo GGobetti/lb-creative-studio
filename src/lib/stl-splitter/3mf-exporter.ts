@@ -67,8 +67,9 @@ export async function export3MF(
         }
         partGeometries.set(colorId, geo.getAttribute('position').array as Float32Array);
       } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
         console.warn(`⚠️ CSG failed for ${partName}, exporting capped part without connectors:`, err);
-        warnings.push(`Conector(es) da parte "${partName}" não puderam ser aplicados — peça exportada sem eles.`);
+        warnings.push(`Conector(es) da parte "${partName}" não puderam ser aplicados (${reason}) — peça exportada sem eles.`);
         partGeometries.set(colorId, cappedPositions);
       }
     } else {

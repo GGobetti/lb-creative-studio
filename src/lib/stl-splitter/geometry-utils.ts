@@ -828,6 +828,43 @@ function ensureOutwardWinding(flat: Float32Array): Float32Array {
 // faces plus fan-triangulated caps closing every boundary loop. Needed so
 // CSG connectors (which require closed volumes) actually embed pins/holes
 // instead of floating on an open shell.
+// Snaps every coordinate to the SAME 3-decimal grid used for the adjacency
+// string-keys elsewhere in this file. Two vertices that our matching logic
+// treats as "the same point" should actually BE numerically identical —
+// otherwise the geometry has micro-cracks (e.g. 1.000006 vs 0.999994) that
+// look fine visually but can trip up CSG's BVH-based boolean evaluation.
+// 1-micron precision is far below any 3D printer's real resolution, so this
+// is invisible to the final print.
+function quantizeVertices(flat: Float32Array, precision = 1000): Float32Array {
+  const out = new Float32Array(flat.length);
+  for (let i = 0; i < flat.length; i++) {
+    out[i] = Math.round(flat[i] * precision) / precision;
+  }
+  return out;
+}
+
+// Drops triangles with (near-)zero area — a common CSG failure trigger,
+// and also a possible side effect of quantizeVertices collapsing a very
+// thin sliver triangle's three corners together.
+function removeDegenerateTriangles(flat: Float32Array, minAreaSq = 1e-12): Float32Array {
+  const totalFaces = Math.floor(flat.length / 9);
+  const kept: number[] = [];
+  for (let fi = 0; fi < totalFaces; fi++) {
+    const b = fi * 9;
+    const ax = flat[b], ay = flat[b + 1], az = flat[b + 2];
+    const bx = flat[b + 3], by = flat[b + 4], bz = flat[b + 5];
+    const cx = flat[b + 6], cy = flat[b + 7], cz = flat[b + 8];
+    const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
+    const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
+    const crossX = e1y * e2z - e1z * e2y;
+    const crossY = e1z * e2x - e1x * e2z;
+    const crossZ = e1x * e2y - e1y * e2x;
+    const areaSq = crossX * crossX + crossY * crossY + crossZ * crossZ;
+    if (areaSq > minAreaSq) kept.push(ax, ay, az, bx, by, bz, cx, cy, cz);
+  }
+  return new Float32Array(kept);
+}
+
 export function buildCappedPartGeometry(
   positions: Float32Array,
   faceIndices: number[],
@@ -847,7 +884,8 @@ export function buildCappedPartGeometry(
   combined.set(caps, own.length);
 
   console.log(`🧊 Capped part ${colorId}: ${faceIndices.length} faces + ${loops.length} loop(s) → ${caps.length / 9} cap triangles`);
-  return ensureOutwardWinding(combined);
+  const wound = ensureOutwardWinding(combined);
+  return removeDegenerateTriangles(quantizeVertices(wound));
 }
 
 // Resolves a connector's final placement: the auto-computed (snap) position
