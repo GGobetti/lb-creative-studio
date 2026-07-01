@@ -31,6 +31,7 @@ export function STLSplitterClient() {
   const addSession = useSTLSplitterStore((state) => state.addSession);
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   // Always-fresh refs so the 30s timer doesn't reset every time the user
   // paints a stroke (painting/connectors change on every action — if they
@@ -122,7 +123,7 @@ export function STLSplitterClient() {
   }
 
   return (
-    <div className="h-full flex gap-6 p-6">
+    <div className="h-full flex flex-col gap-2.5 p-3">
       {error && (
         <div className="fixed top-6 right-6 max-w-sm p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 rounded-lg flex gap-3 z-50">
           <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
@@ -136,66 +137,89 @@ export function STLSplitterClient() {
         </div>
       )}
 
-      <div className="w-80 flex flex-col gap-2.5 overflow-y-auto">
-        <CollapsibleSection title="Novo modelo" icon={<Upload className="h-4 w-4 text-blue-500" />}>
-          <STLUploader />
-        </CollapsibleSection>
-
-        <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <PaintToolbar />
-        </div>
-
-        <CollapsibleSection title="Auto-segmentação" icon={<Wand2 className="h-4 w-4 text-purple-500" />}>
-          <AutoSegmentPanel />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          title="Conectores"
-          icon={<Link2 className="h-4 w-4 text-orange-500" />}
-          badge={connectors.length > 0 && (
-            <span className="text-xs font-normal bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-full">
-              {connectors.length}
-            </span>
-          )}
+      {/* Top bar — global, page-level actions: not tied to any one tool, so
+          they don't compete for space with the panels you use constantly. */}
+      <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg shadow px-3 py-2 flex-shrink-0">
+        <span className="font-semibold text-sm truncate flex-1 min-w-0">
+          {model?.originalFile ?? 'STL Splitter'}
+        </span>
+        <button
+          onClick={() => setUploadOpen((o) => !o)}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition flex items-center gap-1.5 border ${
+            uploadOpen
+              ? 'border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
+              : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-blue-400'
+          }`}
         >
-          <ConnectorPanel />
-        </CollapsibleSection>
-
-        <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <h3 className="font-semibold px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm">
-            <Palette className="h-4 w-4 text-gray-500" />
-            Partes
-            {painting.colors.size > 0 && (
-              <span className="text-xs font-normal bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-full ml-auto">
-                {painting.colors.size}
-              </span>
-            )}
-          </h3>
-          <ColorList />
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => setExportModalOpen(true)}
-            disabled={painting.colors.size === 0}
-            className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 transition"
-          >
-            <Download className="h-5 w-5" />
-            Exportar
-          </button>
-          <button
-            onClick={clearAll}
-            className="flex-1 px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
-          >
-            Limpar tudo
-          </button>
-        </div>
-
-        <SessionHistory />
+          <Upload className="h-3.5 w-3.5" /> Novo modelo
+        </button>
+        <button
+          onClick={() => setExportModalOpen(true)}
+          disabled={painting.colors.size === 0}
+          className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium flex items-center gap-1.5 transition"
+        >
+          <Download className="h-3.5 w-3.5" /> Exportar
+        </button>
+        <button
+          onClick={clearAll}
+          className="px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-medium transition"
+        >
+          Limpar tudo
+        </button>
       </div>
 
-      <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <STLViewer />
+      {uploadOpen && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 flex-shrink-0">
+          <STLUploader />
+        </div>
+      )}
+
+      <div className="flex-1 flex gap-2.5 min-h-0">
+        {/* Left — active tool controls, used constantly while working */}
+        <div className="w-64 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0">
+          <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <PaintToolbar />
+          </div>
+        </div>
+
+        {/* Center — viewport */}
+        <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden min-w-0">
+          <STLViewer />
+        </div>
+
+        {/* Right — setup/organization panels */}
+        <div className="w-80 flex flex-col gap-2.5 overflow-y-auto flex-shrink-0">
+          <CollapsibleSection title="Auto-segmentação" icon={<Wand2 className="h-4 w-4 text-purple-500" />}>
+            <AutoSegmentPanel />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Conectores"
+            icon={<Link2 className="h-4 w-4 text-orange-500" />}
+            badge={connectors.length > 0 && (
+              <span className="text-xs font-normal bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-full">
+                {connectors.length}
+              </span>
+            )}
+          >
+            <ConnectorPanel />
+          </CollapsibleSection>
+
+          <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <h3 className="font-semibold px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm">
+              <Palette className="h-4 w-4 text-gray-500" />
+              Partes
+              {painting.colors.size > 0 && (
+                <span className="text-xs font-normal bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-full ml-auto">
+                  {painting.colors.size}
+                </span>
+              )}
+            </h3>
+            <ColorList />
+          </div>
+
+          <SessionHistory />
+        </div>
       </div>
 
       <ExportModal open={exportModalOpen} onOpenChange={setExportModalOpen} />
