@@ -353,30 +353,87 @@ export function findColorBoundaryEdges(
 // maxFaces). Lets the user click anywhere near a joint — not just the exact
 // boundary pixel — and still land a physically correct connector: manual
 // placement no longer requires hitting a razor-thin seam precisely.
+// Minimal binary min-heap, keyed by a numeric priority. Used by
+// findNearestBoundary to expand faces in true nearest-to-farthest order —
+// a plain BFS explores in graph-hop order, which on a densely tessellated
+// mesh can burn its whole search budget fanning out in irrelevant
+// directions before ever reaching a boundary that's geometrically close.
+class MinHeap<T> {
+  private items: { key: number; value: T }[] = [];
+
+  push(key: number, value: T): void {
+    this.items.push({ key, value });
+    let i = this.items.length - 1;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (this.items[parent].key <= this.items[i].key) break;
+      [this.items[parent], this.items[i]] = [this.items[i], this.items[parent]];
+      i = parent;
+    }
+  }
+
+  pop(): T | undefined {
+    if (this.items.length === 0) return undefined;
+    const top = this.items[0];
+    const last = this.items.pop()!;
+    if (this.items.length > 0) {
+      this.items[0] = last;
+      let i = 0;
+      const n = this.items.length;
+      for (;;) {
+        const l = i * 2 + 1, r = i * 2 + 2;
+        let smallest = i;
+        if (l < n && this.items[l].key < this.items[smallest].key) smallest = l;
+        if (r < n && this.items[r].key < this.items[smallest].key) smallest = r;
+        if (smallest === i) break;
+        [this.items[smallest], this.items[i]] = [this.items[i], this.items[smallest]];
+        i = smallest;
+      }
+    }
+    return top.value;
+  }
+
+  peekKey(): number | undefined {
+    return this.items[0]?.key;
+  }
+
+  get size(): number {
+    return this.items.length;
+  }
+}
+
 export function findNearestBoundary(
   startFace: number,
   hitPoint: Vector3,
   positions: Float32Array,
   colorMap: Map<number, ColorID>,
   adjacency: Map<number, number[]>,
-  maxFaces: number = 1500
+  maxFaces: number = 20000
 ): BoundaryEdgeInfo | null {
   // Deliberately does NOT require the hovered face itself to be painted, nor
   // does it require two DIFFERENTLY colored faces to be directly adjacent —
   // real paint jobs almost always leave a sliver of unpainted triangles
-  // right at a seam, and a naive "current vs. neighbor" comparison misses
-  // the transition whenever the walk reaches a colored face by passing
-  // through an unpainted one first (unpainted has no color to compare).
-  // Instead this walks outward in every direction and, for every distinct
-  // color it touches, remembers the closest point reached on that color.
-  // The two nearest distinct colors overall become the connector's pin/hole.
-  const visited = new Set<number>([startFace]);
-  const queue = [startFace];
+  // right at a seam. Expands nearest-face-first (not breadth-first) so a
+  // boundary that's geometrically close is found quickly even through a
+  // densely tessellated mesh, and stops as soon as nothing closer than the
+  // two nearest colors found so far remains to explore.
+  const visited = new Set<number>();
+  const heap = new MinHeap<number>();
+  heap.push(0, startFace);
+
   const closestByColor = new Map<ColorID, { point: Vector3; dist: number; face: number }>();
   let processed = 0;
 
-  while (queue.length > 0 && processed < maxFaces) {
-    const current = queue.shift()!;
+  while (heap.size > 0 && processed < maxFaces) {
+    if (closestByColor.size >= 2) {
+      const [, second] = Array.from(closestByColor.values()).sort((a, b) => a.dist - b.dist);
+      const nextKey = heap.peekKey();
+      if (nextKey !== undefined && nextKey >= second.dist) break;
+    }
+
+    const current = heap.pop()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
     processed++;
 
     const color = colorMap.get(current);
@@ -391,8 +448,7 @@ export function findNearestBoundary(
 
     for (const nb of (adjacency.get(current) || [])) {
       if (!visited.has(nb)) {
-        visited.add(nb);
-        queue.push(nb);
+        heap.push(getFaceCentroid(positions, nb).distanceTo(hitPoint), nb);
       }
     }
   }
