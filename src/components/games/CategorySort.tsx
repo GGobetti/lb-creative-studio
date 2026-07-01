@@ -161,7 +161,7 @@ export function CategorySort() {
         onBack={() => router.push('/dashboard/games')}
       />
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStl.id}
@@ -169,13 +169,13 @@ export function CategorySort() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
             transition={{ duration: 0.18 }}
-            className="flex items-center gap-3"
+            className="flex items-center gap-4"
           >
-            <div className="w-20 h-20 shrink-0 rounded-xl overflow-hidden bg-muted border border-border flex items-center justify-center">
+            <div className="w-32 h-32 sm:w-36 sm:h-36 shrink-0 rounded-xl overflow-hidden bg-muted border border-border flex items-center justify-center">
               {currentStl.imageUrl ? (
                 <img src={currentStl.imageUrl} alt={currentStl.title} className="w-full h-full object-cover" />
               ) : (
-                <ImageIcon size={24} className="text-muted-foreground/40" />
+                <ImageIcon size={32} className="text-muted-foreground/40" />
               )}
             </div>
             <div className="flex-1 min-w-0">

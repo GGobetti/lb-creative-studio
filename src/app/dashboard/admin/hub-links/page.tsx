@@ -48,7 +48,7 @@ export default function HubLinksAdminPage() {
   useEffect(() => {
     if (profile?.role === "sysadmin") {
       fetchLinks()
-    } else if (profile && profile.role !== "sysadmin") {
+    } else if (profile) {
       setError("Acesso restrito a administradores.")
       setLoading(false)
     }

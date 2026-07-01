@@ -152,7 +152,7 @@ export function TagDetective() {
         onBack={() => router.push('/dashboard/games')}
       />
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
@@ -162,12 +162,12 @@ export function TagDetective() {
             transition={{ duration: 0.18 }}
             className="flex flex-col gap-4"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 shrink-0 rounded-xl overflow-hidden bg-muted border border-border flex items-center justify-center">
+            <div className="flex items-center gap-4">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 shrink-0 rounded-xl overflow-hidden bg-muted border border-border flex items-center justify-center">
                 {currentQuestion.imageUrl ? (
                   <img src={currentQuestion.imageUrl} alt="STL" className="w-full h-full object-cover" />
                 ) : (
-                  <ImageIcon size={20} className="text-muted-foreground/40" />
+                  <ImageIcon size={32} className="text-muted-foreground/40" />
                 )}
               </div>
               <div>

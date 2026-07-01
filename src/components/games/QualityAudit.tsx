@@ -596,7 +596,7 @@ export function QualityAudit() {
     <div className="flex flex-col h-full">
       <GameHeader title="Quality Audit" pointsPerAction={POINTS_PER_AUDIT} onBack={() => router.push('/dashboard/games')} />
 
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-w-4xl mx-auto w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={q.id}
