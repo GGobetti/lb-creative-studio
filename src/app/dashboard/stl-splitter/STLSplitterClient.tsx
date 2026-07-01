@@ -38,30 +38,34 @@ export function STLSplitterClient() {
   // 1152px AND — having no h-full/flex-1 of its own — breaks any h-full
   // percentage chain below it, leaving a shrunken box surrounded by unused
   // space. We can't touch that shared layout (it'd affect every other
-  // dashboard page), so instead we measure <main>'s real content box
-  // (ignoring the constraining wrapper entirely) and pin ourselves to it
-  // with fixed positioning, which isn't subject to ancestor width/height
-  // constraints at all.
+  // dashboard page), so instead we measure <main>'s real content box and
+  // negative-margin our way out to its full edges, staying in NORMAL
+  // document flow (an earlier version used position:fixed, which took the
+  // element out of the flow entirely and broke wheel-scroll delegation —
+  // the browser started routing scroll to unrelated page elements instead
+  // of our own internal overflow-y-auto panels).
   const rootRef = useRef<HTMLDivElement>(null);
-  const [bounds, setBounds] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const [bounds, setBounds] = useState<{ marginLeft: number; marginRight: number; width: number; height: number } | null>(null);
 
   useEffect(() => {
     const el = rootRef.current;
     const main = el?.closest('main');
-    if (!main) return;
+    if (!el || !main || !el.parentElement) return;
 
     const measure = () => {
-      const rect = main.getBoundingClientRect();
-      const style = getComputedStyle(main);
-      const padTop = parseFloat(style.paddingTop) || 0;
-      const padBottom = parseFloat(style.paddingBottom) || 0;
-      const padLeft = parseFloat(style.paddingLeft) || 0;
-      const padRight = parseFloat(style.paddingRight) || 0;
+      const mainRect = main.getBoundingClientRect();
+      const mainStyle = getComputedStyle(main);
+      const padTop = parseFloat(mainStyle.paddingTop) || 0;
+      const padBottom = parseFloat(mainStyle.paddingBottom) || 0;
+      const padLeft = parseFloat(mainStyle.paddingLeft) || 0;
+      const padRight = parseFloat(mainStyle.paddingRight) || 0;
+      const parentRect = el.parentElement!.getBoundingClientRect(); // the max-w-6xl mx-auto div
+
       setBounds({
-        top: rect.top + padTop,
-        left: rect.left + padLeft,
-        width: rect.width - padLeft - padRight,
-        height: rect.height - padTop - padBottom,
+        marginLeft: (mainRect.left + padLeft) - parentRect.left,
+        marginRight: parentRect.right - (mainRect.right - padRight),
+        width: mainRect.width - padLeft - padRight,
+        height: mainRect.height - padTop - padBottom,
       });
     };
 
@@ -73,8 +77,8 @@ export function STLSplitterClient() {
   }, [mode]);
 
   const fillStyle: React.CSSProperties = bounds
-    ? { position: 'fixed', top: bounds.top, left: bounds.left, width: bounds.width, height: bounds.height, zIndex: 1 }
-    : { position: 'relative', width: '100%', height: '100%' };
+    ? { marginLeft: bounds.marginLeft, marginRight: bounds.marginRight, width: bounds.width, height: bounds.height }
+    : { width: '100%', height: '100%' };
 
   // Always-fresh refs so the 30s timer doesn't reset every time the user
   // paints a stroke (painting/connectors change on every action — if they
