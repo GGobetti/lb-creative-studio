@@ -383,20 +383,56 @@ export function sampleConnectorPositions(
   edges: BoundaryEdgeInfo[],
   minSpacingMm: number
 ): BoundaryEdgeInfo[] {
-  const result: BoundaryEdgeInfo[] = [];
-
+  // Group by the specific (colorA, colorB) seam first. A connector's job is
+  // to pin two SPECIFIC parts together, so its spacing budget must not be
+  // eaten by an unrelated seam that happens to sit nearby in 3D space (e.g.
+  // a claw boundary crowding out the crest-to-body boundary, leaving the
+  // crest with a connector only wherever a stray point survived).
+  const groups = new Map<string, BoundaryEdgeInfo[]>();
   for (const edge of edges) {
-    let tooClose = false;
-    for (const placed of result) {
-      if (placed.midpoint.distanceTo(edge.midpoint) < minSpacingMm) {
-        tooClose = true;
-        break;
-      }
-    }
-    if (!tooClose) result.push(edge);
+    const key = [edge.colorA, edge.colorB].sort().join('|');
+    const arr = groups.get(key);
+    if (arr) arr.push(edge); else groups.set(key, [edge]);
   }
 
-  console.log(`🔩 Sampled ${result.length} connector positions from ${edges.length} boundary edges`);
+  const result: BoundaryEdgeInfo[] = [];
+  for (const group of groups.values()) {
+    result.push(...sampleAlongSeam(group, minSpacingMm));
+  }
+
+  console.log(`🔩 Sampled ${result.length} connector positions from ${edges.length} boundary edges across ${groups.size} seam(s)`);
+  return result;
+}
+
+// Spreads points evenly along a single seam instead of taking whatever order
+// the mesh's face scan happens to hand them in (which tends to bunch
+// connectors near an arbitrary corner/tip rather than along the seam).
+function sampleAlongSeam(group: BoundaryEdgeInfo[], minSpacingMm: number): BoundaryEdgeInfo[] {
+  if (group.length === 0) return [];
+
+  const centroid = new Vector3();
+  for (const e of group) centroid.add(e.midpoint);
+  centroid.divideScalar(group.length);
+
+  // Crude principal axis: direction toward the point farthest from centroid.
+  // Good enough to sort an elongated seam end-to-end instead of by scan order.
+  let axis = new Vector3(1, 0, 0);
+  let maxSpread = -Infinity;
+  for (const e of group) {
+    const d = e.midpoint.clone().sub(centroid);
+    const spread = d.lengthSq();
+    if (spread > maxSpread) { maxSpread = spread; axis = spread > 1e-10 ? d.normalize() : axis; }
+  }
+
+  const sorted = [...group].sort(
+    (a, b) => a.midpoint.clone().sub(centroid).dot(axis) - b.midpoint.clone().sub(centroid).dot(axis)
+  );
+
+  const result: BoundaryEdgeInfo[] = [];
+  for (const edge of sorted) {
+    const tooClose = result.some((p) => p.midpoint.distanceTo(edge.midpoint) < minSpacingMm);
+    if (!tooClose) result.push(edge);
+  }
   return result;
 }
 
