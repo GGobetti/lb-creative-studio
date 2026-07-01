@@ -166,6 +166,15 @@ function cleanTitle(raw: string): string {
     word.replace(/([a-z])([A-Z])/g, '$1 $2')
   )
 
+  // Remover parênteses de sufixo já existentes (qualquer capitalização) — serão
+  // recalculados e reinseridos de forma padronizada no passo 7.
+  text = text.replace(/\(\s*chaveiro\s*\)/gi, '')
+  text = text.replace(/\(\s*articulado\s*\)/gi, '')
+  text = text.replace(/\(\s*chaveiro\s*-\s*articulado\s*\)/gi, '')
+  text = text.replace(/\(\s*articulado\s*-\s*chaveiro\s*\)/gi, '')
+  text = text.replace(/\(\s*multipartes(\s*-\s*no-?ams)?\s*\)/gi, '')
+  text = text.replace(/\(\s*no-?ams\s*\)/gi, '')
+
   // ── 5. Normalizar separadores e espaços ──────────────────────────────────
   text = text.replace(/\+/g, ' ')
   text = text.replace(/_/g, ' ')
@@ -208,14 +217,15 @@ function cleanTitle(raw: string): string {
     suffixes.push(`(${parts})`)
   }
 
-  // Articulados
-  if (/articul|flexi|flexibl|spring|print.in.place|moving|poseable/i.test(raw)) {
-    suffixes.push('(Articulado)')
-  }
-
-  // Chaveiro
-  if (/chaveiro|keychain|key.chain|key.ring|portacha/i.test(raw)) {
-    suffixes.push('(Chaveiro)')
+  // Chaveiro / Articulado — unificados em um único parêntese (padrão Multipartes - NO-AMS)
+  const isArticulado = /articul|flexi|flexibl|spring|print.in.place|moving|poseable/i.test(raw)
+  const isChaveiro = /chaveiro|keychain|key.chain|key.ring|portacha/i.test(raw)
+  if (isChaveiro || isArticulado) {
+    const parts = [
+      isChaveiro ? 'Chaveiro' : null,
+      isArticulado ? 'Articulado' : null,
+    ].filter(Boolean).join(' - ')
+    suffixes.push(`(${parts})`)
   }
 
   if (suffixes.length > 0) {
