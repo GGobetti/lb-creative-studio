@@ -293,6 +293,37 @@ export interface BoundaryEdgeInfo {
   gap: number;            // distance between the two face centroids (used to size embed depth)
 }
 
+// Computes the connector axis between two faces on either side of a seam.
+// A purely tangential axis (a straight line between two points that both
+// sit ON the surface) tends to end up nearly parallel to the local surface
+// — and by extension nearly coplanar with the part's boundary cap — which
+// is a known-hard case for CSG boolean evaluators: they can't cleanly
+// resolve a near-degenerate intersection and leave behind slivers or
+// flipped-normal fragments (confirmed by trying it: manually tilting a
+// connector ~20-30° off the raw tangent visibly cleaned up the result).
+// Blending in some of the local outward normal, subtracted (i.e. tilted
+// inward), reliably makes the pin dip through real material instead of
+// skimming its surface, without needing the user to hand-tune every one.
+function computeSeamAxis(positions: Float32Array, faceA: number, faceB: number): { axis: Vector3; gap: number } {
+  const centroidA = getFaceCentroid(positions, faceA);
+  const centroidB = getFaceCentroid(positions, faceB);
+  const gap = centroidA.distanceTo(centroidB);
+
+  if (gap <= 1e-6) {
+    return { axis: getFaceNormal(positions, faceA), gap };
+  }
+
+  const tangent = new Vector3().subVectors(centroidA, centroidB).divideScalar(gap);
+  const nA = getFaceNormal(positions, faceA);
+  const nB = getFaceNormal(positions, faceB);
+  const outward = nA.clone().add(nB);
+  const axis = outward.lengthSq() > 1e-10
+    ? tangent.clone().addScaledVector(outward.normalize(), -0.5).normalize()
+    : tangent;
+
+  return { axis, gap };
+}
+
 // Finds all shared edges between faces of different colors.
 // Returns one entry per adjacent pair of differently-colored faces.
 export function findColorBoundaryEdges(
@@ -330,15 +361,8 @@ export function findColorBoundaryEdges(
         const [bx, by, bz] = parts[1].split(',').map(Number);
         const midpoint = new Vector3((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
 
-        // Tangential direction across the seam (NOT the surface normal — that
-        // points straight out of the model, which is why connectors used to
-        // look like isolated pins instead of bridging the two parts).
-        const centroidA = getFaceCentroid(positions, fA);
-        const centroidB = getFaceCentroid(positions, fB);
-        const gap = centroidA.distanceTo(centroidB);
-        const normal = gap > 1e-6
-          ? new Vector3().subVectors(centroidA, centroidB).divideScalar(gap)
-          : getFaceNormal(positions, fA);
+        // Tangential across the seam, tilted inward — see computeSeamAxis.
+        const { axis: normal, gap } = computeSeamAxis(positions, fA, fB);
 
         edges.push({ midpoint, normal, colorA: cA, colorB: cB, gap });
       }
@@ -459,11 +483,8 @@ export function findNearestBoundary(
   const [colorA, infoA] = entries[0];
   const [colorB, infoB] = entries[1];
 
-  const gap = infoA.point.distanceTo(infoB.point);
   const midpoint = infoA.point.clone().add(infoB.point).multiplyScalar(0.5);
-  const normal = gap > 1e-6
-    ? new Vector3().subVectors(infoA.point, infoB.point).divideScalar(gap)
-    : getFaceNormal(positions, infoA.face);
+  const { axis: normal, gap } = computeSeamAxis(positions, infoA.face, infoB.face);
 
   return { midpoint, normal, colorA, colorB, gap };
 }
