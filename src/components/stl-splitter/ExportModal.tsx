@@ -32,7 +32,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
 
       setExportProgress(30);
       if (connectors.length > 0) setExportProgress(40); // CSG will take longer
-      const blob = await export3MF(model.geometry, painting.colorMap, painting.colors, connectors);
+      const { blob, warnings } = await export3MF(model.geometry, painting.colorMap, painting.colors, connectors);
 
       setExportProgress(75);
       const url = URL.createObjectURL(blob);
@@ -45,10 +45,18 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
       URL.revokeObjectURL(url);
 
       setExportProgress(100);
-      setTimeout(() => {
+      if (warnings.length > 0) {
+        // Some connector(s) failed to embed — keep the modal open so the
+        // user actually sees which part(s), instead of silently shipping a
+        // file that's missing them.
+        setExportError(`Exportado com avisos:\n${warnings.join('\n')}`);
         setExportProgress(0);
-        onOpenChange(false);
-      }, 500);
+      } else {
+        setTimeout(() => {
+          setExportProgress(0);
+          onOpenChange(false);
+        }, 500);
+      }
     } catch (error) {
       setExportError('Falha na exportação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
       setExportProgress(0);
@@ -70,7 +78,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         {exportError && (
           <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 rounded-lg flex gap-2 items-start">
             <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-red-900 dark:text-red-100">{exportError}</p>
+            <p className="text-xs text-red-900 dark:text-red-100 whitespace-pre-line">{exportError}</p>
           </div>
         )}
 

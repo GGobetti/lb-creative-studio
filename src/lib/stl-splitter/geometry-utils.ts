@@ -663,19 +663,135 @@ function findBoundaryLoops(
 
 // Fan-triangulates each boundary loop from its centroid, producing cap
 // triangles that close the part into a (near-)watertight solid.
+// Newell's method: normal of a possibly-non-planar closed polygon. Works
+// for any simple loop, not just convex/planar ones.
+function computePolygonNormal(loop: Vector3[]): Vector3 {
+  const normal = new Vector3();
+  for (let i = 0; i < loop.length; i++) {
+    const curr = loop[i];
+    const next = loop[(i + 1) % loop.length];
+    normal.x += (curr.y - next.y) * (curr.z + next.z);
+    normal.y += (curr.z - next.z) * (curr.x + next.x);
+    normal.z += (curr.x - next.x) * (curr.y + next.y);
+  }
+  return normal.lengthSq() > 1e-12 ? normal.normalize() : new Vector3(0, 0, 1);
+}
+
+function pointInTriangle2D(
+  p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }
+): boolean {
+  const sign = (p1: { x: number; y: number }, p2: { x: number; y: number }, p3: { x: number; y: number }) =>
+    (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+  const d1 = sign(p, a, b), d2 = sign(p, b, c), d3 = sign(p, c, a);
+  const hasNeg = d1 < 0 || d2 < 0 || d3 < 0;
+  const hasPos = d1 > 0 || d2 > 0 || d3 > 0;
+  return !(hasNeg && hasPos);
+}
+
+// Ear-clipping triangulation of a simple (non-self-intersecting) 2D
+// polygon. Returns triangles as index triples into `points`, or an empty
+// array if it can't fully resolve the polygon (caller falls back to a
+// centroid fan in that case).
+function triangulatePolygon2D(points: { x: number; y: number }[]): [number, number, number][] {
+  const n = points.length;
+  if (n < 3) return [];
+
+  const signedArea = (idx: number[]) => {
+    let area = 0;
+    for (let i = 0; i < idx.length; i++) {
+      const a = points[idx[i]];
+      const b = points[idx[(i + 1) % idx.length]];
+      area += a.x * b.y - b.x * a.y;
+    }
+    return area / 2;
+  };
+
+  const remaining = Array.from({ length: n }, (_, i) => i);
+  if (signedArea(remaining) < 0) remaining.reverse(); // normalize to CCW
+
+  const triangles: [number, number, number][] = [];
+  let guard = 0;
+  while (remaining.length > 3 && guard < n * n + 10) {
+    guard++;
+    let earFound = false;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const iPrev = remaining[(i - 1 + remaining.length) % remaining.length];
+      const iCurr = remaining[i];
+      const iNext = remaining[(i + 1) % remaining.length];
+      const a = points[iPrev], b = points[iCurr], c = points[iNext];
+
+      const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      if (cross <= 1e-12) continue; // reflex vertex, not a valid ear tip
+
+      let containsOther = false;
+      for (const idx of remaining) {
+        if (idx === iPrev || idx === iCurr || idx === iNext) continue;
+        if (pointInTriangle2D(points[idx], a, b, c)) { containsOther = true; break; }
+      }
+      if (containsOther) continue;
+
+      triangles.push([iPrev, iCurr, iNext]);
+      remaining.splice(i, 1);
+      earFound = true;
+      break;
+    }
+
+    if (!earFound) return []; // degenerate/self-intersecting — let caller fall back
+  }
+
+  if (remaining.length === 3) triangles.push([remaining[0], remaining[1], remaining[2]]);
+  return triangles;
+}
+
+// Closes each boundary loop with real triangles instead of a naive fan from
+// the centroid — a fan self-intersects (and confuses CSG downstream) on any
+// concave loop, which is common for organic shapes like horns or claws.
+// Projects the loop onto its best-fit plane (Newell's method) and runs
+// 2D ear-clipping, falling back to a centroid fan only if that fails.
 function capLoops(loops: Vector3[][]): number[] {
   const tris: number[] = [];
-  for (const loop of loops) {
-    const centroid = new Vector3();
-    for (const v of loop) centroid.add(v);
-    centroid.divideScalar(loop.length);
 
-    for (let i = 0; i < loop.length; i++) {
-      const a = loop[i];
-      const b = loop[(i + 1) % loop.length];
-      tris.push(a.x, a.y, a.z, b.x, b.y, b.z, centroid.x, centroid.y, centroid.z);
+  for (const loop of loops) {
+    if (loop.length < 3) continue;
+
+    if (loop.length === 3) {
+      const [a, b, c] = loop;
+      tris.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+      continue;
+    }
+
+    const normal = computePolygonNormal(loop);
+    const arbitrary = Math.abs(normal.x) < 0.9 ? new Vector3(1, 0, 0) : new Vector3(0, 1, 0);
+    const u = new Vector3().crossVectors(normal, arbitrary).normalize();
+    const v = new Vector3().crossVectors(normal, u).normalize();
+    const origin = loop[0];
+
+    const points2D = loop.map((p) => {
+      const d = p.clone().sub(origin);
+      return { x: d.dot(u), y: d.dot(v) };
+    });
+
+    const triIndices = triangulatePolygon2D(points2D);
+
+    if (triIndices.length > 0) {
+      for (const [i0, i1, i2] of triIndices) {
+        const a = loop[i0], b = loop[i1], c = loop[i2];
+        tris.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+      }
+    } else {
+      // Fallback: centroid fan (better than leaving the loop unclosed)
+      const centroid = new Vector3();
+      for (const p of loop) centroid.add(p);
+      centroid.divideScalar(loop.length);
+      for (let i = 0; i < loop.length; i++) {
+        const a = loop[i];
+        const b = loop[(i + 1) % loop.length];
+        tris.push(a.x, a.y, a.z, b.x, b.y, b.z, centroid.x, centroid.y, centroid.z);
+      }
     }
   }
+
   return tris;
 }
 

@@ -13,13 +13,19 @@ import { buildCappedPartGeometry, buildWholeMeshEdgeToFaces } from './geometry-u
 //   - partA → ADDITION of a cylinder  (the protruding pin)
 //   - partB → SUBTRACTION of a wider cylinder (the matching hole)
 
+export interface Export3MFResult {
+  blob: Blob;
+  warnings: string[];
+}
+
 export async function export3MF(
   geometry: BufferGeometry,
   colorMap: Map<FaceIndex, ColorID>,
   colors: Map<ColorID, ColorGroup>,
   connectors: ConnectorPoint[] = []
-): Promise<Blob> {
+): Promise<Export3MFResult> {
   const positions = geometry.getAttribute('position').array as Float32Array;
+  const warnings: string[] = [];
 
   // Collect face indices per color
   const facesByColor = new Map<ColorID, number[]>();
@@ -38,6 +44,7 @@ export async function export3MF(
     if (faceIndices.length === 0) continue;
 
     const cappedPositions = buildCappedPartGeometry(positions, faceIndices, colorMap, colorId, edgeToFaces);
+    const partName = colors.get(colorId)?.name ?? colorId;
 
     if (connectors.length > 0) {
       const partGeo = new THREE.BufferGeometry();
@@ -52,15 +59,16 @@ export async function export3MF(
         let geo = partGeo;
         if (asPin.length > 0) {
           geo = await applyConnectorsCSG(geo, asPin, colorId, 'pin');
-          console.log(`🔩 Export: applied ${asPin.length} pins to ${colors.get(colorId)?.name}`);
+          console.log(`🔩 Export: applied ${asPin.length} pins to ${partName}`);
         }
         if (asHole.length > 0) {
           geo = await applyConnectorsCSG(geo, asHole, colorId, 'hole');
-          console.log(`🔩 Export: applied ${asHole.length} holes to ${colors.get(colorId)?.name}`);
+          console.log(`🔩 Export: applied ${asHole.length} holes to ${partName}`);
         }
         partGeometries.set(colorId, geo.getAttribute('position').array as Float32Array);
       } catch (err) {
-        console.warn(`⚠️ CSG failed for ${colors.get(colorId)?.name}, exporting capped part without connectors:`, err);
+        console.warn(`⚠️ CSG failed for ${partName}, exporting capped part without connectors:`, err);
+        warnings.push(`Conector(es) da parte "${partName}" não puderam ser aplicados — peça exportada sem eles.`);
         partGeometries.set(colorId, cappedPositions);
       }
     } else {
@@ -90,7 +98,7 @@ export async function export3MF(
     { level: 0 }
   );
 
-  return new Blob([zip], { type: 'application/zip' });
+  return { blob: new Blob([zip], { type: 'application/zip' }), warnings };
 }
 
 function buildModelXML(

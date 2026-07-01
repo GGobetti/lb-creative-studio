@@ -612,6 +612,15 @@ export function STLViewer() {
       cursorRef.current.style.display = 'none';
     }
 
+    // Dim the whole model while placing connectors, on top of whatever
+    // per-part transparency the user set manually — vertex alpha and
+    // material.opacity multiply together, so this doesn't clobber those.
+    if (meshRef.current) {
+      const mat = meshRef.current.material as MeshStandardMaterial;
+      mat.opacity = tool === 'connector' ? 0.55 : 1;
+      mat.depthWrite = tool !== 'connector';
+    }
+
     if (tool !== 'connector' && connectorPreviewRef.current) {
       connectorPreviewRef.current.visible = false;
       pendingConnectorRef.current = null;
