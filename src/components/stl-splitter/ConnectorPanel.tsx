@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { findColorBoundaryEdges, sampleConnectorPositions } from '@/lib/stl-splitter/geometry-utils';
-import { Link2, Trash2, Zap } from 'lucide-react';
+import { Trash2, Zap } from 'lucide-react';
 
 export function ConnectorPanel() {
   const model           = useSTLSplitterStore((state) => state.model);
@@ -52,12 +52,7 @@ export function ConnectorPanel() {
   if (!model) return null;
 
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
-      <h3 className="font-semibold text-sm flex items-center gap-2">
-        <Link2 className="h-4 w-4 text-orange-500" />
-        Conectores
-      </h3>
-
+    <div className="space-y-3">
       {/* Radius */}
       <div>
         <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">

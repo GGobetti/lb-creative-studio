@@ -14,6 +14,15 @@ import {
   STLSplitterUIState,
   STLSplitterState,
 } from '@/types/stl-splitter.types';
+import {
+  saveSessionToLocalStorage,
+  loadSessionsFromLocalStorage,
+  deleteSessionFromLocalStorage,
+  deserializeColorMap,
+  deserializeGeometry,
+  deserializeColors,
+  deserializeConnectors,
+} from '@/lib/stl-splitter/session-storage';
 
 const AUTO_SEGMENT_PALETTE = [
   '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6',
@@ -125,7 +134,7 @@ const initialState: STLSplitterState = {
   model: null,
   painting: initialPaintingState,
   colorMapHistory: [],
-  sessions: [],
+  sessions: typeof window !== 'undefined' ? loadSessionsFromLocalStorage() : [],
   ui: initialUIState,
   connectors: [],
   connectorRadius: 1.5,
@@ -503,19 +512,50 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
     }));
   },
 
-  // Session management (stubs)
+  // Session management — persisted to localStorage
   addSession: (session) => {
-    set((state) => ({
-      sessions: [session, ...state.sessions].slice(0, 5), // Keep only last 5 sessions
-    }));
+    saveSessionToLocalStorage(session);
+    set((state) => {
+      const filtered = state.sessions.filter((s) => s.id !== session.id);
+      return { sessions: [...filtered, session].slice(-5) }; // Keep only last 5 sessions
+    });
   },
 
-  loadSession: (_sessionId) => {
-    // Stub: Will be implemented in Task 9
-    // Should decompress and restore colorMap and geometry
+  loadSession: (sessionId) => {
+    const session = get().sessions.find((s) => s.id === sessionId);
+    if (!session) {
+      console.warn('⚠️ loadSession: session not found', sessionId);
+      return;
+    }
+
+    const geometry = deserializeGeometry(session.geometryCompressed);
+    geometry.computeBoundingBox();
+    const boundingBox = geometry.boundingBox || new Box3();
+
+    const newModel: STLModel = {
+      geometry,
+      originalFile: session.originalFileName,
+      boundingBox,
+      vertexCount: geometry.attributes.position.count,
+      faceCount: session.metadata.faceCount,
+    };
+
+    set({
+      model: newModel,
+      connectors: deserializeConnectors(session.connectorsJSON),
+      colorMapHistory: [],
+      painting: {
+        ...initialPaintingState,
+        colorMap: deserializeColorMap(session.colorMapCompressed) as Map<FaceIndex, ColorID>,
+        colors: deserializeColors(session.colorsJSON),
+      },
+      ui: { ...initialUIState, mode: 'painting' },
+    });
+    console.log(`📂 Session restored: ${session.originalFileName}`);
   },
 
   deleteSession: (sessionId) => {
+    deleteSessionFromLocalStorage(sessionId);
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== sessionId),
     }));

@@ -107,8 +107,8 @@ export function PaintToolbar() {
   return (
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
 
-      {/* Tool selector — 3+3 grid */}
-      <div className="grid grid-cols-3 gap-1">
+      {/* Tool selector — 4+3 grid */}
+      <div className="grid grid-cols-4 gap-1">
         {TOOLS.map((tool) => (
           <button
             key={tool.id}

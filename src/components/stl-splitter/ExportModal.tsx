@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { export3MF } from '@/lib/stl-splitter/3mf-exporter';
-import { Download } from 'lucide-react';
+import { Download, AlertCircle } from 'lucide-react';
 
 interface ExportModalProps {
   open: boolean;
@@ -17,15 +17,17 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   const setExportProgress = useSTLSplitterStore((state) => state.setExportProgress);
   const [filename, setFilename] = useState('model_split');
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleExport = async () => {
     if (!model || !model.geometry || painting.colors.size === 0) {
-      alert('No model or colors to export');
+      setExportError('Nenhum modelo ou cor para exportar.');
       return;
     }
 
     try {
       setIsExporting(true);
+      setExportError(null);
       setExportProgress(0);
 
       setExportProgress(30);
@@ -48,7 +50,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         onOpenChange(false);
       }, 500);
     } catch (error) {
-      alert('Export failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      setExportError('Falha na exportação: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
       setExportProgress(0);
     } finally {
       setIsExporting(false);
@@ -60,23 +62,30 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full">
-        <h2 className="text-lg font-bold mb-2">Export to 3MF</h2>
+        <h2 className="text-lg font-bold mb-2">Exportar para 3MF</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Your model will be saved as {filename}.3mf with {painting.colors.size} separate parts.
+          Seu modelo será salvo como {filename}.3mf com {painting.colors.size} partes separadas.
         </p>
 
+        {exportError && (
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 rounded-lg flex gap-2 items-start">
+            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-red-900 dark:text-red-100">{exportError}</p>
+          </div>
+        )}
+
         <div className="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg mb-4">
-          <p className="text-sm font-medium mb-2">Export Summary</p>
+          <p className="text-sm font-medium mb-2">Resumo da exportação</p>
           <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-            <li>📦 Parts: {painting.colors.size}</li>
-            <li>📐 Vertices: {model?.vertexCount?.toLocaleString() || '0'}</li>
+            <li>📦 Partes: {painting.colors.size}</li>
+            <li>📐 Vértices: {model?.vertexCount?.toLocaleString() || '0'}</li>
             <li>🔺 Faces: {model?.faceCount?.toLocaleString() || '0'}</li>
             {connectors.length > 0 && <li>🔩 Conectores: {connectors.length} (CSG aplicado no export)</li>}
           </ul>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Filename</label>
+          <label className="block text-sm font-medium mb-1">Nome do arquivo</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -101,7 +110,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
             disabled={isExporting}
             className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             onClick={handleExport}
@@ -109,7 +118,7 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
-            {isExporting ? 'Exporting...' : 'Export'}
+            {isExporting ? 'Exportando...' : 'Exportar'}
           </button>
         </div>
       </div>

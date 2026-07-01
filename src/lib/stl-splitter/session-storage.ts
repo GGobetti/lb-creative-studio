@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SavedSession } from '@/types/stl-splitter.types';
+import { SavedSession, ColorID, ColorGroup, ConnectorPoint } from '@/types/stl-splitter.types';
 
 const STORAGE_KEY = 'splitter_sessions';
 const MAX_SESSIONS = 5;
@@ -96,5 +96,44 @@ export function deserializeGeometry(compressed: string): THREE.BufferGeometry {
   } catch (error) {
     console.error('Failed to deserialize geometry:', error);
     return new THREE.BufferGeometry();
+  }
+}
+
+export function serializeColors(colors: Map<ColorID, ColorGroup>): string {
+  try {
+    return btoa(JSON.stringify(Array.from(colors.values())));
+  } catch (error) {
+    console.error('Failed to serialize colors:', error);
+    return '';
+  }
+}
+
+export function deserializeColors(compressed: string): Map<ColorID, ColorGroup> {
+  try {
+    if (!compressed) return new Map();
+    const arr = JSON.parse(atob(compressed)) as ColorGroup[];
+    return new Map(arr.map((c) => [c.id, c]));
+  } catch (error) {
+    console.error('Failed to deserialize colors:', error);
+    return new Map();
+  }
+}
+
+export function serializeConnectors(connectors: ConnectorPoint[]): string {
+  try {
+    return btoa(JSON.stringify(connectors));
+  } catch (error) {
+    console.error('Failed to serialize connectors:', error);
+    return '';
+  }
+}
+
+export function deserializeConnectors(compressed: string): ConnectorPoint[] {
+  try {
+    if (!compressed) return [];
+    return JSON.parse(atob(compressed)) as ConnectorPoint[];
+  } catch (error) {
+    console.error('Failed to deserialize connectors:', error);
+    return [];
   }
 }

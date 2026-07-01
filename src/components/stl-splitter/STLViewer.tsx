@@ -691,6 +691,20 @@ export function STLViewer() {
         style={{ width: '120px', height: '120px' }}
       />
 
+      {/* Status HUD — model + progress stats, always visible during painting */}
+      {model && (
+        <div className="absolute top-3 left-3 text-xs text-gray-300 bg-black/40 px-3 py-2 rounded-lg pointer-events-none select-none space-y-0.5 z-10">
+          <p className="truncate max-w-[180px] font-medium text-gray-100">{model.originalFile}</p>
+          <p>🔺 {model.faceCount.toLocaleString()} faces · 📐 {model.vertexCount.toLocaleString()} vértices</p>
+          <p>
+            🎨 {painting.colors.size} parte{painting.colors.size !== 1 ? 's' : ''}
+            {' · '}
+            {model.faceCount > 0 ? Math.round((painting.colorMap.size / model.faceCount) * 100) : 0}% pintado
+            {connectors.length > 0 && <> · 🔩 {connectors.length}</>}
+          </p>
+        </div>
+      )}
+
       {/* Wireframe toggle button */}
       <button
         onClick={() => setShowWireframe(!showWireframe)}

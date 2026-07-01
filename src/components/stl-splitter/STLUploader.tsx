@@ -81,17 +81,17 @@ export function STLUploader() {
       />
 
       <Upload className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-      <h3 className="font-semibold text-lg mb-2">Upload STL Model</h3>
+      <h3 className="font-semibold text-lg mb-2">Enviar modelo STL</h3>
       <p className="text-gray-600 dark:text-gray-400 mb-4">
-        Drag and drop your STL file here or click to browse
+        Arraste e solte seu arquivo STL aqui ou clique para escolher
       </p>
-      <p className="text-xs text-gray-500">Max 50MB • Binary or ASCII format</p>
+      <p className="text-xs text-gray-500">Máx 50MB • Formato binário ou ASCII</p>
 
       <button
         onClick={() => fileInputRef.current?.click()}
         className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
       >
-        Select File
+        Selecionar arquivo
       </button>
     </div>
   );

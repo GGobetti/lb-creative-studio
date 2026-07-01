@@ -73,6 +73,8 @@ export interface SavedSession {
   originalFileName: string;
   colorMapCompressed: string; // base64 encoded compressed colorMap
   geometryCompressed: string; // base64 encoded compressed geometry
+  colorsJSON: string;         // base64 encoded ColorGroup[] (names/hex/faceCount)
+  connectorsJSON: string;     // base64 encoded ConnectorPoint[]
   metadata: {
     vertexCount: number;
     faceCount: number;

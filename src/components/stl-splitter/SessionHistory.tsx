@@ -21,7 +21,7 @@ export function SessionHistory() {
         className="flex items-center gap-2 w-full p-2 text-left font-medium text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition"
       >
         <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-        Previous Sessions ({sessions.length})
+        Sessões salvas ({sessions.length})
       </button>
 
       {isExpanded && (
@@ -41,7 +41,7 @@ export function SessionHistory() {
                   })}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {session.metadata.colorGroupCount} parts • {session.metadata.faceCount.toLocaleString()} faces
+                  {session.metadata.colorGroupCount} partes • {session.metadata.faceCount.toLocaleString()} faces
                 </p>
               </div>
 
@@ -49,14 +49,14 @@ export function SessionHistory() {
                 <button
                   onClick={() => loadSession(session.id)}
                   className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded transition"
-                  title="Restore session"
+                  title="Restaurar sessão"
                 >
                   <RotateCcw className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => deleteSession(session.id)}
                   className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900 rounded transition"
-                  title="Delete session"
+                  title="Excluir sessão"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>

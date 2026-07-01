@@ -34,12 +34,7 @@ export function AutoSegmentPanel() {
   if (!model) return null;
 
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow space-y-3">
-      <h3 className="font-semibold text-sm flex items-center gap-2">
-        <Wand2 className="h-4 w-4 text-purple-500" />
-        Auto-segmentação
-      </h3>
-
+    <div className="space-y-3">
       <div>
         <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
           Ângulo de borda: {threshold === 180 ? 'só componentes' : `${threshold}°`}

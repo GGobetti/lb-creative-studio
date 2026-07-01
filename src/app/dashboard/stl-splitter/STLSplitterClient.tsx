@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSTLSplitterStore } from '@/store/stl-splitter.store';
 import { STLUploader } from '@/components/stl-splitter/STLUploader';
 import { STLViewer } from '@/components/stl-splitter/STLViewer';
@@ -10,7 +10,14 @@ import { ExportModal } from '@/components/stl-splitter/ExportModal';
 import { SessionHistory } from '@/components/stl-splitter/SessionHistory';
 import { AutoSegmentPanel } from '@/components/stl-splitter/AutoSegmentPanel';
 import { ConnectorPanel } from '@/components/stl-splitter/ConnectorPanel';
-import { AlertCircle, Download, RotateCcw } from 'lucide-react';
+import { CollapsibleSection } from '@/components/stl-splitter/CollapsibleSection';
+import {
+  serializeColorMap,
+  serializeGeometry,
+  serializeColors,
+  serializeConnectors,
+} from '@/lib/stl-splitter/session-storage';
+import { AlertCircle, Download, RotateCcw, Upload, Wand2, Link2, Palette } from 'lucide-react';
 
 export function STLSplitterClient() {
   const mode = useSTLSplitterStore((state) => state.ui.mode);
@@ -18,20 +25,56 @@ export function STLSplitterClient() {
   const isLoading = useSTLSplitterStore((state) => state.ui.isLoading);
   const model = useSTLSplitterStore((state) => state.model);
   const painting = useSTLSplitterStore((state) => state.painting);
+  const connectors = useSTLSplitterStore((state) => state.connectors);
   const clearAll = useSTLSplitterStore((state) => state.clearAll);
   const setError = useSTLSplitterStore((state) => state.setError);
+  const addSession = useSTLSplitterStore((state) => state.addSession);
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
 
+  // Always-fresh refs so the 30s timer doesn't reset every time the user
+  // paints a stroke (painting/connectors change on every action — if they
+  // were direct effect deps, the interval would keep getting torn down and
+  // recreated and would practically never fire during active painting).
+  const modelRef = useRef(model);
+  useEffect(() => { modelRef.current = model; }, [model]);
+  const paintingRef = useRef(painting);
+  useEffect(() => { paintingRef.current = painting; }, [painting]);
+  const connectorsRef = useRef(connectors);
+  useEffect(() => { connectorsRef.current = connectors; }, [connectors]);
+
+  const sessionIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (mode !== 'painting') return;
+    if (mode !== 'painting') { sessionIdRef.current = null; return; }
 
     const interval = setInterval(() => {
-      // TODO: auto-save to localStorage
+      const m = modelRef.current;
+      const p = paintingRef.current;
+      if (!m?.geometry || p.colors.size === 0) return;
+
+      if (!sessionIdRef.current) {
+        sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+
+      addSession({
+        id: sessionIdRef.current,
+        timestamp: Date.now(),
+        originalFileName: m.originalFile,
+        colorMapCompressed: serializeColorMap(p.colorMap),
+        geometryCompressed: serializeGeometry(m.geometry),
+        colorsJSON: serializeColors(p.colors),
+        connectorsJSON: serializeConnectors(connectorsRef.current),
+        metadata: {
+          vertexCount: m.vertexCount,
+          faceCount: m.faceCount,
+          colorGroupCount: p.colors.size,
+        },
+      });
+      console.log('💾 Auto-save:', sessionIdRef.current);
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [mode, model, painting]);
+  }, [mode, addSession]);
 
   if (isLoading) {
     return (
@@ -40,7 +83,7 @@ export function STLSplitterClient() {
           <div className="animate-spin mb-4">
             <RotateCcw className="h-12 w-12 text-blue-600" />
           </div>
-          <p className="text-lg font-medium">Parsing STL file...</p>
+          <p className="text-lg font-medium">Lendo arquivo STL...</p>
         </div>
       </div>
     );
@@ -52,7 +95,7 @@ export function STLSplitterClient() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">STL Splitter</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Upload an STL file, paint to separate parts, and export as 3MF
+            Envie um arquivo STL, pinte para separar as partes e exporte como 3MF
           </p>
         </div>
 
@@ -94,21 +137,40 @@ export function STLSplitterClient() {
       )}
 
       <div className="w-80 flex flex-col gap-4 overflow-y-auto">
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <h2 className="font-semibold mb-4">Upload New Model</h2>
+        <CollapsibleSection title="Novo modelo" icon={<Upload className="h-4 w-4 text-blue-500" />}>
           <STLUploader />
-        </div>
+        </CollapsibleSection>
 
         <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
           <PaintToolbar />
         </div>
 
-        <AutoSegmentPanel />
+        <CollapsibleSection title="Auto-segmentação" icon={<Wand2 className="h-4 w-4 text-purple-500" />}>
+          <AutoSegmentPanel />
+        </CollapsibleSection>
 
-        <ConnectorPanel />
+        <CollapsibleSection
+          title="Conectores"
+          icon={<Link2 className="h-4 w-4 text-orange-500" />}
+          badge={connectors.length > 0 && (
+            <span className="text-xs font-normal bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-full">
+              {connectors.length}
+            </span>
+          )}
+        >
+          <ConnectorPanel />
+        </CollapsibleSection>
 
         <div className="p-0 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <h3 className="font-semibold p-4 border-b border-gray-200 dark:border-gray-700">Parts</h3>
+          <h3 className="font-semibold p-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <Palette className="h-4 w-4 text-gray-500" />
+            Partes
+            {painting.colors.size > 0 && (
+              <span className="text-xs font-normal bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded-full ml-auto">
+                {painting.colors.size}
+              </span>
+            )}
+          </h3>
           <ColorList />
         </div>
 
@@ -119,13 +181,13 @@ export function STLSplitterClient() {
             className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 transition"
           >
             <Download className="h-5 w-5" />
-            Export
+            Exportar
           </button>
           <button
             onClick={clearAll}
             className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition"
           >
-            Clear All
+            Limpar tudo
           </button>
         </div>
 
