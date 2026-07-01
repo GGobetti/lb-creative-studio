@@ -411,12 +411,13 @@ export function STLViewer() {
     // the nearest real color boundary within reach so the user can place a
     // connector anywhere near a joint, not just on the exact seam pixel.
     const updateConnectorPreview = (fi: number | null, worldPoint: Vector3 | null | undefined) => {
-      const hide = () => {
+      const hide = (cursor: string) => {
         if (connectorPreviewRef.current) connectorPreviewRef.current.visible = false;
         pendingConnectorRef.current = null;
+        if (rendererRef.current) rendererRef.current.domElement.style.cursor = cursor;
       };
 
-      if (fi === null || !worldPoint || !model.geometry || !adjacencyRef.current) { hide(); return; }
+      if (fi === null || !worldPoint || !model.geometry || !adjacencyRef.current) { hide('crosshair'); return; }
 
       const p = paintingRef.current;
       const positions = model.geometry.attributes.position.array as Float32Array;
@@ -424,7 +425,10 @@ export function STLViewer() {
       // outward for the nearest real color transition, so hovering a bit
       // off-target (e.g. an unpainted sliver right at the seam) still works.
       const boundary = findNearestBoundary(fi, worldPoint, positions, p.colorMap, adjacencyRef.current);
-      if (!boundary) { hide(); return; }
+      // 'not-allowed' cursor is the only feedback while hovering fails — no
+      // second differently-colored part was found within reach from here.
+      if (!boundary) { hide('not-allowed'); return; }
+      if (rendererRef.current) rendererRef.current.domElement.style.cursor = 'crosshair';
 
       const worldMid = boundary.midpoint.clone().applyMatrix4(meshRef.current!.matrixWorld);
       const axis = boundary.normal.clone().transformDirection(meshRef.current!.matrixWorld).normalize();
@@ -633,10 +637,14 @@ export function STLViewer() {
     // Dim the whole model while placing connectors, on top of whatever
     // per-part transparency the user set manually — vertex alpha and
     // material.opacity multiply together, so this doesn't clobber those.
+    // depthWrite stays TRUE even while transparent: turning it off makes
+    // overlapping front/back geometry blend together visually, which can
+    // make a spot LOOK like it's near a different color than the one the
+    // raycaster (which always resolves the true front-most surface) is
+    // actually hitting — confusing when placing connectors precisely.
     if (meshRef.current) {
       const mat = meshRef.current.material as MeshStandardMaterial;
       mat.opacity = tool === 'connector' ? 0.55 : 1;
-      mat.depthWrite = tool !== 'connector';
     }
 
     if (tool !== 'connector' && connectorPreviewRef.current) {

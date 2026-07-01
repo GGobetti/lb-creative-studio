@@ -74,8 +74,8 @@ export function buildFaceAdjacency(geometry: BufferGeometry): Map<number, number
       const vb = fi * 9 + ((ei + 1) % 3) * 3;
 
       // Use 5-decimal precision strings to handle float32 near-duplicates
-      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
-      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const ka = `${positions[va].toFixed(3)},${positions[va + 1].toFixed(3)},${positions[va + 2].toFixed(3)}`;
+      const kb = `${positions[vb].toFixed(3)},${positions[vb + 1].toFixed(3)},${positions[vb + 2].toFixed(3)}`;
       const edgeKey = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
 
       const entry = edgeToFaces.get(edgeKey);
@@ -229,8 +229,8 @@ export function autoSegmentBySharpEdges(
     for (let ei = 0; ei < 3; ei++) {
       const va = fi * 9 + ei * 3;
       const vb = fi * 9 + ((ei + 1) % 3) * 3;
-      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
-      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const ka = `${positions[va].toFixed(3)},${positions[va + 1].toFixed(3)},${positions[va + 2].toFixed(3)}`;
+      const kb = `${positions[vb].toFixed(3)},${positions[vb + 1].toFixed(3)},${positions[vb + 2].toFixed(3)}`;
       const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
       const entry = edgeToFaces.get(key);
       if (entry) entry.push(fi); else edgeToFaces.set(key, [fi]);
@@ -307,8 +307,8 @@ export function findColorBoundaryEdges(
     for (let ei = 0; ei < 3; ei++) {
       const va = fi * 9 + ei * 3;
       const vb = fi * 9 + ((ei + 1) % 3) * 3;
-      const ka = `${positions[va].toFixed(4)},${positions[va+1].toFixed(4)},${positions[va+2].toFixed(4)}`;
-      const kb = `${positions[vb].toFixed(4)},${positions[vb+1].toFixed(4)},${positions[vb+2].toFixed(4)}`;
+      const ka = `${positions[va].toFixed(3)},${positions[va+1].toFixed(3)},${positions[va+2].toFixed(3)}`;
+      const kb = `${positions[vb].toFixed(3)},${positions[vb+1].toFixed(3)},${positions[vb+2].toFixed(3)}`;
       const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
       const entry = edgeToFaces.get(key);
       if (entry) entry.push(fi); else edgeToFaces.set(key, [fi]);
@@ -408,7 +408,7 @@ export function findNearestBoundary(
   positions: Float32Array,
   colorMap: Map<number, ColorID>,
   adjacency: Map<number, number[]>,
-  maxFaces: number = 20000
+  maxFaces: number = 60000
 ): BoundaryEdgeInfo | null {
   // Deliberately does NOT require the hovered face itself to be painted, nor
   // does it require two DIFFERENTLY colored faces to be directly adjacent —
@@ -598,8 +598,8 @@ export function buildWholeMeshEdgeToFaces(positions: Float32Array): Map<string, 
     for (let ei = 0; ei < 3; ei++) {
       const va = fi * 9 + ei * 3;
       const vb = fi * 9 + ((ei + 1) % 3) * 3;
-      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
-      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const ka = `${positions[va].toFixed(3)},${positions[va + 1].toFixed(3)},${positions[va + 2].toFixed(3)}`;
+      const kb = `${positions[vb].toFixed(3)},${positions[vb + 1].toFixed(3)},${positions[vb + 2].toFixed(3)}`;
       const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
       const entry = edgeToFaces.get(key);
       if (entry) entry.push(fi); else edgeToFaces.set(key, [fi]);
@@ -624,8 +624,8 @@ function findBoundaryLoops(
     for (let ei = 0; ei < 3; ei++) {
       const va = fi * 9 + ei * 3;
       const vb = fi * 9 + ((ei + 1) % 3) * 3;
-      const ka = `${positions[va].toFixed(5)},${positions[va + 1].toFixed(5)},${positions[va + 2].toFixed(5)}`;
-      const kb = `${positions[vb].toFixed(5)},${positions[vb + 1].toFixed(5)},${positions[vb + 2].toFixed(5)}`;
+      const ka = `${positions[va].toFixed(3)},${positions[va + 1].toFixed(3)},${positions[va + 2].toFixed(3)}`;
+      const kb = `${positions[vb].toFixed(3)},${positions[vb + 1].toFixed(3)},${positions[vb + 2].toFixed(3)}`;
       const undirectedKey = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
       const facesOnEdge = edgeToFaces.get(undirectedKey) || [fi];
       const otherFace = facesOnEdge.find((f) => f !== fi);
