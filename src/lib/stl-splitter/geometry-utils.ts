@@ -285,35 +285,6 @@ export function getFaceCentroid(positions: Float32Array, faceIndex: number): Vec
   );
 }
 
-// Finds the midpoint of the edge shared between two adjacent faces.
-export function getSharedEdgeMidpoint(
-  positions: Float32Array,
-  faceA: number,
-  faceB: number
-): Vector3 | null {
-  const keyAt = (base: number) =>
-    `${positions[base].toFixed(5)},${positions[base + 1].toFixed(5)},${positions[base + 2].toFixed(5)}`;
-  const edgesOf = (fi: number) => {
-    const base = fi * 9;
-    return [[base, base + 3], [base + 3, base + 6], [base + 6, base]].map(([a, b]) => ({
-      a, b, ka: keyAt(a), kb: keyAt(b),
-    }));
-  };
-
-  for (const ea of edgesOf(faceA)) {
-    for (const eb of edgesOf(faceB)) {
-      if ((ea.ka === eb.ka && ea.kb === eb.kb) || (ea.ka === eb.kb && ea.kb === eb.ka)) {
-        return new Vector3(
-          (positions[ea.a] + positions[ea.b]) / 2,
-          (positions[ea.a + 1] + positions[ea.b + 1]) / 2,
-          (positions[ea.a + 2] + positions[ea.b + 2]) / 2
-        );
-      }
-    }
-  }
-  return null;
-}
-
 export interface BoundaryEdgeInfo {
   midpoint: Vector3;
   normal: Vector3;       // tangential direction across the seam, from faceB's centroid toward faceA's
@@ -388,41 +359,37 @@ export function findNearestBoundary(
   positions: Float32Array,
   colorMap: Map<number, ColorID>,
   adjacency: Map<number, number[]>,
-  maxFaces: number = 600
+  maxFaces: number = 1500
 ): BoundaryEdgeInfo | null {
-  const startColor = colorMap.get(startFace);
-  if (!startColor) return null;
-
+  // Deliberately does NOT require the hovered face itself to be painted, nor
+  // does it require two DIFFERENTLY colored faces to be directly adjacent —
+  // real paint jobs almost always leave a sliver of unpainted triangles
+  // right at a seam, and a naive "current vs. neighbor" comparison misses
+  // the transition whenever the walk reaches a colored face by passing
+  // through an unpainted one first (unpainted has no color to compare).
+  // Instead this walks outward in every direction and, for every distinct
+  // color it touches, remembers the closest point reached on that color.
+  // The two nearest distinct colors overall become the connector's pin/hole.
   const visited = new Set<number>([startFace]);
   const queue = [startFace];
-  let best: BoundaryEdgeInfo | null = null;
-  let bestDist = Infinity;
+  const closestByColor = new Map<ColorID, { point: Vector3; dist: number; face: number }>();
   let processed = 0;
 
   while (queue.length > 0 && processed < maxFaces) {
     const current = queue.shift()!;
     processed++;
-    const neighbors = adjacency.get(current) || [];
 
-    for (const nb of neighbors) {
-      const nbColor = colorMap.get(nb);
-
-      if (nbColor && nbColor !== startColor) {
-        const mid = getSharedEdgeMidpoint(positions, current, nb) ?? getFaceCentroid(positions, current);
-        const dist = mid.distanceTo(hitPoint);
-        if (dist < bestDist) {
-          const centroidA = getFaceCentroid(positions, current);
-          const centroidB = getFaceCentroid(positions, nb);
-          const gap = centroidA.distanceTo(centroidB);
-          const normal = gap > 1e-6
-            ? new Vector3().subVectors(centroidA, centroidB).divideScalar(gap)
-            : getFaceNormal(positions, current);
-          best = { midpoint: mid, normal, colorA: startColor, colorB: nbColor, gap };
-          bestDist = dist;
-        }
-        continue; // don't cross into different-colored territory
+    const color = colorMap.get(current);
+    if (color) {
+      const point = getFaceCentroid(positions, current);
+      const dist = point.distanceTo(hitPoint);
+      const existing = closestByColor.get(color);
+      if (!existing || dist < existing.dist) {
+        closestByColor.set(color, { point, dist, face: current });
       }
+    }
 
+    for (const nb of (adjacency.get(current) || [])) {
       if (!visited.has(nb)) {
         visited.add(nb);
         queue.push(nb);
@@ -430,7 +397,19 @@ export function findNearestBoundary(
     }
   }
 
-  return best;
+  const entries = Array.from(closestByColor.entries()).sort((a, b) => a[1].dist - b[1].dist);
+  if (entries.length < 2) return null;
+
+  const [colorA, infoA] = entries[0];
+  const [colorB, infoB] = entries[1];
+
+  const gap = infoA.point.distanceTo(infoB.point);
+  const midpoint = infoA.point.clone().add(infoB.point).multiplyScalar(0.5);
+  const normal = gap > 1e-6
+    ? new Vector3().subVectors(infoA.point, infoB.point).divideScalar(gap)
+    : getFaceNormal(positions, infoA.face);
+
+  return { midpoint, normal, colorA, colorB, gap };
 }
 
 // Samples connector positions along boundary edges, spacing them by `minSpacingMm`.

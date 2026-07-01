@@ -401,10 +401,10 @@ export function STLViewer() {
       if (fi === null || !worldPoint || !model.geometry || !adjacencyRef.current) { hide(); return; }
 
       const p = paintingRef.current;
-      const hitColorId = p.colorMap.get(fi);
-      if (!hitColorId) { hide(); return; }
-
       const positions = model.geometry.attributes.position.array as Float32Array;
+      // Doesn't require the hovered face itself to be painted — it searches
+      // outward for the nearest real color transition, so hovering a bit
+      // off-target (e.g. an unpainted sliver right at the seam) still works.
       const boundary = findNearestBoundary(fi, worldPoint, positions, p.colorMap, adjacencyRef.current);
       if (!boundary) { hide(); return; }
 
@@ -435,7 +435,7 @@ export function STLViewer() {
         normal:   { x: axis.x, y: axis.y, z: axis.z },
         positionOffset: { x: 0, y: 0, z: 0 },
         rotationDeg: { x: 0, y: 0, z: 0 },
-        partAColorId: hitColorId,
+        partAColorId: boundary.colorA,
         partBColorId: boundary.colorB,
         radius,
         depth,
