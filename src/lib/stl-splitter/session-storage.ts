@@ -4,15 +4,35 @@ import { SavedSession, ColorID, ColorGroup, ConnectorPoint } from '@/types/stl-s
 const STORAGE_KEY = 'splitter_sessions';
 const MAX_SESSIONS = 5;
 
-export function saveSessionToLocalStorage(session: SavedSession): void {
-  try {
-    const sessions = loadSessionsFromLocalStorage();
+// Returns whether the save actually succeeded — auto-save relies on this to
+// stop retrying (and spamming the console) once a model is simply too big
+// for localStorage's quota, instead of failing silently every 30s forever.
+export function saveSessionToLocalStorage(session: SavedSession): boolean {
+  const trySave = (sessions: SavedSession[]) => {
     const filtered = sessions.filter((s) => s.id !== session.id);
     filtered.push(session);
     const trimmed = filtered.slice(-MAX_SESSIONS);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+  };
+
+  try {
+    trySave(loadSessionsFromLocalStorage());
+    return true;
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+      // Older cached sessions may be hogging the quota — drop everything
+      // else and retry with just this one save before giving up.
+      try {
+        trySave([]);
+        console.warn('⚠️ Session storage was full; cleared older sessions to make room.');
+        return true;
+      } catch (retryError) {
+        console.warn('⚠️ Session too large to auto-save even alone — this model exceeds localStorage capacity:', retryError);
+        return false;
+      }
+    }
     console.error('Failed to save session:', error);
+    return false;
   }
 }
 

@@ -45,10 +45,16 @@ export function STLSplitterClient() {
   useEffect(() => { connectorsRef.current = connectors; }, [connectors]);
 
   const sessionIdRef = useRef<string | null>(null);
+  const autoSaveFailedRef = useRef(false);
   useEffect(() => {
-    if (mode !== 'painting') { sessionIdRef.current = null; return; }
+    if (mode !== 'painting') { sessionIdRef.current = null; autoSaveFailedRef.current = false; return; }
 
     const interval = setInterval(() => {
+      // Once a save has failed (model too big for localStorage's quota),
+      // stop retrying every 30s — it'll just keep failing and spamming the
+      // console for the rest of the session.
+      if (autoSaveFailedRef.current) return;
+
       const m = modelRef.current;
       const p = paintingRef.current;
       if (!m?.geometry || p.colors.size === 0) return;
@@ -57,7 +63,7 @@ export function STLSplitterClient() {
         sessionIdRef.current = `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       }
 
-      addSession({
+      const saved = addSession({
         id: sessionIdRef.current,
         timestamp: Date.now(),
         originalFileName: m.originalFile,
@@ -71,11 +77,17 @@ export function STLSplitterClient() {
           colorGroupCount: p.colors.size,
         },
       });
+
+      if (!saved) {
+        autoSaveFailedRef.current = true;
+        setError('Este modelo é grande demais para o salvamento automático do navegador — seu progresso não será restaurado se você recarregar a página, mas a exportação continua funcionando normalmente.');
+        return;
+      }
       console.log('💾 Auto-save:', sessionIdRef.current);
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [mode, addSession]);
+  }, [mode, addSession, setError]);
 
   if (isLoading) {
     return (

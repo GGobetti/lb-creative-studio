@@ -3,6 +3,21 @@ import { Evaluator, Brush, ADDITION, SUBTRACTION } from 'three-bvh-csg';
 import type { ConnectorPoint } from '@/types/stl-splitter.types';
 import { getEffectiveConnectorTransform } from './geometry-utils';
 
+// three-bvh-csg's Evaluator hard-codes ['position', 'uv', 'normal'] as the
+// attributes it reads from BOTH brushes in a boolean op (see its source:
+// `this.attributes = ['position', 'uv', 'normal']`). Our part geometry only
+// ever gets position + normal — CylinderGeometry (the connector tool) DOES
+// include uv, so the evaluator tries to read `attributes.uv.array` off our
+// part's geometry, finds `undefined`, and throws mid-operation. A dummy
+// all-zero uv is enough; nothing here is ever textured.
+function ensureUvAttribute(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+  if (!geometry.attributes.uv) {
+    const count = geometry.attributes.position.count;
+    geometry.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+  }
+  return geometry;
+}
+
 function buildAlignedCylinder(
   position: THREE.Vector3,
   normal: THREE.Vector3,
@@ -31,7 +46,7 @@ export async function applyConnectorsCSG(
   const evaluator = new Evaluator();
   evaluator.useGroups = false;
 
-  let result = new Brush(partGeometry.clone());
+  let result = new Brush(ensureUvAttribute(partGeometry.clone()));
   result.updateMatrixWorld(true);
 
   for (const conn of connectors) {

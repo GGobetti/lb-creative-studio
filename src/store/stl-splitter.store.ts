@@ -90,9 +90,13 @@ function hslToHex(h: number, s: number, l: number): string {
     b = x;
   }
 
-  // Convert to 0-255 range and to hex
+  // Convert to 0-255 range and to hex — clamp first: floating-point overshoot
+  // in the HSL math above can round (val + m) * 255 to 256 (or below 0),
+  // which produces a 3-character (or negative) hex chunk instead of 2,
+  // corrupting the final "#rrggbb" string into something the DOM rejects.
   const toHex = (val: number) => {
-    const hex = Math.round((val + m) * 255).toString(16);
+    const clamped = Math.max(0, Math.min(255, Math.round((val + m) * 255)));
+    const hex = clamped.toString(16);
     return hex.length === 1 ? '0' + hex : hex;
   };
 
@@ -173,7 +177,7 @@ interface STLSplitterStoreActions {
   setExportProgress: (progress: number) => void;
 
   // Session management (stubs for now, implemented in Task 9)
-  addSession: (session: SavedSession) => void;
+  addSession: (session: SavedSession) => boolean;
   loadSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
 
@@ -549,11 +553,14 @@ export const useSTLSplitterStore = create<STLSplitterStore>((set, get) => ({
 
   // Session management — persisted to localStorage
   addSession: (session) => {
-    saveSessionToLocalStorage(session);
-    set((state) => {
-      const filtered = state.sessions.filter((s) => s.id !== session.id);
-      return { sessions: [...filtered, session].slice(-5) }; // Keep only last 5 sessions
-    });
+    const saved = saveSessionToLocalStorage(session);
+    if (saved) {
+      set((state) => {
+        const filtered = state.sessions.filter((s) => s.id !== session.id);
+        return { sessions: [...filtered, session].slice(-5) }; // Keep only last 5 sessions
+      });
+    }
+    return saved;
   },
 
   loadSession: (sessionId) => {
