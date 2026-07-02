@@ -399,6 +399,7 @@ function SuggestModal({
 
 export function QualityAudit() {
   const router = useRouter()
+  const { t } = useTranslation()
   const accessTokenRef = useRef<string | null>(null)
 
   const [questions, setQuestions]         = useState<AuditQuestion[]>([])
@@ -625,7 +626,7 @@ export function QualityAudit() {
               ) : (
                 <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
                   <ImageIcon size={40} />
-                  <span className="text-xs">Preview não disponível</span>
+                  <span className="text-xs">{t('gameQualityAudit.previewUnavailable', 'Preview não disponível')}</span>
                 </div>
               )}
             </div>
@@ -650,7 +651,7 @@ export function QualityAudit() {
                         <span key={t} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t}</span>
                       ))
                     ) : (
-                      <span className="text-xs text-destructive">Sem tags</span>
+                      <span className="text-xs text-destructive">{t('gameQualityAudit.noTags', 'Sem tags')}</span>
                     )}
                   </div>
                 </div>
@@ -658,14 +659,14 @@ export function QualityAudit() {
 
               {/* Quality checklist */}
               <div className="flex flex-col gap-1.5">
-                <p className="text-label text-muted-foreground">Critérios</p>
+                <p className="text-label text-muted-foreground">{t('gameQualityAudit.criteria', 'Critérios')}</p>
                 {[
-                  { label: 'Imagem representativa', ok: !!q.imageUrl },
-                  { label: 'Nome descritivo', ok: q.title.split(' ').length >= 3 },
-                  { label: 'Descrição com 20+ palavras', ok: wordCount >= 20 },
-                  { label: 'Pelo menos 2 tags', ok: q.tags.length >= 2 },
-                ].map(({ label, ok }) => (
-                  <div key={label} className="flex items-center gap-2 text-sm">
+                  { key: 'representativeImage', label: t('gameQualityAudit.criteriaImage', 'Imagem representativa'), ok: !!q.imageUrl },
+                  { key: 'descriptiveName', label: t('gameQualityAudit.criteriaName', 'Nome descritivo'), ok: q.title.split(' ').length >= 3 },
+                  { key: 'description20Words', label: t('gameQualityAudit.criteriaDescription', 'Descrição com 20+ palavras'), ok: wordCount >= 20 },
+                  { key: 'atLeast2Tags', label: t('gameQualityAudit.criteriaTags', 'Pelo menos 2 tags'), ok: q.tags.length >= 2 },
+                ].map(({ key, label, ok }) => (
+                  <div key={key} className="flex items-center gap-2 text-sm">
                     {ok
                       ? <CheckCircle2 size={14} className="text-success shrink-0" />
                       : <XCircle size={14} className="text-destructive shrink-0" />}
