@@ -3,6 +3,7 @@
 import { useRef, useEffect } from 'react';
 import { AffiliateProduct, trackClick } from '@/lib/api/affiliate';
 import { getSupabaseBrowser } from '@/lib/supabase';
+import { useTranslation } from '@/lib/translations';
 
 interface AffiliateProductCardProps {
   product: AffiliateProduct;
@@ -20,6 +21,7 @@ export function AffiliateProductCard({
   product,
   onSelect,
 }: AffiliateProductCardProps) {
+  const { t } = useTranslation();
   const details = product.details;
   const primaryPhoto = product.photos?.find((p) => p.is_primary) || product.photos?.[0];
   const accessTokenRef = useRef<string | null>(null);
@@ -81,7 +83,7 @@ export function AffiliateProductCard({
           <div className="flex items-center gap-1 mb-3">
             <span>⭐</span>
             <span className="text-xs font-medium">
-              {(details.rating || 0).toFixed(1)} ({details.rating_count || 0} reviews)
+              {(details.rating || 0).toFixed(1)} ({details.rating_count || 0} {t('affiliateProductModal.reviews', 'reviews')})
             </span>
           </div>
         )}
@@ -98,16 +100,16 @@ export function AffiliateProductCard({
           {details?.stock_quantity !== undefined && (
             <div className="text-xs text-slate-400 mb-3">
               {details.stock_quantity > 5
-                ? '✓ In stock'
+                ? `✓ ${t('affiliateProductModal.inStock', 'In stock')}`
                 : details.stock_quantity > 0
-                ? '⚠️ Low stock'
-                : '✗ Out of stock'}
+                ? `⚠️ ${t('affiliateProductModal.lowStock', 'Low stock')}`
+                : `✗ ${t('affiliateProductModal.outOfStock', 'Out of stock')}`}
             </div>
           )}
 
           {/* View button */}
           <button className="w-full inline-block text-center bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-2 rounded font-medium text-sm hover:opacity-90 transition-opacity">
-            View Details
+            {t('affiliateStorefront.viewDetails', 'View Details')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 
@@ -15,19 +16,42 @@ type LangCode = typeof LANGUAGES[number]['code']
 export function LanguageSwitcher() {
   const { language, setLanguage, profile, setProfile } = useAppStore()
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
+  const [mounted, setMounted] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const current = LANGUAGES.find(l => l.code === language) ?? LANGUAGES[0]
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        wrapperRef.current && !wrapperRef.current.contains(target) &&
+        menuRef.current && !menuRef.current.contains(target)
+      ) {
         setOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const toggleOpen = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setMenuPos({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setOpen(prev => !prev)
+  }
 
   const handleSelect = async (code: LangCode) => {
     setOpen(false)
@@ -48,9 +72,10 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div ref={wrapperRef} className="relative shrink-0">
       <button
-        onClick={() => setOpen(prev => !prev)}
+        ref={buttonRef}
+        onClick={toggleOpen}
         className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs font-bold"
         title={current.label}
       >
@@ -61,8 +86,12 @@ export function LanguageSwitcher() {
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-xl border border-border bg-card shadow-elevated overflow-hidden">
+      {open && mounted && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
+          className="z-[999] min-w-[140px] rounded-xl border border-border bg-card shadow-elevated overflow-hidden"
+        >
           {LANGUAGES.map(lang => (
             <button
               key={lang.code}
@@ -75,7 +104,8 @@ export function LanguageSwitcher() {
               <span>{lang.label}</span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

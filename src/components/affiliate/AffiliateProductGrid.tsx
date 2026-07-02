@@ -4,22 +4,23 @@ import { useState, useMemo } from 'react';
 import { AffiliateProduct } from '@/lib/api/affiliate';
 import { AffiliateProductCard } from './AffiliateProductCard';
 import { ProductModal } from './ProductModal';
+import { useTranslation } from '@/lib/translations';
 
 interface AffiliateProductGridProps {
   products: AffiliateProduct[];
 }
 
-const marketplaces = [
-  { value: 'all', label: 'Todos' },
-  { value: 'aliexpress', label: 'AliExpress' },
-  { value: 'shopee', label: 'Shopee' },
-  { value: 'mercado_livre', label: 'Mercado Livre' },
-  { value: 'amazon', label: 'Amazon' },
-];
-
 export function AffiliateProductGrid({
   products,
 }: AffiliateProductGridProps) {
+  const { t } = useTranslation();
+  const marketplaces = [
+    { value: 'all', label: t('affiliateStorefront.filterAll', 'Todos') },
+    { value: 'aliexpress', label: 'AliExpress' },
+    { value: 'shopee', label: 'Shopee' },
+    { value: 'mercado_livre', label: 'Mercado Livre' },
+    { value: 'amazon', label: 'Amazon' },
+  ];
   const [search, setSearch] = useState('');
   const [marketplace, setMarketplace] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState<AffiliateProduct | null>(null);
@@ -41,7 +42,7 @@ export function AffiliateProductGrid({
         <div>
           <input
             type="text"
-            placeholder="Buscar produtos..."
+            placeholder={t('affiliateStorefront.searchPlaceholder', 'Buscar produtos...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full px-4 py-2 rounded bg-slate-800/50 text-white placeholder-slate-400 border border-slate-700 focus:border-cyan-500 outline-none transition"
@@ -68,7 +69,7 @@ export function AffiliateProductGrid({
       {/* Results */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
-          Nenhum produto encontrado
+          {t('affiliateStorefront.noProductsFound', 'Nenhum produto encontrado')}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -84,7 +85,7 @@ export function AffiliateProductGrid({
 
       {/* Count */}
       <div className="mt-8 text-center text-sm text-slate-400">
-        {filtered.length} de {products.length} produtos
+        {t('affiliateStorefront.countOf', '{filtered} de {total} produtos').replace('{filtered}', String(filtered.length)).replace('{total}', String(products.length))}
       </div>
 
       {/* Modal */}

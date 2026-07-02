@@ -266,6 +266,10 @@ export interface UserStlPortfolio {
   parts_count: number
   telegram_group_id: string
   stl_created_at: string
+  // present only for manually pasted-link imports (portfolio_items, source_type='makerworld')
+  external_url?: string | null
+  weight_g?: number | null
+  print_time_hours?: number | null
 }
 
 /**
