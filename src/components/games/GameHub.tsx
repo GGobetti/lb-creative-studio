@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/store'
 import { BADGES } from '@/types/games'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { LeaderboardCard } from './LeaderboardCard'
+import { useTranslation } from '@/lib/translations'
 
 const GAMES = [
   {
@@ -15,7 +16,8 @@ const GAMES = [
     href: '/dashboard/games/photo-match',
     icon: Camera,
     title: 'Photo Match',
-    description: 'A foto representa o modelo?',
+    descriptionKey: 'gameHub.photoMatchDesc',
+    descriptionFallback: 'A foto representa o modelo?',
     credits: 10,
     color: 'text-primary',
     bg: 'bg-primary/8',
@@ -27,7 +29,8 @@ const GAMES = [
     href: '/dashboard/games/tag-detective',
     icon: Tag,
     title: 'Tag Detective',
-    description: 'Remova as tags que não fazem sentido',
+    descriptionKey: 'gameHub.tagDetectiveDesc',
+    descriptionFallback: 'Remova as tags que não fazem sentido',
     credits: 5,
     color: 'text-accent-foreground',
     bg: 'bg-accent',
@@ -39,7 +42,8 @@ const GAMES = [
     href: '/dashboard/games/category-sort',
     icon: LayoutGrid,
     title: 'Category Sort',
-    description: 'Classifique modelos nas categorias certas',
+    descriptionKey: 'gameHub.categorySortDesc',
+    descriptionFallback: 'Classifique modelos nas categorias certas',
     credits: 25,
     color: 'text-warning',
     bg: 'bg-warning/8',
@@ -51,7 +55,8 @@ const GAMES = [
     href: '/dashboard/games/quality-audit',
     icon: ShieldCheck,
     title: 'Quality Audit',
-    description: 'Aprove ou rejeite uploads da comunidade',
+    descriptionKey: 'gameHub.qualityAuditDesc',
+    descriptionFallback: 'Aprove ou rejeite uploads da comunidade',
     credits: 15,
     color: 'text-success',
     bg: 'bg-success/8',
@@ -60,7 +65,15 @@ const GAMES = [
   },
 ]
 
+const BADGE_TEXT: Record<string, { nameKey: string; nameFallback: string; powerKey: string; powerFallback: string }> = {
+  bronze:  { nameKey: 'gameHub.badgeBronzeName', nameFallback: 'Iniciante', powerKey: 'gameHub.badgeBronzePower', powerFallback: 'Acesso a todos os games' },
+  silver:  { nameKey: 'gameHub.badgeSilverName', nameFallback: 'Curador', powerKey: 'gameHub.badgeSilverPower', powerFallback: 'Aprovações valem 2×' },
+  gold:    { nameKey: 'gameHub.badgeGoldName', nameFallback: 'Especialista', powerKey: 'gameHub.badgeGoldPower', powerFallback: 'Streak bonus +5 créditos' },
+  diamond: { nameKey: 'gameHub.badgeDiamondName', nameFallback: 'Moderador', powerKey: 'gameHub.badgeDiamondPower', powerFallback: 'Aprovação solo de STLs' },
+}
+
 export function GameHub() {
+  const { t } = useTranslation()
   const { profile } = useAppStore()
   const [streak, setStreak] = useState(0)
   const [points, setPoints] = useState(0)
@@ -117,9 +130,9 @@ export function GameHub() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-display text-2xl gradient-text">Gaming Lab XP</h1>
+          <h1 className="text-display text-2xl gradient-text">{t('gameHub.title', 'Gaming Lab XP')}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Ajude a melhorar o catálogo e ganhe créditos
+            {t('gameHub.subtitle', 'Ajude a melhorar o catálogo e ganhe créditos')}
           </p>
         </div>
         <div className="flex items-center gap-1.5 bg-primary/10 text-primary text-sm font-bold px-3 py-2 rounded-xl badge-pulse">
@@ -138,9 +151,9 @@ export function GameHub() {
           <Flame size={18} className="text-warning shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">
-              Streak de {streak} {streak === 1 ? 'dia' : 'dias'}!
+              {t('gameHub.streakPrefix', 'Streak de')} {streak} {streak === 1 ? t('gameHub.day', 'dia') : t('gameHub.days', 'dias')}!
             </p>
-            <p className="text-xs text-muted-foreground">Multiplicador 2× ativo hoje</p>
+            <p className="text-xs text-muted-foreground">{t('gameHub.multiplierActive', 'Multiplicador 2× ativo hoje')}</p>
           </div>
         </motion.div>
       )}
@@ -169,18 +182,18 @@ export function GameHub() {
                   >
                     <span className={`flex items-center gap-1 ${game.color}`}>
                       <Zap size={11} />
-                      +{game.credits} por acerto
+                      +{game.credits} {t('gameHub.perCorrectAnswer', 'por acerto')}
                     </span>
                   </div>
                 </div>
 
                 <div>
                   <h3 className="text-heading text-base font-bold text-foreground">{game.title}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{game.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{t(game.descriptionKey, game.descriptionFallback)}</p>
                 </div>
 
                 <div className={`text-xs font-semibold ${game.color} mt-auto`}>
-                  Jogar →
+                  {t('gameHub.play', 'Jogar')} →
                 </div>
               </Link>
             </motion.div>
@@ -192,7 +205,7 @@ export function GameHub() {
       {nextBadge && (
         <div className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <p className="text-label text-muted-foreground">Progresso de Badge</p>
+            <p className="text-label text-muted-foreground">{t('gameHub.badgeProgress', 'Progresso de Badge')}</p>
             <span className="text-xs text-muted-foreground">{points} pts</span>
           </div>
 
@@ -204,9 +217,11 @@ export function GameHub() {
             })()}
             <div className="flex-1">
               <div className="flex justify-between text-xs mb-1">
-                <span className="text-foreground font-medium">{currentBadge?.name ?? 'Sem badge'}</span>
+                <span className="text-foreground font-medium">
+                  {currentBadge ? t(BADGE_TEXT[currentBadge.tier].nameKey, BADGE_TEXT[currentBadge.tier].nameFallback) : t('gameHub.noBadge', 'Sem badge')}
+                </span>
                 <span className="text-muted-foreground">
-                  → {nextBadge.name} ({nextBadge.requiredPoints} pts)
+                  → {t(BADGE_TEXT[nextBadge.tier].nameKey, BADGE_TEXT[nextBadge.tier].nameFallback)} ({nextBadge.requiredPoints} pts)
                 </span>
               </div>
               <div className="h-2 bg-border rounded-full overflow-hidden">
@@ -227,7 +242,7 @@ export function GameHub() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Próximo poder: <span className="text-foreground font-medium">{nextBadge.unlockedPower}</span>
+            {t('gameHub.nextPower', 'Próximo poder:')} <span className="text-foreground font-medium">{t(BADGE_TEXT[nextBadge.tier].powerKey, BADGE_TEXT[nextBadge.tier].powerFallback)}</span>
           </p>
         </div>
       )}
