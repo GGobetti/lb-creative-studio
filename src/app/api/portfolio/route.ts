@@ -147,6 +147,9 @@ export async function GET(request: Request): Promise<NextResponse> {
       parts_count: 1,
       telegram_group_id: '',
       stl_created_at: row.created_at,
+      external_url: row.external_url ?? null,
+      weight_g: row.weight_g ?? null,
+      print_time_hours: row.print_time_hours ?? null,
     }))
 
     // ── 4. Segregar por source ─────────────────────────────────────────────────

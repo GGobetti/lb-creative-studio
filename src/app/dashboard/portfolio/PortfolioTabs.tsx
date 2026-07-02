@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { PortfolioGrid } from './PortfolioGrid'
+import { useTranslation } from '@/lib/translations'
 import type { UserStlPortfolio } from '@/lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -18,22 +19,24 @@ interface PortfolioTabsProps {
   makerworld: UserStlPortfolio[]
   stlSearch: UserStlPortfolio[]
   isLoading?: boolean
+  onPriceIt: (item: UserStlPortfolio) => void
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function PortfolioTabs({ makerworld, stlSearch, isLoading = false }: PortfolioTabsProps) {
+export function PortfolioTabs({ makerworld, stlSearch, isLoading = false, onPriceIt }: PortfolioTabsProps) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabId>('stlSearch')
 
   const tabs: Tab[] = [
     {
       id: 'stlSearch',
-      label: 'Comprados STL Search',
+      label: t('portfolioTabs.purchasedStlSearch', 'Comprados STL Search'),
       count: stlSearch.length,
     },
     {
       id: 'makerworld',
-      label: 'Importados Makerworld',
+      label: t('portfolioTabs.importedMakerworld', 'Importados Makerworld'),
       count: makerworld.length,
     },
   ]
@@ -82,7 +85,7 @@ export function PortfolioTabs({ makerworld, stlSearch, isLoading = false }: Port
       </div>
 
       {/* Grid for active tab */}
-      <PortfolioGrid items={activeItems} isLoading={isLoading} />
+      <PortfolioGrid items={activeItems} isLoading={isLoading} onPriceIt={onPriceIt} />
     </div>
   )
 }

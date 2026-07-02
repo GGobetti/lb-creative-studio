@@ -1,12 +1,13 @@
 'use client'
 
-import { Box, Download, Calendar, CheckCircle, Layers, ImageIcon } from 'lucide-react'
+import { Box, Download, Calendar, CheckCircle, Layers, ImageIcon, ExternalLink, DollarSign } from 'lucide-react'
 import type { UserStlPortfolio } from '@/lib/supabase'
+import { useTranslation } from '@/lib/translations'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('pt-BR', {
+function formatDate(dateString: string, locale: string): string {
+  return new Date(dateString).toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -21,8 +22,12 @@ function formatBytes(bytes: number): string {
 
 // ─── Portfolio Card ───────────────────────────────────────────────────────────
 
-function PortfolioCard({ item }: { item: UserStlPortfolio }) {
+function PortfolioCard({ item, onPriceIt }: { item: UserStlPortfolio; onPriceIt: (item: UserStlPortfolio) => void }) {
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const hasMultipleParts = item.parts_count > 1
+  const isManualMakerworldImport = item.source === 'import' && !!item.external_url
+  const canPriceIt = item.weight_g != null || item.print_time_hours != null
 
   return (
     <div className="flex flex-col bg-card border border-border/60 rounded-2xl overflow-hidden hover:border-cyan-400/30 hover:shadow-md transition-all hover:scale-[1.01] duration-200 group cursor-pointer">
@@ -38,27 +43,27 @@ function PortfolioCard({ item }: { item: UserStlPortfolio }) {
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground group-hover:scale-105 transition-transform duration-300">
             <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
-            <span className="text-xs font-bold uppercase tracking-wider opacity-50">Sem Foto</span>
+            <span className="text-xs font-bold uppercase tracking-wider opacity-50">{t('portfolioGrid.noPhoto', 'Sem Foto')}</span>
           </div>
         )}
 
         {/* Unlocked badge */}
         <div className="absolute top-3 left-3 flex items-center gap-1 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-full">
           <CheckCircle className="w-3 h-3" />
-          Desbloqueado
+          {t('portfolioGrid.unlocked', 'Desbloqueado')}
         </div>
 
         {/* Parts count or file size */}
         {hasMultipleParts ? (
           <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-md text-primary-foreground text-[10px] px-2.5 py-1 rounded-full font-bold border border-primary/30 shadow-lg shadow-primary/20 flex items-center gap-1.5">
             <Layers className="w-3 h-3" />
-            {item.parts_count} partes
+            {t('portfolioGrid.partsCount', '{count} partes').replace('{count}', String(item.parts_count))}
           </div>
-        ) : (
+        ) : !isManualMakerworldImport ? (
           <div className="absolute top-3 right-3 bg-background/60 backdrop-blur-md text-foreground text-xs px-2 py-1 rounded-md font-medium border border-border/60">
             {formatBytes(item.file_size_bytes)}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Content */}
@@ -76,7 +81,7 @@ function PortfolioCard({ item }: { item: UserStlPortfolio }) {
         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-auto">
           <div className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
-            <span>{formatDate(item.acquired_at)}</span>
+            <span>{formatDate(item.acquired_at, locale)}</span>
           </div>
         </div>
 
@@ -97,14 +102,42 @@ function PortfolioCard({ item }: { item: UserStlPortfolio }) {
           </div>
         )}
 
-        {/* Download button */}
-        <button
-          className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer bg-emerald-600 border-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Download className="w-3.5 h-3.5" />
-          Baixar
-        </button>
+        {/* Actions */}
+        <div className="mt-3 flex items-center gap-2">
+          {isManualMakerworldImport ? (
+            <a
+              href={item.external_url!}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer bg-emerald-600 border-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {t('portfolioGrid.viewOnMakerWorld', 'Ver no MakerWorld')}
+            </a>
+          ) : (
+            <button
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer bg-emerald-600 border-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="w-3.5 h-3.5" />
+              {t('portfolioGrid.download', 'Baixar')}
+            </button>
+          )}
+
+          {canPriceIt && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onPriceIt(item)
+              }}
+              title={t('portfolioGrid.priceIt', 'Precificar')}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer bg-primary border-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -130,9 +163,12 @@ function SkeletonCard() {
 interface PortfolioGridProps {
   items: UserStlPortfolio[]
   isLoading?: boolean
+  onPriceIt: (item: UserStlPortfolio) => void
 }
 
-export function PortfolioGrid({ items, isLoading = false }: PortfolioGridProps) {
+export function PortfolioGrid({ items, isLoading = false, onPriceIt }: PortfolioGridProps) {
+  const { t } = useTranslation()
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -147,9 +183,9 @@ export function PortfolioGrid({ items, isLoading = false }: PortfolioGridProps) 
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-border rounded-2xl bg-muted/20">
         <Box className="w-14 h-14 text-muted-foreground/30 mb-4 animate-pulse" />
-        <p className="text-lg font-bold text-foreground">Nenhum STL adquirido ainda</p>
+        <p className="text-lg font-bold text-foreground">{t('portfolioGrid.emptyTitle', 'Nenhum STL adquirido ainda')}</p>
         <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-          Explore a busca de STLs e desbloqueie seus primeiros modelos.
+          {t('portfolioGrid.emptySubtitle', 'Explore a busca de STLs e desbloqueie seus primeiros modelos.')}
         </p>
       </div>
     )
@@ -158,7 +194,7 @@ export function PortfolioGrid({ items, isLoading = false }: PortfolioGridProps) 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {items.map((item) => (
-        <PortfolioCard key={item.acquisition_id} item={item} />
+        <PortfolioCard key={item.acquisition_id} item={item} onPriceIt={onPriceIt} />
       ))}
     </div>
   )
