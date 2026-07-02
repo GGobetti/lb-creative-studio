@@ -17,6 +17,7 @@ import { SessionProgress } from './shared/SessionProgress'
 import { CreditsPopup } from './shared/CreditsPopup'
 import { SessionResult } from './shared/SessionResult'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/translations'
 
 const SESSION_SIZE = 5
 const POINTS_PER_AUDIT = 15
@@ -41,6 +42,8 @@ function SuggestionCard({
   token: string | null
   onUpvoteChange: (id: string, newCount: number, hasUpvoted: boolean) => void
 }) {
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [loading, setLoading] = useState(false)
 
   const toggle = async () => {
@@ -80,27 +83,27 @@ function SuggestionCard({
       )}
       {suggestion.suggested_title && (
         <div>
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-0.5">Título sugerido</p>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-0.5">{t('gameQualityAudit.suggestedTitle', 'Título sugerido')}</p>
           <p className="text-sm text-foreground">{suggestion.suggested_title}</p>
         </div>
       )}
       {suggestion.suggested_description && (
         <div>
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-0.5">Descrição sugerida</p>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-0.5">{t('gameQualityAudit.suggestedDescription', 'Descrição sugerida')}</p>
           <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">{suggestion.suggested_description}</p>
         </div>
       )}
       {suggestion.suggested_tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide w-full mb-0.5">Tags sugeridas</p>
-          {suggestion.suggested_tags.map((t) => (
-            <span key={t} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t}</span>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide w-full mb-0.5">{t('gameQualityAudit.suggestedTags', 'Tags sugeridas')}</p>
+          {suggestion.suggested_tags.map((tag) => (
+            <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{tag}</span>
           ))}
         </div>
       )}
       {suggestion.suggested_categories.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide w-full mb-0.5">Categorias sugeridas</p>
+          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide w-full mb-0.5">{t('gameQualityAudit.suggestedCategories', 'Categorias sugeridas')}</p>
           {suggestion.suggested_categories.map((c) => (
             <span key={c} className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">{c}</span>
           ))}
@@ -108,7 +111,7 @@ function SuggestionCard({
       )}
       <div className="flex items-center justify-between pt-1 border-t border-border/30">
         <p className="text-[10px] text-muted-foreground">
-          {new Date(suggestion.created_at).toLocaleDateString('pt-BR')}
+          {new Date(suggestion.created_at).toLocaleDateString(locale)}
         </p>
         <button
           onClick={toggle}
@@ -122,7 +125,7 @@ function SuggestionCard({
           )}
         >
           <ThumbsUp size={11} />
-          {suggestion.upvote_count} {suggestion.has_upvoted ? 'votado' : 'apoiar'}
+          {suggestion.upvote_count} {suggestion.has_upvoted ? t('gameQualityAudit.voted', 'votado') : t('gameQualityAudit.support', 'apoiar')}
         </button>
       </div>
     </div>
@@ -149,6 +152,15 @@ function SuggestModal({
   }) => Promise<void>
   submitting: boolean
 }) {
+  const { t } = useTranslation()
+  const REJECTION_REASON_LABELS: Record<string, string> = {
+    'Imagem não representa o modelo': t('gameQualityAudit.reasonImageMismatch', 'Imagem não representa o modelo'),
+    'Descrição insuficiente ou vazia': t('gameQualityAudit.reasonDescriptionInsufficient', 'Descrição insuficiente ou vazia'),
+    'Nome não descritivo': t('gameQualityAudit.reasonNameNotDescriptive', 'Nome não descritivo'),
+    'Sem tags relevantes': t('gameQualityAudit.reasonNoRelevantTags', 'Sem tags relevantes'),
+    'Conteúdo inapropriado': t('gameQualityAudit.reasonInappropriateContent', 'Conteúdo inapropriado'),
+    'Outro': t('gameQualityAudit.reasonOther', 'Outro'),
+  }
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([...question.tags])
@@ -191,8 +203,8 @@ function SuggestModal({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
           <div>
-            <h3 className="text-heading text-base font-bold">Sugerir melhorias</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Preencha apenas os campos que precisam de correção</p>
+            <h3 className="text-heading text-base font-bold">{t('gameQualityAudit.suggestImprovements', 'Sugerir melhorias')}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t('gameQualityAudit.fillOnlyFieldsToCorrect', 'Preencha apenas os campos que precisam de correção')}</p>
           </div>
           <button onClick={onClose} disabled={submitting} className="text-muted-foreground hover:text-foreground">
             <X size={18} />
@@ -204,7 +216,7 @@ function SuggestModal({
 
           {/* Title */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Título</label>
+            <label className="text-sm font-medium text-foreground">{t('gameQualityAudit.title', 'Título')}</label>
             <input
               type="text"
               value={title}
@@ -216,11 +228,11 @@ function SuggestModal({
 
           {/* Description */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Descrição</label>
+            <label className="text-sm font-medium text-foreground">{t('gameQualityAudit.description', 'Descrição')}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={question.description || 'Descrição do modelo...'}
+              placeholder={question.description || t('gameQualityAudit.modelDescriptionPlaceholder', 'Descrição do modelo...')}
               rows={3}
               className="px-3 py-2 rounded-lg border border-border bg-muted text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
             />
@@ -228,12 +240,12 @@ function SuggestModal({
 
           {/* Tags */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Tags</label>
+            <label className="text-sm font-medium text-foreground">{t('gameQualityAudit.tags', 'Tags')}</label>
             <div className="flex flex-wrap gap-1.5 p-2 rounded-lg border border-border bg-muted min-h-[40px]">
-              {tags.map((t) => (
-                <span key={t} className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
-                  #{t}
-                  <button onClick={() => setTags((prev) => prev.filter((x) => x !== t))} className="hover:text-destructive">
+              {tags.map((tag) => (
+                <span key={tag} className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+                  #{tag}
+                  <button onClick={() => setTags((prev) => prev.filter((x) => x !== tag))} className="hover:text-destructive">
                     <X size={10} />
                   </button>
                 </span>
@@ -244,7 +256,7 @@ function SuggestModal({
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addTag()}
-                  placeholder="add tag..."
+                  placeholder={t('gameQualityAudit.addTagPlaceholder', 'add tag...')}
                   className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground/40 outline-none w-20"
                 />
                 <button onClick={addTag} className="text-muted-foreground hover:text-primary">
@@ -256,7 +268,7 @@ function SuggestModal({
 
           {/* Categories */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Categorias</label>
+            <label className="text-sm font-medium text-foreground">{t('gameQualityAudit.categories', 'Categorias')}</label>
             <div className="grid grid-cols-2 gap-1.5">
               {STL_CATEGORIES.map((cat) => {
                 const sel = categories.has(cat)
@@ -284,7 +296,7 @@ function SuggestModal({
 
           {/* Problems */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">Problemas identificados</label>
+            <label className="text-sm font-medium text-foreground">{t('gameQualityAudit.problemsIdentified', 'Problemas identificados')}</label>
             {REJECTION_REASONS.filter((r) => r !== 'Outro').map((reason) => (
               <label key={reason} className="flex items-center gap-2.5 cursor-pointer group">
                 <input
@@ -297,7 +309,7 @@ function SuggestModal({
                   }}
                   className="w-4 h-4 rounded cursor-pointer"
                 />
-                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{reason}</span>
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{REJECTION_REASON_LABELS[reason] ?? reason}</span>
               </label>
             ))}
             <label className="flex items-center gap-2.5 cursor-pointer group">
@@ -311,14 +323,14 @@ function SuggestModal({
                 }}
                 className="w-4 h-4 rounded cursor-pointer"
               />
-              <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">Outro</span>
+              <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{REJECTION_REASON_LABELS['Outro']}</span>
             </label>
             {selectedReasons.has('Outro') && (
               <input
                 type="text"
                 value={otherReason}
                 onChange={(e) => setOtherReason(e.target.value)}
-                placeholder="Descreva o problema..."
+                placeholder={t('gameQualityAudit.describeProblemPlaceholder', 'Descreva o problema...')}
                 className="px-3 py-2 rounded-lg border border-border bg-muted text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-destructive/40"
               />
             )}
@@ -326,7 +338,7 @@ function SuggestModal({
 
           {/* Verdict */}
           <div className="flex flex-col gap-2 pt-1 border-t border-border">
-            <p className="text-sm font-medium text-foreground">Seu veredito sobre o STL</p>
+            <p className="text-sm font-medium text-foreground">{t('gameQualityAudit.yourVerdict', 'Seu veredito sobre o STL')}</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setVerdict('approve')}
@@ -337,7 +349,7 @@ function SuggestModal({
                     : 'border-border text-muted-foreground hover:border-success/40 hover:text-success',
                 )}
               >
-                <CheckCircle2 size={15} /> Aprovar
+                <CheckCircle2 size={15} /> {t('gameQualityAudit.approve', 'Aprovar')}
               </button>
               <button
                 onClick={() => setVerdict('reject')}
@@ -348,7 +360,7 @@ function SuggestModal({
                     : 'border-border text-muted-foreground hover:border-destructive/40 hover:text-destructive',
                 )}
               >
-                <XCircle size={15} /> Rejeitar
+                <XCircle size={15} /> {t('gameQualityAudit.reject', 'Rejeitar')}
               </button>
             </div>
           </div>
@@ -361,7 +373,7 @@ function SuggestModal({
             disabled={submitting}
             className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
           >
-            Cancelar
+            {t('gameQualityAudit.cancel', 'Cancelar')}
           </button>
           <button
             onClick={() => onSubmit({
@@ -375,7 +387,7 @@ function SuggestModal({
             disabled={!canSubmit}
             className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {submitting ? 'Enviando...' : 'Enviar sugestões'}
+            {submitting ? t('gameQualityAudit.sending', 'Enviando...') : t('gameQualityAudit.sendSuggestions', 'Enviar sugestões')}
           </button>
         </div>
       </motion.div>

@@ -5,11 +5,14 @@ import type { XpSummary, XpConfig } from '@/types/xp'
 import { useAppStore } from '@/store/store'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { Loader2, ArrowRightLeft } from 'lucide-react'
+import { useTranslation } from '@/lib/translations'
 
 interface Props { summary: XpSummary }
 
 export function XpRedeemCard({ summary }: Props) {
   const { refreshXpSummary, refreshCredits } = useAppStore()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [config, setConfig] = useState<XpConfig | null>(null)
   const [amount, setAmount] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,7 +39,7 @@ export function XpRedeemCard({ summary }: Props) {
     try {
       const supabase = getSupabaseBrowser()
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { setError('Sessão expirada'); setLoading(false); return }
+      if (!session) { setError(t('xpRedeemCard.sessionExpired', 'Sessão expirada')); setLoading(false); return }
 
       const res = await fetch('/api/games/redeem-xp', {
         method: 'POST',
@@ -49,7 +52,7 @@ export function XpRedeemCard({ summary }: Props) {
       const data = await res.json()
       if (!res.ok) { setError(data.error); setLoading(false); setShowConfirm(false); return }
 
-      setSuccess(`+${data.credits_earned} créditos adicionados!`)
+      setSuccess(`+${data.credits_earned} ${t('xpRedeemCard.creditsAdded', 'créditos adicionados!')}`)
       setAmount('')
       setShowConfirm(false)
       await refreshXpSummary()
@@ -64,19 +67,19 @@ export function XpRedeemCard({ summary }: Props) {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-        Resgatar XP por Créditos
+        {t('xpRedeemCard.title', 'Resgatar XP por Créditos')}
       </h3>
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">XP disponível</span>
-          <span className="font-bold text-foreground">{summary.xp_total.toLocaleString('pt-BR')} XP</span>
+          <span className="text-muted-foreground">{t('xpRedeemCard.availableXp', 'XP disponível')}</span>
+          <span className="font-bold text-foreground">{summary.xp_total.toLocaleString(locale)} XP</span>
         </div>
         {config && (
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Taxa</span>
+            <span className="text-muted-foreground">{t('xpRedeemCard.rate', 'Taxa')}</span>
             <span className="text-muted-foreground">
-              {config.xp_to_credits_rate} XP = 1 crédito
-              <span className="ml-2 text-muted-foreground/50">(mín. {config.min_redeem_xp} XP)</span>
+              {config.xp_to_credits_rate} XP = 1 {t('xpRedeemCard.creditSingular', 'crédito')}
+              <span className="ml-2 text-muted-foreground/50">({t('xpRedeemCard.minAbbrev', 'mín.')} {config.min_redeem_xp} XP)</span>
             </span>
           </div>
         )}
@@ -85,7 +88,7 @@ export function XpRedeemCard({ summary }: Props) {
             type="number"
             value={amount}
             onChange={(e) => { setAmount(e.target.value); setError(null); setSuccess(null) }}
-            placeholder={`Quantidade de XP (mín. ${config?.min_redeem_xp ?? 100})`}
+            placeholder={`${t('xpRedeemCard.amountPlaceholder', 'Quantidade de XP')} (${t('xpRedeemCard.minAbbrev', 'mín.')} ${config?.min_redeem_xp ?? 100})`}
             className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm
                        focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
@@ -96,12 +99,12 @@ export function XpRedeemCard({ summary }: Props) {
                        disabled:opacity-40 disabled:cursor-not-allowed hover:bg-amber-400 transition-colors"
           >
             <ArrowRightLeft size={15} />
-            Resgatar
+            {t('xpRedeemCard.redeemButton', 'Resgatar')}
           </button>
         </div>
         {xpNum > 0 && config && (
           <p className="text-xs text-muted-foreground">
-            {xpNum.toLocaleString('pt-BR')} XP → <span className="font-semibold text-amber-500">{creditsPreview} créditos</span>
+            {xpNum.toLocaleString(locale)} XP → <span className="font-semibold text-amber-500">{creditsPreview} {t('xpRedeemCard.creditsPlural', 'créditos')}</span>
           </p>
         )}
         {error && <p className="text-sm text-red-500">{error}</p>}
@@ -112,18 +115,18 @@ export function XpRedeemCard({ summary }: Props) {
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full mx-4 flex flex-col gap-4">
-            <h4 className="text-lg font-bold text-foreground">Confirmar resgate</h4>
+            <h4 className="text-lg font-bold text-foreground">{t('xpRedeemCard.confirmTitle', 'Confirmar resgate')}</h4>
             <p className="text-sm text-muted-foreground">
-              Trocar <span className="font-semibold text-foreground">{xpNum.toLocaleString('pt-BR')} XP</span> por{' '}
-              <span className="font-semibold text-amber-500">{creditsPreview} créditos</span>?
-              <br />Esta ação não pode ser desfeita.
+              {t('xpRedeemCard.confirmTradePrefix', 'Trocar')} <span className="font-semibold text-foreground">{xpNum.toLocaleString(locale)} XP</span> {t('xpRedeemCard.confirmTradeFor', 'por')}{' '}
+              <span className="font-semibold text-amber-500">{creditsPreview} {t('xpRedeemCard.creditsPlural', 'créditos')}</span>?
+              <br />{t('xpRedeemCard.confirmIrreversible', 'Esta ação não pode ser desfeita.')}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
                 className="flex-1 py-2.5 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted"
               >
-                Cancelar
+                {t('xpRedeemCard.cancel', 'Cancelar')}
               </button>
               <button
                 onClick={handleRedeem}
@@ -131,7 +134,7 @@ export function XpRedeemCard({ summary }: Props) {
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-400 disabled:opacity-60"
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
-                Confirmar
+                {t('xpRedeemCard.confirm', 'Confirmar')}
               </button>
             </div>
           </div>

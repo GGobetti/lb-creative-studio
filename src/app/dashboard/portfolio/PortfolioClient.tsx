@@ -34,9 +34,12 @@ import { PricingCalculator } from '@/components/dashboard/PricingCalculator'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useAppStore } from '@/store/store'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from '@/lib/translations'
 
 export function PortfolioClient() {
   const { profile } = useAppStore()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [items, setItems] = useState<PortfolioItem[]>([])
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -78,7 +81,7 @@ export function PortfolioClient() {
         setTransactions((data as Transaction[]) ?? [])
       } catch (err: any) {
         console.error("[History] Failed to fetch:", err)
-        setTransactionsError("Não foi possível carregar o histórico. Tente novamente.")
+        setTransactionsError(t('portfolio.historyLoadError', "Não foi possível carregar o histórico. Tente novamente."))
       } finally {
         setLoadingTransactions(false)
       }
@@ -195,23 +198,23 @@ export function PortfolioClient() {
   }
 
   const handleDeleteItem = async (itemId: string) => {
-    if (!confirm('Deseja realmente excluir este item do seu portfólio?')) return
+    if (!confirm(t('portfolio.confirmDelete', 'Deseja realmente excluir este item do seu portfólio?'))) return
     try {
       const supabase = getSupabaseBrowser()
       const { error } = await supabase
         .from('portfolio_items')
         .delete()
         .eq('id', itemId)
-      
+
       if (!error) {
         setItems(prev => prev.filter(item => item.id !== itemId))
         setViewingItem(null)
       } else {
-        alert('Erro ao excluir item: ' + error.message)
+        alert(t('portfolio.deleteError', 'Erro ao excluir item: ') + error.message)
       }
     } catch (e: any) {
       console.error(e)
-      alert('Erro inesperado: ' + e.message)
+      alert(t('portfolio.unexpectedError', 'Erro inesperado: ') + e.message)
     }
   }
 
@@ -224,12 +227,12 @@ export function PortfolioClient() {
       const supabase = getSupabaseBrowser()
       const { data: { session } } = await supabase.auth.getSession()
       const userId = session?.user?.id
-      if (!userId) throw new Error('Usuário não autenticado.')
+      if (!userId) throw new Error(t('portfolio.notAuthenticated', 'Usuário não autenticado.'))
 
       // Verificar se a pasta do usuário está configurada no storage
       const fileExt = file.name.split('.').pop()
       const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`
-      
+
       const { error: uploadError } = await supabase.storage
         .from('portfolio')
         .upload(fileName, file, {
@@ -240,7 +243,7 @@ export function PortfolioClient() {
       if (uploadError) {
         // Se der erro de bucket inexistente, avisa o usuário sobre a migração
         if (uploadError.message?.includes('bucket') || uploadError.message?.includes('does not exist')) {
-          throw new Error('Bucket "portfolio" não configurado no Supabase. Certifique-se de executar as migrações SQL no painel do Supabase.')
+          throw new Error(t('portfolio.bucketNotConfigured', 'Bucket "portfolio" não configurado no Supabase. Certifique-se de executar as migrações SQL no painel do Supabase.'))
         }
         throw uploadError
       }
@@ -252,7 +255,7 @@ export function PortfolioClient() {
       setFormThumbnailUrl(publicUrl)
     } catch (err: any) {
       console.error('Error uploading image:', err)
-      alert(err.message || 'Erro ao fazer upload da imagem.')
+      alert(err.message || t('portfolio.uploadImageError', 'Erro ao fazer upload da imagem.'))
     } finally {
       setUploading(false)
     }
@@ -271,7 +274,7 @@ export function PortfolioClient() {
   const handleCreateManualItem = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formTitle.trim()) {
-      alert('O título é obrigatório.')
+      alert(t('portfolio.titleRequired', 'O título é obrigatório.'))
       return
     }
 
@@ -280,7 +283,7 @@ export function PortfolioClient() {
       const supabase = getSupabaseBrowser()
       const { data: { session } } = await supabase.auth.getSession()
       const userId = session?.user?.id
-      if (!userId) throw new Error('Usuário não autenticado.')
+      if (!userId) throw new Error(t('portfolio.notAuthenticated', 'Usuário não autenticado.'))
 
       const tagsArray = formTags.split(',').map(t => t.trim()).filter(Boolean)
 
@@ -311,7 +314,7 @@ export function PortfolioClient() {
       resetForm()
     } catch (err: any) {
       console.error(err)
-      alert('Erro ao salvar item: ' + err.message)
+      alert(t('portfolio.saveError', 'Erro ao salvar item: ') + err.message)
     } finally {
       setSaving(false)
     }
@@ -332,7 +335,7 @@ export function PortfolioClient() {
     e.preventDefault()
     if (!editingItem) return
     if (!formTitle.trim()) {
-      alert('O título é obrigatório.')
+      alert(t('portfolio.titleRequired', 'O título é obrigatório.'))
       return
     }
 
@@ -375,7 +378,7 @@ export function PortfolioClient() {
       resetForm()
     } catch (err: any) {
       console.error(err)
-      alert('Erro ao atualizar item: ' + err.message)
+      alert(t('portfolio.updateError', 'Erro ao atualizar item: ') + err.message)
     } finally {
       setSaving(false)
     }
@@ -396,9 +399,9 @@ export function PortfolioClient() {
     <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-foreground">Meu Portfólio</h1>
+          <h1 className="text-3xl font-black text-foreground">{t('portfolio.title', 'Meu Portfólio')}</h1>
           <p className="text-muted-foreground mt-1">
-            Importe do MakerWorld ou cadastre seus próprios modelos para calcular custos com precisão.
+            {t('portfolio.subtitle', 'Importe do MakerWorld ou cadastre seus próprios modelos para calcular custos com precisão.')}
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0 flex-wrap">
@@ -407,7 +410,7 @@ export function PortfolioClient() {
             className="bg-muted text-muted-foreground px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-muted/80 hover:text-foreground transition-colors"
           >
             <CalculatorIcon className="w-4 h-4" />
-            Calculadora Livre
+            {t('portfolio.freeCalculator', 'Calculadora Livre')}
           </button>
           <button
             onClick={() => {
@@ -417,14 +420,14 @@ export function PortfolioClient() {
             className="bg-secondary text-secondary-foreground px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-secondary/80 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Cadastrar Modelo
+            {t('portfolio.registerModel', 'Cadastrar Modelo')}
           </button>
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
           >
             <Plus className="w-4 h-4" />
-            Importar MakerWorld
+            {t('portfolio.importMakerWorld', 'Importar MakerWorld')}
           </button>
         </div>
       </div>
@@ -440,7 +443,7 @@ export function PortfolioClient() {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-5xl translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl">
-            <Dialog.Title className="sr-only">Calculadora de Preço</Dialog.Title>
+            <Dialog.Title className="sr-only">{t('portfolio.priceCalculatorTitle', 'Calculadora de Preço')}</Dialog.Title>
             <PricingCalculator isStandalone={true} />
             <Dialog.Close asChild>
               <button className="absolute top-4 right-4 bg-muted hover:bg-muted/80 text-foreground rounded-full p-2 transition-colors z-50">
@@ -456,7 +459,7 @@ export function PortfolioClient() {
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/70 z-50 animate-in fade-in" />
           <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-5xl translate-x-[-50%] translate-y-[-50%] max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl">
-            <Dialog.Title className="sr-only">Precificar Modelo</Dialog.Title>
+            <Dialog.Title className="sr-only">{t('portfolio.pricingModelTitle', 'Precificar Modelo')}</Dialog.Title>
             {selectedItem && (
               <PricingCalculator
                 isStandalone={false}
@@ -495,7 +498,7 @@ export function PortfolioClient() {
                         {viewingItem.title}
                       </Dialog.Title>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Adicionado em {new Date(viewingItem.created_at).toLocaleDateString('pt-BR')}
+                        {t('portfolio.addedOn', 'Adicionado em')} {new Date(viewingItem.created_at).toLocaleDateString(locale)}
                       </p>
                     </div>
                     <Dialog.Close asChild>
@@ -528,7 +531,7 @@ export function PortfolioClient() {
                           </AnimatePresence>
 
                           <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider z-10">
-                            {viewingItem.source_type === 'makerworld' ? 'MakerWorld' : viewingItem.source_type === 'manual' ? 'Manual' : 'LB Studio'}
+                            {viewingItem.source_type === 'makerworld' ? 'MakerWorld' : viewingItem.source_type === 'manual' ? t('portfolio.sourceManual', 'Manual') : t('portfolio.sourceLbStudio', 'LB Studio')}
                           </div>
 
                           {/* Left/Right controls (when multiple pictures exist) */}
@@ -590,7 +593,7 @@ export function PortfolioClient() {
                                     <User className="w-6 h-6 rounded-full p-0.5 bg-muted border" />
                                   )}
                                   <div className="text-xs">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Autor</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('portfolio.author', 'Autor')}</p>
                                     <p className="font-semibold text-foreground">{viewingItem.metadata.creator.name}</p>
                                   </div>
                                 </div>
@@ -599,26 +602,26 @@ export function PortfolioClient() {
                               <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <Heart size={14} className="text-red-500 fill-red-500" />
-                                  <span>{viewingItem.metadata.likeCount || 0} Likes</span>
+                                  <span>{viewingItem.metadata.likeCount || 0} {t('portfolio.likes', 'Likes')}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <DownloadIcon size={14} className="text-blue-500" />
-                                  <span>{viewingItem.metadata.downloadCount || 0} Downloads</span>
+                                  <span>{viewingItem.metadata.downloadCount || 0} {t('portfolio.downloads', 'Downloads')}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <Bookmark size={14} className="text-yellow-500 fill-yellow-500" />
-                                  <span>{viewingItem.metadata.collectionCount || 0} Salvos</span>
+                                  <span>{viewingItem.metadata.collectionCount || 0} {t('portfolio.saved', 'Salvos')}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <Box size={14} className="text-green-500" />
-                                  <span>{viewingItem.metadata.printCount || 0} Impressões</span>
+                                  <span>{viewingItem.metadata.printCount || 0} {t('portfolio.prints', 'Impressões')}</span>
                                 </div>
                               </div>
 
                               {viewingItem.metadata.license && (
                                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted border border-border/60 px-2 py-1 rounded w-fit">
                                   <ShieldCheck size={12} className="text-primary" />
-                                  <span>Licença: {viewingItem.metadata.license}</span>
+                                  <span>{t('portfolio.license', 'Licença')}: {viewingItem.metadata.license}</span>
                                 </div>
                               )}
 
@@ -630,7 +633,7 @@ export function PortfolioClient() {
                                   className="text-[11px] font-bold text-primary flex items-center gap-1 hover:underline"
                                 >
                                   <ExternalLink size={12} />
-                                  Visualizar no MakerWorld original
+                                  {t('portfolio.viewOriginal', 'Visualizar no MakerWorld original')}
                                 </a>
                               )}
                             </div>
@@ -640,17 +643,17 @@ export function PortfolioClient() {
                           <div className="grid grid-cols-3 gap-3 bg-muted/20 border border-border/50 p-3 rounded-xl text-center">
                             <div className="flex flex-col items-center">
                               <Scale size={14} className="text-muted-foreground mb-1" />
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Peso</span>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('portfolio.weight', 'Peso')}</span>
                               <span className="text-sm font-semibold">{viewingItem.weight_g}g</span>
                             </div>
                             <div className="flex flex-col items-center">
                               <Clock size={14} className="text-muted-foreground mb-1" />
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tempo</span>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('portfolio.time', 'Tempo')}</span>
                               <span className="text-sm font-semibold">{viewingItem.print_time_hours}h</span>
                             </div>
                             <div className="flex flex-col items-center">
                               <DollarSign size={14} className="text-primary mb-1" />
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Preço</span>
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('portfolio.price', 'Preço')}</span>
                               <span className="text-sm font-semibold text-primary">
                                 {viewingItem.calculated_price > 0 ? `R$ ${viewingItem.calculated_price.toFixed(2)}` : 'R$ 0,00'}
                               </span>
@@ -661,10 +664,10 @@ export function PortfolioClient() {
                           <div>
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1">
                               <FileText size={12} />
-                              Descrição
+                              {t('portfolio.description', 'Descrição')}
                             </span>
                             <p className="text-xs text-muted-foreground max-h-36 overflow-y-auto whitespace-pre-wrap border border-border/40 p-3 rounded-lg bg-muted/10 leading-relaxed scrollbar-thin">
-                              {viewingItem.description || 'Nenhuma descrição inserida.'}
+                              {viewingItem.description || t('portfolio.noDescription', 'Nenhuma descrição inserida.')}
                             </p>
                           </div>
 
@@ -673,7 +676,7 @@ export function PortfolioClient() {
                             <div>
                               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-1.5">
                                 <Tag size={12} />
-                                Tags
+                                {t('portfolio.tags', 'Tags')}
                               </span>
                               <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto scrollbar-thin">
                                 {viewingItem.metadata.tags.map((tag: string, i: number) => (
@@ -691,7 +694,7 @@ export function PortfolioClient() {
                           <button
                             onClick={() => handleDeleteItem(viewingItem.id)}
                             className="bg-destructive/10 text-destructive hover:bg-destructive/20 p-2.5 rounded-lg transition-colors"
-                            title="Excluir item"
+                            title={t('portfolio.deleteItemTitle', 'Excluir item')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -703,7 +706,7 @@ export function PortfolioClient() {
                             className="bg-muted text-foreground border border-border hover:bg-muted/80 p-2.5 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold"
                           >
                             <Edit size={14} />
-                            Editar
+                            {t('common.edit', 'Editar')}
                           </button>
                           <button
                             onClick={() => {
@@ -713,7 +716,7 @@ export function PortfolioClient() {
                             className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 rounded-lg text-xs font-bold transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
                           >
                             <DollarSign size={14} />
-                            Precificar Impressão
+                            {t('portfolio.pricingPrint', 'Precificar Impressão')}
                           </button>
                         </div>
                       </div>
@@ -734,7 +737,7 @@ export function PortfolioClient() {
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <Dialog.Title className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Plus className="w-5 h-5 text-primary" />
-                Cadastrar Modelo Manualmente
+                {t('portfolio.registerModelManually', 'Cadastrar Modelo Manualmente')}
               </Dialog.Title>
               <Dialog.Close asChild>
                 <button className="bg-muted hover:bg-muted/80 text-foreground rounded-full p-2 transition-colors">
@@ -745,23 +748,23 @@ export function PortfolioClient() {
 
             <form onSubmit={handleCreateManualItem} className="space-y-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Título *</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.titleField', 'Título')} *</label>
                 <input
                   type="text"
                   required
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  placeholder="Ex: Chaveiro Logo Personalizado"
+                  placeholder={t('portfolio.titlePlaceholder', 'Ex: Chaveiro Logo Personalizado')}
                   className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Descrição</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.description', 'Descrição')}</label>
                 <textarea
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Detalhes ou especificações do modelo"
+                  placeholder={t('portfolio.descriptionPlaceholder', 'Detalhes ou especificações do modelo')}
                   rows={3}
                   className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                 />
@@ -769,7 +772,7 @@ export function PortfolioClient() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Peso Estimado (g)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.estimatedWeight', 'Peso Estimado (g)')}</label>
                   <input
                     type="number"
                     min="0"
@@ -780,7 +783,7 @@ export function PortfolioClient() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Tempo Estimado (h)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.estimatedTime', 'Tempo Estimado (h)')}</label>
                   <input
                     type="number"
                     min="0"
@@ -793,7 +796,7 @@ export function PortfolioClient() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Link Externo (Ex: MakerWorld, Thingiverse)</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.externalLink', 'Link Externo (Ex: MakerWorld, Thingiverse)')}</label>
                 <input
                   type="url"
                   value={formExternalUrl}
@@ -804,18 +807,18 @@ export function PortfolioClient() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Tags (Separadas por vírgula)</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.tagsField', 'Tags (Separadas por vírgula)')}</label>
                 <input
                   type="text"
                   value={formTags}
                   onChange={(e) => setFormTags(e.target.value)}
-                  placeholder="chaveiro, personalizado, presente"
+                  placeholder={t('portfolio.tagsPlaceholder', 'chaveiro, personalizado, presente')}
                   className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Foto / Imagem do Modelo</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">{t('portfolio.photoField', 'Foto / Imagem do Modelo')}</label>
                 <div className="grid grid-cols-1 gap-3">
                   {/* File Upload Dropzone */}
                   <div className="border border-dashed border-border rounded-lg p-4 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition relative">
@@ -832,14 +835,14 @@ export function PortfolioClient() {
                       <Upload className="w-6 h-6 text-muted-foreground mb-1" />
                     )}
                     <span className="text-xs font-bold text-foreground">
-                      {uploading ? 'Enviando...' : 'Fazer upload de imagem'}
+                      {uploading ? t('portfolio.uploading', 'Enviando...') : t('portfolio.uploadImage', 'Fazer upload de imagem')}
                     </span>
                     <span className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG ou WebP</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="h-px bg-border flex-1"></span>
-                    <span>OU COLE A URL</span>
+                    <span>{t('portfolio.orPasteUrl', 'OU COLE A URL')}</span>
                     <span className="h-px bg-border flex-1"></span>
                   </div>
 
@@ -847,14 +850,14 @@ export function PortfolioClient() {
                     type="url"
                     value={formThumbnailUrl}
                     onChange={(e) => setFormThumbnailUrl(e.target.value)}
-                    placeholder="Cole a URL pública da imagem..."
+                    placeholder={t('portfolio.pastePublicUrl', 'Cole a URL pública da imagem...')}
                     className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
                   />
 
                   {formThumbnailUrl && (
                     <div className="mt-2 relative w-20 h-20 rounded-lg border border-border overflow-hidden bg-black/40">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={formThumbnailUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={formThumbnailUrl} alt={t('portfolio.previewAlt', 'Preview')} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setFormThumbnailUrl('')}
@@ -873,7 +876,7 @@ export function PortfolioClient() {
                     type="button"
                     className="bg-muted hover:bg-muted/80 text-foreground px-4 py-2 rounded-lg text-sm font-bold transition-colors"
                   >
-                    Cancelar
+                    {t('common.cancel', 'Cancelar')}
                   </button>
                 </Dialog.Close>
                 <button
@@ -882,7 +885,7 @@ export function PortfolioClient() {
                   className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-primary/20 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Salvar Modelo
+                  {t('portfolio.saveModel', 'Salvar Modelo')}
                 </button>
               </div>
             </form>
@@ -898,7 +901,7 @@ export function PortfolioClient() {
             <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
               <Dialog.Title className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Edit className="w-5 h-5 text-primary" />
-                Editar Modelo
+                {t('portfolio.editModel', 'Editar Modelo')}
               </Dialog.Title>
               <button
                 onClick={() => setEditingItem(null)}
@@ -910,7 +913,7 @@ export function PortfolioClient() {
 
             <form onSubmit={handleEditItem} className="space-y-4">
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Título *</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.titleField', 'Título')} *</label>
                 <input
                   type="text"
                   required
@@ -921,7 +924,7 @@ export function PortfolioClient() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Descrição</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.description', 'Descrição')}</label>
                 <textarea
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -932,7 +935,7 @@ export function PortfolioClient() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Peso Estimado (g)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.estimatedWeight', 'Peso Estimado (g)')}</label>
                   <input
                     type="number"
                     min="0"
@@ -943,7 +946,7 @@ export function PortfolioClient() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Tempo Estimado (h)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.estimatedTime', 'Tempo Estimado (h)')}</label>
                   <input
                     type="number"
                     min="0"
@@ -956,7 +959,7 @@ export function PortfolioClient() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Link Externo</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.externalLinkShort', 'Link Externo')}</label>
                 <input
                   type="url"
                   value={formExternalUrl}
@@ -966,7 +969,7 @@ export function PortfolioClient() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">Tags (Separadas por vírgula)</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-1">{t('portfolio.tagsField', 'Tags (Separadas por vírgula)')}</label>
                 <input
                   type="text"
                   value={formTags}
@@ -976,7 +979,7 @@ export function PortfolioClient() {
               </div>
 
               <div>
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Foto / Imagem do Modelo</label>
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">{t('portfolio.photoField', 'Foto / Imagem do Modelo')}</label>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="border border-dashed border-border rounded-lg p-4 flex flex-col items-center justify-center bg-muted/30 hover:bg-muted/50 transition relative">
                     <input
@@ -992,13 +995,13 @@ export function PortfolioClient() {
                       <Upload className="w-6 h-6 text-muted-foreground mb-1" />
                     )}
                     <span className="text-xs font-bold text-foreground">
-                      {uploading ? 'Enviando...' : 'Fazer upload de nova imagem'}
+                      {uploading ? t('portfolio.uploading', 'Enviando...') : t('portfolio.uploadNewImage', 'Fazer upload de nova imagem')}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="h-px bg-border flex-1"></span>
-                    <span>OU ATUALIZE A URL</span>
+                    <span>{t('portfolio.orUpdateUrl', 'OU ATUALIZE A URL')}</span>
                     <span className="h-px bg-border flex-1"></span>
                   </div>
 
@@ -1012,7 +1015,7 @@ export function PortfolioClient() {
                   {formThumbnailUrl && (
                     <div className="mt-2 relative w-20 h-20 rounded-lg border border-border overflow-hidden bg-black/40">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={formThumbnailUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={formThumbnailUrl} alt={t('portfolio.previewAlt', 'Preview')} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setFormThumbnailUrl('')}
@@ -1031,7 +1034,7 @@ export function PortfolioClient() {
                   onClick={() => setEditingItem(null)}
                   className="bg-muted hover:bg-muted/80 text-foreground px-4 py-2 rounded-lg text-sm font-bold transition-colors"
                 >
-                  Cancelar
+                  {t('common.cancel', 'Cancelar')}
                 </button>
                 <button
                   type="submit"
@@ -1039,7 +1042,7 @@ export function PortfolioClient() {
                   className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-primary/20 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Atualizar Modelo
+                  {t('portfolio.updateModel', 'Atualizar Modelo')}
                 </button>
               </div>
             </form>
@@ -1058,16 +1061,16 @@ export function PortfolioClient() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar no portfólio por título ou descrição..."
+                  placeholder={t('portfolio.searchPlaceholder', 'Buscar no portfólio por título ou descrição...')}
                   className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-muted border border-border text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
                 />
               </div>
               <div className="flex gap-2 w-full md:w-auto overflow-x-auto shrink-0">
                 {['all', 'makerworld', 'generated_lb', 'manual'].map((source) => {
-                  const label = 
-                    source === 'all' ? 'Todos' :
+                  const label =
+                    source === 'all' ? t('portfolio.filterAll', 'Todos') :
                     source === 'makerworld' ? 'MakerWorld' :
-                    source === 'generated_lb' ? 'LB Studio' : 'Manual'
+                    source === 'generated_lb' ? t('portfolio.sourceLbStudio', 'LB Studio') : t('portfolio.sourceManual', 'Manual')
                   return (
                     <button
                       key={source}
@@ -1089,9 +1092,9 @@ export function PortfolioClient() {
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-border rounded-2xl bg-muted/20">
               <Box className="w-16 h-16 text-muted-foreground/30 mb-4 animate-pulse" />
-              <h3 className="text-xl font-bold text-foreground mb-2">Seu portfólio está vazio</h3>
+              <h3 className="text-xl font-bold text-foreground mb-2">{t('portfolio.emptyTitle', 'Seu portfólio está vazio')}</h3>
               <p className="text-muted-foreground max-w-md text-sm mb-6">
-                Comece importando um link do MakerWorld ou cadastre seus próprios modelos 3D manualmente.
+                {t('portfolio.emptySubtitle', 'Comece importando um link do MakerWorld ou cadastre seus próprios modelos 3D manualmente.')}
               </p>
               <div className="flex items-center gap-3">
                 <button
@@ -1102,22 +1105,22 @@ export function PortfolioClient() {
                   className="bg-secondary text-secondary-foreground px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-secondary/80 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Cadastrar Manualmente
+                  {t('portfolio.registerManually', 'Cadastrar Manualmente')}
                 </button>
                 <button
                   onClick={() => setIsImportModalOpen(true)}
                   className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
                 >
                   <Plus className="w-4 h-4" />
-                  Importar MakerWorld
+                  {t('portfolio.importMakerWorld', 'Importar MakerWorld')}
                 </button>
               </div>
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-center">
               <Box className="w-12 h-12 opacity-20 mb-3 text-primary animate-bounce" />
-              <p className="font-bold text-sm text-foreground">Nenhum item atende aos filtros de busca.</p>
-              <p className="text-xs text-muted-foreground mt-1">Tente ajustar a pesquisa textual ou os filtros de origem.</p>
+              <p className="font-bold text-sm text-foreground">{t('portfolio.noResultsTitle', 'Nenhum item atende aos filtros de busca.')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('portfolio.noResultsSubtitle', 'Tente ajustar a pesquisa textual ou os filtros de origem.')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -1141,13 +1144,13 @@ export function PortfolioClient() {
                       </div>
                     )}
                     <div className="absolute top-2 right-2 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                      {item.source_type === 'makerworld' ? 'MakerWorld' : item.source_type === 'manual' ? 'Manual' : 'LB Studio'}
+                      {item.source_type === 'makerworld' ? 'MakerWorld' : item.source_type === 'manual' ? t('portfolio.sourceManual', 'Manual') : t('portfolio.sourceLbStudio', 'LB Studio')}
                     </div>
                   </div>
                   <div className="p-4 flex flex-col flex-1">
                     <h3 className="font-bold text-sm line-clamp-1">{item.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2 flex-1">
-                      {item.description || 'Sem descrição'}
+                      {item.description || t('portfolio.noDescriptionShort', 'Sem descrição')}
                     </p>
                     <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
                       <div className="text-xs font-medium text-muted-foreground flex gap-2">
@@ -1160,7 +1163,7 @@ export function PortfolioClient() {
                         }}
                         className="bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md text-xs font-bold transition-colors relative z-10"
                       >
-                        Precificar
+                        {t('portfolio.pricingBtn', 'Precificar')}
                       </button>
                     </div>
                   </div>
@@ -1178,7 +1181,7 @@ export function PortfolioClient() {
               type="text"
               value={transactionsSearchQuery}
               onChange={(e) => setTransactionsSearchQuery(e.target.value)}
-              placeholder="Filtrar histórico por descrição..."
+              placeholder={t('portfolio.filterHistoryPlaceholder', 'Filtrar histórico por descrição...')}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-card border border-border text-sm outline-none focus:ring-2 focus:ring-primary/40 transition"
             />
           </div>
@@ -1188,38 +1191,38 @@ export function PortfolioClient() {
               <div className="flex items-center justify-center py-20 text-muted-foreground">
                 <div className="flex flex-col items-center gap-3">
                   <Clock size={32} className="opacity-30 animate-pulse" />
-                  <span className="text-sm">Carregando histórico...</span>
+                  <span className="text-sm">{t('portfolio.loadingHistory', 'Carregando histórico...')}</span>
                 </div>
               </div>
             ) : transactionsError ? (
               <div className="flex items-center justify-center py-20 text-red-500">
                 <span className="text-sm">{transactionsError}</span>
               </div>
-            ) : transactions.filter(t => (t.description ?? '').toLowerCase().includes(transactionsSearchQuery.toLowerCase())).length === 0 ? (
+            ) : transactions.filter(tx => (tx.description ?? '').toLowerCase().includes(transactionsSearchQuery.toLowerCase())).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground text-center">
                 <FileBox size={40} className="opacity-20 mb-3" />
-                <p className="font-medium text-sm text-foreground">Nenhum registro de transação encontrado.</p>
+                <p className="font-medium text-sm text-foreground">{t('portfolio.noTransactions', 'Nenhum registro de transação encontrado.')}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
                     <tr>
-                      <th className="px-6 py-4 font-medium">Data</th>
-                      <th className="px-6 py-4 font-medium">Descrição</th>
-                      <th className="px-6 py-4 font-medium text-right">Créditos</th>
+                      <th className="px-6 py-4 font-medium">{t('portfolio.colDate', 'Data')}</th>
+                      <th className="px-6 py-4 font-medium">{t('portfolio.description', 'Descrição')}</th>
+                      <th className="px-6 py-4 font-medium text-right">{t('portfolio.colCredits', 'Créditos')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactions
-                      .filter(t => (t.description ?? '').toLowerCase().includes(transactionsSearchQuery.toLowerCase()))
+                      .filter(tx => (tx.description ?? '').toLowerCase().includes(transactionsSearchQuery.toLowerCase()))
                       .map((tx) => (
                         <tr
                           key={tx.id}
                           className="border-b border-border last:border-0 hover:bg-muted/40 transition-colors"
                         >
                           <td className="px-6 py-4 text-muted-foreground whitespace-nowrap text-xs">
-                            {new Intl.DateTimeFormat("pt-BR", {
+                            {new Intl.DateTimeFormat(locale, {
                               day: "2-digit",
                               month: "short",
                               year: "numeric",
@@ -1234,10 +1237,10 @@ export function PortfolioClient() {
                                   ? "bg-violet-500/10 border-violet-500/20 text-violet-400"
                                   : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
                               }`}>
-                                {tx.credits_added < 0 ? "Gasto" : "Recebido"}
+                                {tx.credits_added < 0 ? t('portfolio.spent', 'Gasto') : t('portfolio.received', 'Recebido')}
                               </span>
                               <span className="truncate max-w-md">
-                                {tx.description ?? (tx.credits_added < 0 ? "Ação paga" : "Créditos adicionados")}
+                                {tx.description ?? (tx.credits_added < 0 ? t('portfolio.paidAction', 'Ação paga') : t('portfolio.creditsAdded', 'Créditos adicionados'))}
                               </span>
                             </div>
                           </td>

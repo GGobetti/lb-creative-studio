@@ -23,7 +23,8 @@ import { useTranslation } from "@/lib/translations"
 
 export function TicketsTab() {
   const { profile } = useAppStore()
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
 
   // State
   const [tickets, setTickets] = useState<SupportTicket[]>([])
@@ -224,7 +225,7 @@ export function TicketsTab() {
       await fetchTickets()
     } catch (err) {
       console.error("Erro ao enviar resposta do admin:", err)
-      alert("Erro ao enviar resposta.")
+      alert(t('adminTicketsTab.replyError', "Erro ao enviar resposta."))
     } finally {
       setSendingReply(false)
     }
@@ -248,12 +249,12 @@ export function TicketsTab() {
 
       // Post status update system message
       const statusLabels = {
-        open: "Aberto",
-        in_progress: "Em Atendimento",
-        resolved: "Resolvido",
-        closed: "Fechado"
+        open: t('tickets.status_open', "Aberto"),
+        in_progress: t('tickets.status_in_progress', "Em Atendimento"),
+        resolved: t('tickets.status_resolved', "Resolvido"),
+        closed: t('tickets.status_closed', "Fechado")
       }
-      
+
       await supabase
         .from("ticket_messages")
         .insert({
@@ -266,7 +267,7 @@ export function TicketsTab() {
       await fetchTickets()
     } catch (err) {
       console.error("Erro ao atualizar status:", err)
-      alert("Erro ao atualizar status do chamado.")
+      alert(t('adminTicketsTab.statusUpdateError', "Erro ao atualizar status do chamado."))
     } finally {
       setUpdatingStatus(null)
     }
@@ -308,7 +309,7 @@ export function TicketsTab() {
         <div className="p-4 border-b border-border bg-card space-y-3 shrink-0">
           <h3 className="font-bold text-sm text-foreground flex items-center gap-1.5">
             <LifeBuoy size={16} className="text-primary" />
-            Central de Atendimento
+            {t('adminTicketsTab.centralTitle', "Central de Atendimento")}
           </h3>
 
           {/* Search bar */}
@@ -318,7 +319,7 @@ export function TicketsTab() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por e-mail ou assunto..."
+              placeholder={t('adminTicketsTab.searchPlaceholder', "Buscar por e-mail ou assunto...")}
               className="w-full pl-9 pr-3 py-1.5 bg-muted border border-border rounded-lg text-[11px] text-foreground outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -330,21 +331,21 @@ export function TicketsTab() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-muted border border-border rounded-lg px-2 py-1 text-[10px] text-foreground outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="all">Todos os Status</option>
-              <option value="open">Abertos</option>
-              <option value="in_progress">Em Atendimento</option>
-              <option value="resolved">Resolvidos</option>
-              <option value="closed">Fechados</option>
+              <option value="all">{t('tickets.allStatuses', "Todos os Status")}</option>
+              <option value="open">{t('adminTicketsTab.statusOpenPlural', "Abertos")}</option>
+              <option value="in_progress">{t('tickets.status_in_progress', "Em Atendimento")}</option>
+              <option value="resolved">{t('adminTicketsTab.statusResolvedPlural', "Resolvidos")}</option>
+              <option value="closed">{t('adminTicketsTab.statusClosedPlural', "Fechados")}</option>
             </select>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="bg-muted border border-border rounded-lg px-2 py-1 text-[10px] text-foreground outline-none focus:ring-1 focus:ring-primary"
             >
-              <option value="all">Todas Categorias</option>
-              <option value="request_stl">Solicitar STL</option>
-              <option value="stl_adjustment">Ajuste de STL</option>
-              <option value="other">Outros</option>
+              <option value="all">{t('tickets.allCategories', "Todas Categorias")}</option>
+              <option value="request_stl">{t('tickets.category_request_stl', "Solicitar STL")}</option>
+              <option value="stl_adjustment">{t('adminTicketsTab.categoryAdjustment', "Ajuste de STL")}</option>
+              <option value="other">{t('tickets.category_other', "Outros")}</option>
             </select>
           </div>
         </div>
@@ -354,11 +355,11 @@ export function TicketsTab() {
           {loading ? (
             <div className="p-12 text-center text-xs text-muted-foreground flex flex-col items-center justify-center gap-2">
               <Loader2 className="animate-spin text-primary" size={16} />
-              <span>Carregando chamados...</span>
+              <span>{t('adminTicketsTab.loadingTickets', "Carregando chamados...")}</span>
             </div>
           ) : filteredTickets.length === 0 ? (
             <div className="p-12 text-center text-xs text-muted-foreground">
-              Nenhum chamado pendente encontrado.
+              {t('adminTicketsTab.noPendingTickets', "Nenhum chamado pendente encontrado.")}
             </div>
           ) : (
             filteredTickets.map((ticket) => {
@@ -375,7 +376,7 @@ export function TicketsTab() {
                       {t(`tickets.status_${ticket.status}`, ticket.status)}
                     </span>
                     <span className="text-[9px] text-muted-foreground font-mono">
-                      {new Date(ticket.updated_at).toLocaleDateString("pt-BR")}
+                      {new Date(ticket.updated_at).toLocaleDateString(locale)}
                     </span>
                   </div>
 
@@ -409,28 +410,28 @@ export function TicketsTab() {
                   <span className="text-[10px] text-muted-foreground font-mono">({selectedTicket.user_email})</span>
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
-                  <span className="font-medium">Categoria: {getCategoryLabel(selectedTicket.category)}</span>
+                  <span className="font-medium">{t('adminTicketsTab.categoryLabel', "Categoria")}: {getCategoryLabel(selectedTicket.category)}</span>
                   <span>|</span>
                   <span className="flex items-center gap-1">
                     <Clock size={11} />
-                    Criado: {new Date(selectedTicket.created_at).toLocaleString("pt-BR")}
+                    {t('adminTicketsTab.createdLabel', "Criado")}: {new Date(selectedTicket.created_at).toLocaleString(locale)}
                   </span>
                 </div>
               </div>
 
               {/* Status control */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase">Status:</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">{t('tickets.status', "Status")}:</span>
                 <select
                   value={selectedTicket.status}
                   onChange={(e: any) => handleUpdateStatus(e.target.value)}
                   disabled={updatingStatus !== null}
                   className="bg-muted border border-border rounded-lg px-2.5 py-1 text-[11px] font-bold text-foreground outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="open">Aberto</option>
-                  <option value="in_progress">Em Atendimento</option>
-                  <option value="resolved">Resolvido</option>
-                  <option value="closed">Fechado</option>
+                  <option value="open">{t('tickets.status_open', "Aberto")}</option>
+                  <option value="in_progress">{t('tickets.status_in_progress', "Em Atendimento")}</option>
+                  <option value="resolved">{t('tickets.status_resolved', "Resolvido")}</option>
+                  <option value="closed">{t('tickets.status_closed', "Fechado")}</option>
                 </select>
               </div>
             </div>
@@ -444,7 +445,7 @@ export function TicketsTab() {
                   <div className="p-4 rounded-xl bg-card border border-border text-xs text-foreground space-y-2">
                     <div className="font-bold flex items-center gap-1 text-primary">
                       <AlertCircle size={13} />
-                      Mensagem de abertura do usuário:
+                      {t('adminTicketsTab.openingMessage', "Mensagem de abertura do usuário")}:
                     </div>
                     <p className="whitespace-pre-wrap leading-relaxed">{selectedTicket.description}</p>
                     {selectedTicket.attachment_url && (
@@ -456,7 +457,7 @@ export function TicketsTab() {
                           className="inline-flex items-center gap-1 text-[10px] text-violet-400 font-bold hover:underline"
                         >
                           <Paperclip size={11} />
-                          Visualizar arquivo anexo do chamado
+                          {t('tickets.viewAttachedFile', "Visualizar Arquivo Anexo")}
                           <ExternalLink size={10} />
                         </a>
                       </div>
@@ -466,7 +467,7 @@ export function TicketsTab() {
                   {loadingMessages ? (
                     <div className="py-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-1">
                       <Loader2 className="animate-spin text-primary" size={14} />
-                      <span>Carregando histórico...</span>
+                      <span>{t('tickets.loadingHistory', "Carregando histórico do chamado...")}</span>
                     </div>
                   ) : (
                     messages.map((msg) => {
@@ -493,10 +494,10 @@ export function TicketsTab() {
                         >
                           <div className="flex items-center gap-1.5 px-1">
                             <span className="text-[9px] text-muted-foreground font-mono">
-                              {isOwnMessage ? "Você" : isSupportReply ? "Suporte" : msg.sender_email}
+                              {isOwnMessage ? t('tickets.you', "Você") : isSupportReply ? t('tickets.support', "Suporte") : msg.sender_email}
                             </span>
                             <span className="text-[8px] text-muted-foreground/60">
-                              {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(msg.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           <div
@@ -524,7 +525,7 @@ export function TicketsTab() {
                       onChange={(e) => setReplyText(e.target.value)}
                       disabled={sendingReply}
                       className="flex-1 bg-muted border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
-                      placeholder="Escrever resposta como administrador..."
+                      placeholder={t('adminTicketsTab.replyPlaceholder', "Escrever resposta como administrador...")}
                     />
                     <button
                       type="submit"
@@ -545,9 +546,9 @@ export function TicketsTab() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
             <MessageSquare size={48} className="stroke-1 mb-2 text-muted-foreground/30 animate-pulse" />
-            <h4 className="font-bold text-sm text-foreground">Nenhum Chamado Selecionado</h4>
+            <h4 className="font-bold text-sm text-foreground">{t('adminTicketsTab.noTicketSelected', "Nenhum Chamado Selecionado")}</h4>
             <p className="text-xs max-w-xs mt-1">
-              Selecione um chamado na lista lateral para visualizar as mensagens e iniciar o atendimento.
+              {t('adminTicketsTab.selectTicketHint', "Selecione um chamado na lista lateral para visualizar as mensagens e iniciar o atendimento.")}
             </p>
           </div>
         )}

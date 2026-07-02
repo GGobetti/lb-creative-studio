@@ -42,7 +42,8 @@ export function AnalyticsTab({
   downloadsOverTime,
   downloadsByChannel,
 }: AnalyticsTabProps) {
-  const { t } = useTranslation()
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; count: number; label: string } | null>(null)
 
   const uniqueUsers = new Set(downloadHistory.map((h) => h.user_email)).size
@@ -59,20 +60,20 @@ export function AnalyticsTab({
           <div className="space-y-1">
             <h4 className="font-bold text-yellow-500 flex items-center gap-2">
               <AlertTriangle size={18} className="shrink-0" />
-              Banco de Dados desatualizado ou Erro de Conexão
+              {t("adminAnalytics.dbErrorTitle", "Banco de Dados desatualizado ou Erro de Conexão")}
             </h4>
             <p className="text-xs text-muted-foreground max-w-2xl mt-1">
-              Não foi possível carregar o histórico de downloads. A tabela{" "}
+              {t("adminAnalytics.dbErrorDescPart1", "Não foi possível carregar o histórico de downloads. A tabela")}{" "}
               <code className="bg-muted px-1 py-0.5 rounded text-yellow-400 font-mono">telegram_downloads_history</code>{" "}
-              pode não ter sido criada ainda.
+              {t("adminAnalytics.dbErrorDescPart2", "pode não ter sido criada ainda.")}
             </p>
-            <p className="text-[10px] text-muted-foreground/60 mt-2 font-mono">Erro: {error}</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-2 font-mono">{t("adminAnalytics.errorLabel", "Erro")}: {error}</p>
           </div>
           <button
             onClick={onRefresh}
             className="px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 text-xs font-bold rounded-lg border border-yellow-500/25 transition-all whitespace-nowrap cursor-pointer shrink-0"
           >
-            Tentar Novamente
+            {t("adminAnalytics.tryAgain", "Tentar Novamente")}
           </button>
         </div>
       )}
@@ -80,10 +81,10 @@ export function AnalyticsTab({
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: t("admin.totalDownloads", "Total de Downloads"), value: downloadHistory.length, unit: "arquivos" },
-          { title: t("admin.uniqueUsers", "Usuários Únicos"), value: uniqueUsers, unit: "usuários" },
-          { title: t("admin.activeChannels", "Canais Ativos"), value: uniqueChannels, unit: "grupos" },
-          { title: t("admin.downloadsPeriod", "Downloads no Período"), value: recentDownloads, unit: "últimos 7 dias" },
+          { title: t("admin.totalDownloads", "Total de Downloads"), value: downloadHistory.length, unit: t("adminAnalytics.unitFiles", "arquivos") },
+          { title: t("admin.uniqueUsers", "Usuários Únicos"), value: uniqueUsers, unit: t("adminAnalytics.unitUsers", "usuários") },
+          { title: t("admin.activeChannels", "Canais Ativos"), value: uniqueChannels, unit: t("adminAnalytics.unitGroups", "grupos") },
+          { title: t("admin.downloadsPeriod", "Downloads no Período"), value: recentDownloads, unit: t("adminAnalytics.unitLast7Days", "últimos 7 dias") },
         ].map((stat, i) => (
           <motion.div
             key={i}
@@ -170,7 +171,7 @@ export function AnalyticsTab({
                         style={{ left: `${(hoveredPoint.x / 500) * 100}%`, top: `${(hoveredPoint.y / 200) * 100}%`, transform: "translate(-50%, -125%)" }}
                       >
                         <span className="text-[9px] text-indigo-400 font-mono">{hoveredPoint.label}</span>
-                        <span>{hoveredPoint.count} downloads</span>
+                        <span>{hoveredPoint.count} {t("adminAnalytics.downloads", "downloads")}</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -187,7 +188,7 @@ export function AnalyticsTab({
           </h3>
           <div className="space-y-4 pt-2">
             {downloadsByChannel.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">Nenhum dado disponível</div>
+              <div className="h-48 flex items-center justify-center text-xs text-muted-foreground">{t("adminAnalytics.noDataAvailable", "Nenhum dado disponível")}</div>
             ) : (
               downloadsByChannel.map((ch, idx) => {
                 const maxDownloads = Math.max(...downloadsByChannel.map((x) => x.count), 1)
@@ -196,7 +197,7 @@ export function AnalyticsTab({
                   <div key={ch.name} className="space-y-1.5">
                     <div className="flex justify-between text-xs font-semibold text-foreground">
                       <span className="truncate max-w-[200px]">{ch.name}</span>
-                      <span className="font-mono text-xs">{ch.count} downloads</span>
+                      <span className="font-mono text-xs">{ch.count} {t("adminAnalytics.downloads", "downloads")}</span>
                     </div>
                     <div className="w-full bg-muted border border-border h-3.5 rounded-full overflow-hidden">
                       <motion.div
@@ -230,7 +231,7 @@ export function AnalyticsTab({
             className="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg border border-primary/25 transition-all cursor-pointer"
           >
             <RefreshCw size={14} />
-            Atualizar Relatório
+            {t("adminAnalytics.refreshReport", "Atualizar Relatório")}
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -262,7 +263,7 @@ export function AnalyticsTab({
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">{log.chat_title}</td>
                     <td className="px-6 py-4 text-xs font-mono text-muted-foreground">
-                      {new Date(log.downloaded_at).toLocaleString("pt-BR", {
+                      {new Date(log.downloaded_at).toLocaleString(locale, {
                         day: "2-digit", month: "2-digit", year: "numeric",
                         hour: "2-digit", minute: "2-digit", second: "2-digit",
                       })}

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import type { XpConfig, XpLevel, GameRewardsConfig } from '@/types/xp'
 import { Save, Loader2, Check } from 'lucide-react'
+import { useTranslation } from '@/lib/translations'
 
 export function XpConfigPanel() {
+  const { t } = useTranslation()
   const [config, setConfig] = useState<XpConfig | null>(null)
   const [levels, setLevels] = useState<XpLevel[]>([])
   const [gameConfigs, setGameConfigs] = useState<GameRewardsConfig[]>([])
@@ -71,18 +73,18 @@ export function XpConfigPanel() {
     setGameConfigs((prev) => prev.map((g, i) => i === index ? { ...g, xp_per_action: value } : g))
   }
 
-  if (!config) return <div className="flex items-center justify-center py-10 text-muted-foreground"><Loader2 className="animate-spin mr-2" size={18} />Carregando...</div>
+  if (!config) return <div className="flex items-center justify-center py-10 text-muted-foreground"><Loader2 className="animate-spin mr-2" size={18} />{t('adminXpConfig.loading', 'Carregando...')}</div>
 
   return (
     <div className="flex flex-col gap-6">
       {/* Global config */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-semibold text-foreground mb-4">Configuração Global de XP</h3>
+        <h3 className="font-semibold text-foreground mb-4">{t('adminXpConfig.globalConfigTitle', 'Configuração Global de XP')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Taxa XP → Créditos', field: 'xp_to_credits_rate' as const, hint: 'XP ÷ taxa = créditos' },
-            { label: 'Mínimo por resgate (XP)', field: 'min_redeem_xp' as const, hint: 'Ex: 100' },
-            { label: 'Limite diário de resgate (XP)', field: 'max_redeem_per_day' as const, hint: 'Ex: 5000' },
+            { label: t('adminXpConfig.rateLabel', 'Taxa XP → Créditos'), field: 'xp_to_credits_rate' as const, hint: t('adminXpConfig.rateHint', 'XP ÷ taxa = créditos') },
+            { label: t('adminXpConfig.minRedeemLabel', 'Mínimo por resgate (XP)'), field: 'min_redeem_xp' as const, hint: t('adminXpConfig.minRedeemHint', 'Ex: 100') },
+            { label: t('adminXpConfig.maxDailyLabel', 'Limite diário de resgate (XP)'), field: 'max_redeem_per_day' as const, hint: t('adminXpConfig.maxDailyHint', 'Ex: 5000') },
           ].map(({ label, field, hint }) => (
             <div key={field}>
               <label className="text-xs text-muted-foreground block mb-1">{label}</label>
@@ -102,13 +104,13 @@ export function XpConfigPanel() {
           className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60"
         >
           {saving === 'config' ? <Loader2 size={14} className="animate-spin" /> : saved === 'config' ? <Check size={14} /> : <Save size={14} />}
-          {saved === 'config' ? 'Salvo!' : 'Salvar'}
+          {saved === 'config' ? t('adminXpConfig.saved', 'Salvo!') : t('adminXpConfig.save', 'Salvar')}
         </button>
       </div>
 
       {/* XP per game */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-semibold text-foreground mb-4">XP por Ação (por jogo)</h3>
+        <h3 className="font-semibold text-foreground mb-4">{t('adminXpConfig.xpPerGameTitle', 'XP por Ação (por jogo)')}</h3>
         <div className="flex flex-col gap-3">
           {gameConfigs.map((gc, i) => (
             <div key={gc.game_type} className="flex items-center gap-4">
@@ -121,14 +123,14 @@ export function XpConfigPanel() {
                 onChange={(e) => updateGame(i, parseInt(e.target.value) || 0)}
                 className="w-24 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
-              <span className="text-xs text-muted-foreground">XP / ação</span>
+              <span className="text-xs text-muted-foreground">{t('adminXpConfig.xpPerAction', 'XP / ação')}</span>
               <button
                 onClick={() => saveGameConfig(gc)}
                 disabled={saving === `game-${gc.game_type}`}
                 className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-xs font-medium hover:bg-muted/80 disabled:opacity-60"
               >
                 {saving === `game-${gc.game_type}` ? <Loader2 size={12} className="animate-spin" /> : saved === `game-${gc.game_type}` ? <Check size={12} /> : <Save size={12} />}
-                {saved === `game-${gc.game_type}` ? 'Salvo' : 'Salvar'}
+                {saved === `game-${gc.game_type}` ? t('adminXpConfig.savedShort', 'Salvo') : t('adminXpConfig.save', 'Salvar')}
               </button>
             </div>
           ))}
@@ -137,7 +139,7 @@ export function XpConfigPanel() {
 
       {/* Levels */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="font-semibold text-foreground mb-4">Níveis e Badges</h3>
+        <h3 className="font-semibold text-foreground mb-4">{t('adminXpConfig.levelsTitle', 'Níveis e Badges')}</h3>
         <div className="flex flex-col gap-3">
           {levels.map((level, i) => (
             <div key={level.level} className="grid grid-cols-2 sm:grid-cols-5 gap-3 items-center p-3 rounded-lg bg-muted/30">
@@ -147,24 +149,24 @@ export function XpConfigPanel() {
                   value={level.name}
                   onChange={(e) => updateLevel(i, 'name', e.target.value)}
                   className="rounded-lg border border-border bg-background px-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="Nome"
+                  placeholder={t('adminXpConfig.namePlaceholder', 'Nome')}
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-0.5">XP necessário</label>
+                <label className="text-xs text-muted-foreground block mb-0.5">{t('adminXpConfig.xpRequiredLabel', 'XP necessário')}</label>
                 <input type="number" value={level.xp_required ?? 0}
                   onChange={(e) => updateLevel(i, 'xp_required', parseInt(e.target.value) || 0)}
                   disabled={level.level === 1}
                   className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-0.5">Ícone (emoji)</label>
+                <label className="text-xs text-muted-foreground block mb-0.5">{t('adminXpConfig.iconLabel', 'Ícone (emoji)')}</label>
                 <input value={level.badge_icon}
                   onChange={(e) => updateLevel(i, 'badge_icon', e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-0.5">Créditos reward</label>
+                <label className="text-xs text-muted-foreground block mb-0.5">{t('adminXpConfig.creditsRewardLabel', 'Créditos reward')}</label>
                 <input type="number" value={level.credits_reward ?? 0}
                   onChange={(e) => updateLevel(i, 'credits_reward', parseInt(e.target.value) || 0)}
                   disabled={level.level === 1}
@@ -176,7 +178,7 @@ export function XpConfigPanel() {
                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium disabled:opacity-60"
               >
                 {saving === `level-${level.level}` ? <Loader2 size={12} className="animate-spin" /> : saved === `level-${level.level}` ? <Check size={12} /> : <Save size={12} />}
-                {saved === `level-${level.level}` ? 'Salvo' : 'Salvar'}
+                {saved === `level-${level.level}` ? t('adminXpConfig.savedShort', 'Salvo') : t('adminXpConfig.save', 'Salvar')}
               </button>
             </div>
           ))}

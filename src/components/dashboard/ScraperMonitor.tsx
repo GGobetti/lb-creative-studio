@@ -7,6 +7,7 @@ import { RefreshCw, Loader2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAppStore } from "@/store/store"
 import { useShallow } from "zustand/react/shallow"
+import { useTranslation } from "@/lib/translations"
 
 interface ScraperJob {
   id: string
@@ -24,6 +25,8 @@ interface ScraperJob {
 
 export function ScraperMonitor() {
   const { profile } = useAppStore(useShallow((s) => ({ profile: s.profile })))
+  const { t, language } = useTranslation()
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR'
   const [scraperJobs, setScraperJobs] = useState<ScraperJob[]>([])
   const [scraperSettings, setScraperSettings] = useState<{ size_limit_mb: number; last_heartbeat?: string } | null>(null)
   const [scraperHeartbeat, setScraperHeartbeat] = useState<string | null>(null)
@@ -142,7 +145,7 @@ export function ScraperMonitor() {
   if (profile !== null && profile?.role !== "sysadmin") {
     return (
       <div className="flex items-center justify-center min-h-[400px] text-muted-foreground text-sm">
-        Acesso restrito a sysadmin.
+        {t('scraperMonitor.restrictedAccess', 'Acesso restrito a sysadmin.')}
       </div>
     )
   }
@@ -150,8 +153,8 @@ export function ScraperMonitor() {
   const getTimeText = () => {
     if (!scraperHeartbeat) return ""
     const diff = Math.max(0, Math.floor((Date.now() - new Date(scraperHeartbeat).getTime()) / 1000))
-    if (diff < 60) return `há ${diff}s`
-    return `há ${Math.floor(diff / 60)}m`
+    if (diff < 60) return `${t('scraperMonitor.timeAgo', 'há')} ${diff}s`
+    return `${t('scraperMonitor.timeAgo', 'há')} ${Math.floor(diff / 60)}m`
   }
 
   const summaryBadges = {
@@ -163,12 +166,12 @@ export function ScraperMonitor() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "downloading_file": return "Baixando"
-      case "uploading_vault": return "Salvando"
-      case "indexing": return "Indexando"
-      case "completed": return "Concluído"
-      case "failed": return "Falhou"
-      case "pending": return "Na Fila"
+      case "downloading_file": return t('scraperMonitor.statusDownloading', 'Baixando')
+      case "uploading_vault": return t('scraperMonitor.statusUploading', 'Salvando')
+      case "indexing": return t('scraperMonitor.statusIndexing', 'Indexando')
+      case "completed": return t('scraperMonitor.statusCompleted', 'Concluído')
+      case "failed": return t('scraperMonitor.statusFailed', 'Falhou')
+      case "pending": return t('scraperMonitor.statusPending', 'Na Fila')
       default: return status
     }
   }
@@ -190,7 +193,7 @@ export function ScraperMonitor() {
       const supabase = getSupabaseBrowser()
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
-      if (!token) throw new Error("Sessão não encontrada")
+      if (!token) throw new Error(t('scraperMonitor.sessionNotFound', 'Sessão não encontrada'))
       const res = await fetch("/api/telegram/jobs", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
@@ -198,11 +201,11 @@ export function ScraperMonitor() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `Erro ${res.status}`)
+        throw new Error(err.error || `${t('scraperMonitor.error', 'Erro')} ${res.status}`)
       }
       await fetchJobs()
     } catch (err: any) {
-      alert(`Erro ao aprovar: ${err.message}`)
+      alert(`${t('scraperMonitor.approveError', 'Erro ao aprovar')}: ${err.message}`)
     } finally {
       setActingJobId(null)
     }
@@ -214,7 +217,7 @@ export function ScraperMonitor() {
       const supabase = getSupabaseBrowser()
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
-      if (!token) throw new Error("Sessão não encontrada")
+      if (!token) throw new Error(t('scraperMonitor.sessionNotFound', 'Sessão não encontrada'))
       const res = await fetch("/api/telegram/jobs", {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
@@ -222,11 +225,11 @@ export function ScraperMonitor() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `Erro ${res.status}`)
+        throw new Error(err.error || `${t('scraperMonitor.error', 'Erro')} ${res.status}`)
       }
       await fetchJobs()
     } catch (err: any) {
-      alert(`Erro ao rejeitar: ${err.message}`)
+      alert(`${t('scraperMonitor.rejectError', 'Erro ao rejeitar')}: ${err.message}`)
     } finally {
       setActingJobId(null)
     }
@@ -234,7 +237,7 @@ export function ScraperMonitor() {
 
   const handleBanPhotos = useCallback(async () => {
     if (selectedBans.length === 0) return
-    if (!confirm(`Banir ${selectedBans.length} imagem(ns)?`)) return
+    if (!confirm(`${t('scraperMonitor.confirmBan', 'Banir')} ${selectedBans.length} ${t('scraperMonitor.imagesParen', 'imagem(ns)')}?`)) return
     setIsBanningPhotos(true)
 
     let successCount = 0
@@ -245,7 +248,7 @@ export function ScraperMonitor() {
       const supabase = getSupabaseBrowser()
       const { data: sessionData } = await supabase.auth.getSession()
       const token = sessionData.session?.access_token
-      if (!token) throw new Error("Sessão não encontrada")
+      if (!token) throw new Error(t('scraperMonitor.sessionNotFound', 'Sessão não encontrada'))
 
       const { getPerceptualHash } = await import("@/lib/imageHash")
 
@@ -280,12 +283,12 @@ export function ScraperMonitor() {
       setSelectedBans([])
 
       const parts: string[] = []
-      if (successCount > 0) parts.push(`${successCount} foto(s) banida(s)`)
-      if (skippedExpired > 0) parts.push(`${skippedExpired} URL(s) expirada(s) removidas da fila`)
-      if (failCount > 0) parts.push(`${failCount} falha(s) — veja o console`)
-      alert(parts.join(". ") || "Nenhuma ação realizada.")
+      if (successCount > 0) parts.push(`${successCount} ${t('scraperMonitor.photosBanned', 'foto(s) banida(s)')}`)
+      if (skippedExpired > 0) parts.push(`${skippedExpired} ${t('scraperMonitor.urlsExpiredRemoved', 'URL(s) expirada(s) removidas da fila')}`)
+      if (failCount > 0) parts.push(`${failCount} ${t('scraperMonitor.failuresSeeConsole', 'falha(s) — veja o console')}`)
+      alert(parts.join(". ") || t('scraperMonitor.noActionTaken', 'Nenhuma ação realizada.'))
     } catch (err: any) {
-      alert(`Erro ao banir: ${err.message}`)
+      alert(`${t('scraperMonitor.banError', 'Erro ao banir')}: ${err.message}`)
     } finally {
       setIsBanningPhotos(false)
     }
@@ -298,11 +301,11 @@ export function ScraperMonitor() {
           {/* Status Card */}
           <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base text-foreground">Status do Scraper</h3>
+              <h3 className="font-bold text-base text-foreground">{t('scraperMonitor.scraperStatus', 'Status do Scraper')}</h3>
               <button
                 onClick={() => { fetchJobs(); fetchSettings() }}
                 className="p-2 hover:bg-muted rounded-lg transition-colors cursor-pointer"
-                aria-label="Atualizar"
+                aria-label={t('scraperMonitor.refresh', 'Atualizar')}
               >
                 <RefreshCw size={18} className="text-muted-foreground" />
               </button>
@@ -320,25 +323,25 @@ export function ScraperMonitor() {
                 : scraperStatus === "offline" ? "text-rose-400"
                 : "text-zinc-400"
               }`}>
-                {scraperStatus === "healthy" && `Servidor Ativo (${getTimeText()})`}
-                {scraperStatus === "warning" && `Instável (${getTimeText()})`}
-                {scraperStatus === "offline" && `Fora do Ar (${getTimeText()})`}
-                {scraperStatus === "unknown" && "Status Desconhecido"}
+                {scraperStatus === "healthy" && `${t('scraperMonitor.serverActive', 'Servidor Ativo')} (${getTimeText()})`}
+                {scraperStatus === "warning" && `${t('scraperMonitor.unstable', 'Instável')} (${getTimeText()})`}
+                {scraperStatus === "offline" && `${t('scraperMonitor.offline', 'Fora do Ar')} (${getTimeText()})`}
+                {scraperStatus === "unknown" && t('scraperMonitor.unknownStatus', 'Status Desconhecido')}
               </p>
             </div>
           </div>
 
           {/* Summary Badges */}
           <div className="flex flex-wrap gap-2">
-            <div className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold">{summaryBadges.pending} pendentes</div>
-            <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold">{summaryBadges.inProgress} em progresso</div>
-            <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">{summaryBadges.failed} falhas</div>
-            <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">{summaryBadges.completed} completados</div>
+            <div className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold">{summaryBadges.pending} {t('scraperMonitor.pending', 'pendentes')}</div>
+            <div className="px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold">{summaryBadges.inProgress} {t('scraperMonitor.inProgress', 'em progresso')}</div>
+            <div className="px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">{summaryBadges.failed} {t('scraperMonitor.failures', 'falhas')}</div>
+            <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">{summaryBadges.completed} {t('scraperMonitor.completedCount', 'completados')}</div>
           </div>
 
           {/* Jobs em Progresso */}
           <div className="bg-card border border-border rounded-2xl p-4">
-            <h3 className="font-bold text-sm text-foreground mb-3">Em Progresso</h3>
+            <h3 className="font-bold text-sm text-foreground mb-3">{t('scraperMonitor.inProgressTitle', 'Em Progresso')}</h3>
             <div className="max-h-[400px] overflow-y-auto space-y-2">
               {scraperJobs
                 .filter(j => ["pending", "downloading_file", "uploading_vault", "indexing"].includes(j.status))
@@ -356,14 +359,14 @@ export function ScraperMonitor() {
                   </div>
                 ))}
               {scraperJobs.filter(j => ["pending", "downloading_file", "uploading_vault", "indexing"].includes(j.status)).length === 0 && (
-                <p className="text-xs text-muted-foreground italic py-4 text-center">Nenhum job em progresso</p>
+                <p className="text-xs text-muted-foreground italic py-4 text-center">{t('scraperMonitor.noJobsInProgress', 'Nenhum job em progresso')}</p>
               )}
             </div>
           </div>
 
           {/* Histórico Recente */}
           <div className="bg-card border border-border rounded-2xl p-4">
-            <h3 className="font-bold text-sm text-foreground mb-3">Histórico Recente</h3>
+            <h3 className="font-bold text-sm text-foreground mb-3">{t('scraperMonitor.recentHistory', 'Histórico Recente')}</h3>
             <div className="max-h-[200px] overflow-y-auto space-y-2">
               {scraperJobs
                 .filter(j => ["completed", "failed"].includes(j.status))
@@ -377,12 +380,12 @@ export function ScraperMonitor() {
                       </span>
                     </div>
                     <div className="text-muted-foreground">
-                      {new Date(job.updated_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(job.updated_at).toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
                 ))}
               {scraperJobs.filter(j => ["completed", "failed"].includes(j.status)).length === 0 && (
-                <p className="text-xs text-muted-foreground italic py-4 text-center">Nenhum histórico recente</p>
+                <p className="text-xs text-muted-foreground italic py-4 text-center">{t('scraperMonitor.noRecentHistory', 'Nenhum histórico recente')}</p>
               )}
             </div>
           </div>

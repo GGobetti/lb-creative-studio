@@ -129,7 +129,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
       items: [
         { name: t("sidebar.adminPanel", "Painel Admin"), href: "/dashboard/admin", icon: ShieldAlert },
         { name: t("sidebar.photoCurator", "Curadoria de Fotos"), href: "/dashboard/photo-curator", icon: ScanSearch },
-        { name: "Configuração do Hub", href: "/dashboard/admin/hub-links", icon: Settings },
+        { name: t("sidebar.hubConfig", "Configuração do Hub"), href: "/dashboard/admin/hub-links", icon: Settings },
       ],
     })
   }

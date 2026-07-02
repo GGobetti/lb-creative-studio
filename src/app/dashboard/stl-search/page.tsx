@@ -12,6 +12,7 @@ import { useAppStore } from "@/store/store";
 import { getSupabaseBrowser } from "@/lib/supabase";
 import { DotMatrixLoader } from "@/components/ui/DotMatrixLoader";
 import { useToast } from "@/components/ui/Toast";
+import { useTranslation } from "@/lib/translations";
 
 const usePageSize = () => {
   const [pageSize, setPageSize] = useState(28);
@@ -51,6 +52,7 @@ export default function StlSearchPage() {
   const profile = useAppStore((s) => s.profile);
   const refreshCredits = useAppStore((s) => s.refreshCredits);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const pageSize = usePageSize();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -470,7 +472,7 @@ export default function StlSearchPage() {
 
   const handleToggleFavorite = async (id: string) => {
     if (!profile) {
-      toast("Por favor, faça login para favoritar modelos.", "warning");
+      toast(t('stlSearch.loginToFavorite', "Por favor, faça login para favoritar modelos."), "warning");
       return;
     }
 
@@ -479,7 +481,7 @@ export default function StlSearchPage() {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
-      toast("Sessão expirada. Faça login novamente.", "error");
+      toast(t('stlSearch.sessionExpired', "Sessão expirada. Faça login novamente."), "error");
       return;
     }
 
@@ -507,7 +509,7 @@ export default function StlSearchPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Falha ao salvar favorito no servidor.");
+        throw new Error(t('stlSearch.favoriteSaveFail', "Falha ao salvar favorito no servidor."));
       }
     } catch (err) {
       console.error(err);
@@ -523,7 +525,7 @@ export default function StlSearchPage() {
       }
       setTopDownloads((prev) => prev.map(revertItem));
       setTopFavorites((prev) => prev.map(revertItem));
-      toast("Não foi possível sincronizar o favorito. Tente novamente.", "error");
+      toast(t('stlSearch.favoriteSyncFail', "Não foi possível sincronizar o favorito. Tente novamente."), "error");
     }
   };
 
@@ -605,7 +607,7 @@ export default function StlSearchPage() {
 
   const handleDeleteSelected = async () => {
     if (deleteSelection.length === 0) return;
-    if (!confirm(`Tem certeza que deseja deletar ${deleteSelection.length} STL(s)? Não será possível recuperar.`)) return;
+    if (!confirm(t('stlSearch.confirmDeleteMultiple', 'Tem certeza que deseja deletar {count} STL(s)? Não será possível recuperar.').replace('{count}', String(deleteSelection.length)))) return;
 
     setIsDeleting(true);
     try {
@@ -653,11 +655,11 @@ export default function StlSearchPage() {
       const newCount = newlyDeletedRecords.length;
       const alreadyDeletedCount = deleteSelection.length - newCount;
 
-      let message = `${newCount} STL(s) movido(s) para lixeira`;
+      let message = t('stlSearch.movedToTrash', '{count} STL(s) movido(s) para lixeira').replace('{count}', String(newCount));
       if (alreadyDeletedCount > 0) {
-        message += ` (${alreadyDeletedCount} já estava(m) deletado(s))`;
+        message += ' ' + t('stlSearch.alreadyDeletedSuffix', '({count} já estava(m) deletado(s))').replace('{count}', String(alreadyDeletedCount));
       }
-      message += ". Não será(ão) reprocessado(s)";
+      message += t('stlSearch.willNotBeReprocessed', '. Não será(ão) reprocessado(s)');
 
       toast(message, "success");
 
@@ -665,7 +667,7 @@ export default function StlSearchPage() {
       setDeleteSelection([]);
     } catch (err) {
       console.error("Erro ao deletar STLs:", err);
-      toast("Falha ao deletar STLs", "error");
+      toast(t('stlSearch.deleteStlsFail', "Falha ao deletar STLs"), "error");
     } finally {
       setIsDeleting(false);
     }
@@ -740,12 +742,19 @@ export default function StlSearchPage() {
     if (!item && !selectedItem) return;
 
     if (!profile) {
-      toast("Por favor, faça login para baixar arquivos STL.", "warning");
+      toast(t('stlSearch.loginToDownload', "Por favor, faça login para baixar arquivos STL."), "warning");
       return;
     }
 
     if (profile.credits < cost) {
-      toast(`Créditos insuficientes. Esta operação custa ${cost} crédito${cost !== 1 ? 's' : ''}. Saldo atual: ${profile.credits}`, "error");
+      const creditWord = cost !== 1 ? t('stlSearch.creditsPlural', 'créditos') : t('stlSearch.creditSingular', 'crédito');
+      toast(
+        t('stlSearch.insufficientCreditsDetail', 'Créditos insuficientes. Esta operação custa {cost} {creditWord}. Saldo atual: {balance}')
+          .replace('{cost}', String(cost))
+          .replace('{creditWord}', creditWord)
+          .replace('{balance}', String(profile.credits)),
+        "error"
+      );
       return;
     }
 
@@ -756,7 +765,7 @@ export default function StlSearchPage() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        toast("Sessão expirada. Faça login novamente.", "error");
+        toast(t('stlSearch.sessionExpired', "Sessão expirada. Faça login novamente."), "error");
         setDownloadingIds((prev) => prev.filter((dId) => dId !== id));
         return;
       }
@@ -774,11 +783,11 @@ export default function StlSearchPage() {
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         if (json.error === "INSUFFICIENT_CREDITS") {
-          toast("Créditos insuficientes para este download.", "error");
+          toast(t('stlSearch.insufficientCreditsForDownload', "Créditos insuficientes para este download."), "error");
           setDownloadingIds((prev) => prev.filter((dId) => dId !== id));
           return;
         }
-        throw new Error(json.error || "Erro ao processar download.");
+        throw new Error(json.error || t('stlSearch.downloadProcessError', "Erro ao processar download."));
       }
 
       const contentType = res.headers.get("Content-Type") || "";
@@ -855,10 +864,10 @@ export default function StlSearchPage() {
         }
       }
 
-      toast(`Download de "${fallbackTitle}" iniciado!`, "success");
+      toast(t('stlSearch.downloadStarted', 'Download de "{title}" iniciado!').replace('{title}', fallbackTitle), "success");
     } catch (err: any) {
       console.error(err);
-      toast(err.message || "Falha ao processar download.", "error");
+      toast(err.message || t('stlSearch.downloadProcessError', "Erro ao processar download."), "error");
     } finally {
       setDownloadingIds((prev) => prev.filter((dId) => dId !== id));
     }
@@ -873,15 +882,15 @@ export default function StlSearchPage() {
             <PackageSearch className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-base font-black tracking-tight text-foreground leading-tight">Garimpo 3D</h1>
-            <p className="text-xs text-muted-foreground leading-tight">Sua mina de STLs prontos para impressão</p>
+            <h1 className="text-base font-black tracking-tight text-foreground leading-tight">{t('sidebar.stlSearch', 'Garimpo 3D')}</h1>
+            <p className="text-xs text-muted-foreground leading-tight">{t('stlSearch.pageSubtitle', 'Sua mina de STLs prontos para impressão')}</p>
           </div>
         </div>
         <div className="flex-1">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
-            placeholder="Buscar modelos, personagens ou grupos..."
+            placeholder={t('stlSearch.mainSearchPlaceholder', 'Buscar modelos, personagens ou grupos...')}
           />
         </div>
       </div>
@@ -896,7 +905,7 @@ export default function StlSearchPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          Explorar Catálogo
+          {t('stlSearch.exploreTab', 'Explorar Catálogo')}
         </button>
         <button
           onClick={() => setActiveSearchTab("rankings")}
@@ -906,7 +915,7 @@ export default function StlSearchPage() {
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
         >
-          🏆 Rankings de Popularidade
+          🏆 {t('stlSearch.rankingsTab', 'Rankings de Popularidade')}
         </button>
       </div>
 
@@ -920,13 +929,13 @@ export default function StlSearchPage() {
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Categoria</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('stlSearch.categoryLabel', 'Categoria')}</span>
                 {categoryFilter && (
                   <button
                     onClick={() => setCategoryFilter(null)}
                     className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    <XIcon className="w-3 h-3" /> Limpar
+                    <XIcon className="w-3 h-3" /> {t('stlSearch.clearFilter', 'Limpar')}
                   </button>
                 )}
               </div>
@@ -948,7 +957,7 @@ export default function StlSearchPage() {
                   onClick={() => setShowAllCategories((v) => !v)}
                   className="px-3 py-1 rounded-full text-xs font-bold border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-all"
                 >
-                  {showAllCategories ? "Ver menos ↑" : `+${STL_CATEGORIES.length - 6} mais`}
+                  {showAllCategories ? t('stlSearch.seeLess', 'Ver menos ↑') : t('stlSearch.seeMoreCount', '+{count} mais').replace('{count}', String(STL_CATEGORIES.length - 6))}
                 </button>
               </div>
             </div>
@@ -956,7 +965,7 @@ export default function StlSearchPage() {
             {/* Impressora + Fotos na mesma linha */}
             <div className="flex flex-wrap items-center gap-4 pt-1 border-t border-border/40">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Impressora</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('stlSearch.printerLabel', 'Impressora')}</span>
                 <div className="flex gap-1">
                   {(["all", "fdm", "resin"] as const).map((v) => (
                     <button
@@ -968,14 +977,14 @@ export default function StlSearchPage() {
                           : "bg-background text-muted-foreground border-border hover:bg-muted"
                       }`}
                     >
-                      {v === "all" ? "Todos" : v === "fdm" ? "FDM" : "Resina"}
+                      {v === "all" ? t('stlSearch.filterAll', 'Todos') : v === "fdm" ? "FDM" : t('stlSearch.resin', 'Resina')}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fotos</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t('stlSearch.photosLabel', 'Fotos')}</span>
                 <div className="flex gap-1">
                   {(["all", "with_photo", "without_photo"] as const).map((v) => (
                     <button
@@ -987,7 +996,7 @@ export default function StlSearchPage() {
                           : "bg-background text-muted-foreground border-border hover:bg-muted"
                       }`}
                     >
-                      {v === "all" ? "Todas" : v === "with_photo" ? "Com foto" : "Sem foto"}
+                      {v === "all" ? t('stlSearch.filterAllFem', 'Todas') : v === "with_photo" ? t('stlSearch.withPhoto', 'Com foto') : t('stlSearch.withoutPhoto', 'Sem foto')}
                     </button>
                   ))}
                 </div>
@@ -1000,14 +1009,14 @@ export default function StlSearchPage() {
             <div className="flex items-center gap-3">
               <h2 className="text-base font-bold text-foreground">
                 {mergeMode
-                  ? `Selecione os arquivos para mesclar (${mergeSelection.length} selecionados)`
+                  ? t('stlSearch.selectFilesToMerge', 'Selecione os arquivos para mesclar ({count} selecionados)').replace('{count}', String(mergeSelection.length))
                   : showOnlyFavorites
-                    ? "Favoritos salvos"
+                    ? t('stlSearch.savedFavorites', 'Favoritos salvos')
                     : categoryFilter
-                      ? `Categoria: ${categoryFilter}${searchQuery ? ` · "${searchQuery}"` : ""}`
+                      ? t('stlSearch.categoryPrefix', 'Categoria: {category}').replace('{category}', categoryFilter) + (searchQuery ? ` · "${searchQuery}"` : "")
                       : searchQuery
-                        ? `Resultados para "${searchQuery}"`
-                        : "Modelos Recentes"}
+                        ? t('stlSearch.resultsForQuery', 'Resultados para "{query}"').replace('{query}', searchQuery)
+                        : t('stlSearch.recentModels', 'Modelos Recentes')}
               </h2>
               {!mergeMode && (
                 <span className="text-xs text-muted-foreground font-semibold bg-muted border border-border px-2.5 py-0.5 rounded-full">
@@ -1027,7 +1036,7 @@ export default function StlSearchPage() {
                   }`}
                 >
                   <Heart className={`w-3.5 h-3.5 ${showOnlyFavorites ? "fill-current text-red-500" : ""}`} />
-                  <span>{showOnlyFavorites ? "Ver Todos" : "Favoritos"}</span>
+                  <span>{showOnlyFavorites ? t('stlSearch.viewAll', 'Ver Todos') : t('stlSearch.favoritesLabel', 'Favoritos')}</span>
                 </button>
               )}
 
@@ -1038,14 +1047,14 @@ export default function StlSearchPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-primary/30 bg-primary/8 text-primary hover:bg-primary/15 transition-all cursor-pointer"
                   >
                     <GitMerge className="w-3.5 h-3.5" />
-                    Mesclar
+                    {t('stlSearch.mergeAction', 'Mesclar')}
                   </button>
                   <button
                     onClick={() => { setDeleteMode(true); setDeleteSelection([]); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-rose-500/30 bg-rose-500/8 text-rose-500 hover:bg-rose-500/15 transition-all cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Deletar
+                    {t('stlSearch.deleteAction', 'Deletar')}
                   </button>
                 </>
               )}
@@ -1056,7 +1065,7 @@ export default function StlSearchPage() {
                     onClick={() => { setMergeMode(false); setMergeSelection([]); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   >
-                    <XIcon className="w-3.5 h-3.5" /> Cancelar
+                    <XIcon className="w-3.5 h-3.5" /> {t('common.cancel', 'Cancelar')}
                   </button>
                   <button
                     disabled={mergeSelection.length < 2}
@@ -1064,7 +1073,7 @@ export default function StlSearchPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-primary bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-primary/20"
                   >
                     <GitMerge className="w-3.5 h-3.5" />
-                    Mesclar ({mergeSelection.length})
+                    {t('stlSearch.mergeAction', 'Mesclar')} ({mergeSelection.length})
                   </button>
                 </>
               )}
@@ -1075,7 +1084,7 @@ export default function StlSearchPage() {
                     onClick={() => { setDeleteMode(false); setDeleteSelection([]); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-border bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer"
                   >
-                    <XIcon className="w-3.5 h-3.5" /> Cancelar
+                    <XIcon className="w-3.5 h-3.5" /> {t('common.cancel', 'Cancelar')}
                   </button>
                   <button
                     disabled={deleteSelection.length === 0 || isDeleting}
@@ -1083,7 +1092,7 @@ export default function StlSearchPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-rose-600 bg-rose-600 text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm shadow-rose-600/20"
                   >
                     {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                    Deletar ({deleteSelection.length})
+                    {t('stlSearch.deleteAction', 'Deletar')} ({deleteSelection.length})
                   </button>
                 </>
               )}
@@ -1113,11 +1122,11 @@ export default function StlSearchPage() {
                 disabled={page === 0 || isLoading}
                 className="px-4 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                ← Anterior
+                ← {t('stlSearch.previous', 'Anterior')}
               </button>
 
               <div className="text-sm font-semibold text-muted-foreground">
-                Página {page + 1} {hasMore ? "de ?" : `(${items.length} carregados)`}
+                {t('stlSearch.pageLabel', 'Página')} {page + 1} {hasMore ? t('stlSearch.ofUnknown', 'de ?') : t('stlSearch.loadedCount', '({count} carregados)').replace('{count}', String(items.length))}
               </div>
 
               <button
@@ -1125,7 +1134,7 @@ export default function StlSearchPage() {
                 disabled={!hasMore || isLoading}
                 className="px-4 py-2.5 rounded-xl border border-border bg-muted text-sm font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
-                Próxima →
+                {t('stlSearch.next', 'Próxima')} →
               </button>
             </div>
           )}
@@ -1135,7 +1144,7 @@ export default function StlSearchPage() {
         <div className="py-2">
           {isLoadingRankings ? (
             <div className="h-64 flex flex-col items-center justify-center bg-muted/20 border border-border/80 rounded-3xl">
-              <DotMatrixLoader text="Carregando estatísticas e rankings..." />
+              <DotMatrixLoader text={t('stlSearch.loadingRankings', 'Carregando estatísticas e rankings...')} />
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -1143,13 +1152,13 @@ export default function StlSearchPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-border pb-3">
                   <TrendingUp className="w-6 h-6 text-emerald-500" />
-                  <h3 className="text-lg font-bold text-foreground">Top Downloads</h3>
+                  <h3 className="text-lg font-bold text-foreground">{t('stlSearch.topDownloads', 'Top Downloads')}</h3>
                 </div>
 
                 <div className="space-y-3">
                   {topDownloads.length === 0 ? (
                     <div className="p-8 text-center text-sm border border-dashed border-border bg-muted/20 rounded-2xl text-muted-foreground">
-                      Nenhum dado de download disponível.
+                      {t('stlSearch.noDownloads', 'Nenhum dado de download disponível.')}
                     </div>
                   ) : (
                     (showMoreDownloads ? topDownloads : topDownloads.slice(0, 5)).map((item, idx) => (
@@ -1170,7 +1179,7 @@ export default function StlSearchPage() {
                     onClick={() => setShowMoreDownloads(!showMoreDownloads)}
                     className="w-full py-2.5 bg-muted/60 hover:bg-muted border border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    {showMoreDownloads ? "Ver Menos" : "Ver Mais (Top 10)"}
+                    {showMoreDownloads ? t('stlSearch.viewLess', 'Ver Menos') : t('stlSearch.viewMore', 'Ver Mais (Top 10)')}
                   </button>
                 )}
               </div>
@@ -1179,13 +1188,13 @@ export default function StlSearchPage() {
               <div className="space-y-6">
                 <div className="flex items-center gap-3 border-b border-border pb-3">
                   <Trophy className="w-6 h-6 text-amber-500" />
-                  <h3 className="text-lg font-bold text-foreground">Top Favoritados</h3>
+                  <h3 className="text-lg font-bold text-foreground">{t('stlSearch.topFavorited', 'Top Favoritados')}</h3>
                 </div>
 
                 <div className="space-y-3">
                   {topFavorites.length === 0 ? (
                     <div className="p-8 text-center text-sm border border-dashed border-border bg-muted/20 rounded-2xl text-muted-foreground">
-                      Nenhum modelo favoritado ainda.
+                      {t('stlSearch.noFavorites', 'Nenhum modelo favoritado ainda.')}
                     </div>
                   ) : (
                     (showMoreFavorites ? topFavorites : topFavorites.slice(0, 5)).map((item, idx) => (
@@ -1206,7 +1215,7 @@ export default function StlSearchPage() {
                     onClick={() => setShowMoreFavorites(!showMoreFavorites)}
                     className="w-full py-2.5 bg-muted/60 hover:bg-muted border border-border hover:border-muted-foreground/30 text-muted-foreground hover:text-foreground rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    {showMoreFavorites ? "Ver Menos" : "Ver Mais (Top 10)"}
+                    {showMoreFavorites ? t('stlSearch.viewLess', 'Ver Menos') : t('stlSearch.viewMore', 'Ver Mais (Top 10)')}
                   </button>
                 )}
               </div>

@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase';
+import { useTranslation } from '@/lib/translations';
 
 export function MercadoLivreConnect() {
+  const { t } = useTranslation();
   const [isConnected, isSetConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,7 @@ export function MercadoLivreConnect() {
     }
 
     if (params.get('error')) {
-      setError(`Erro: ${params.get('error')}`);
+      setError(`${t('adminMercadoLivre.error', 'Erro')}: ${params.get('error')}`);
     }
   }, []);
 
@@ -63,7 +65,7 @@ export function MercadoLivreConnect() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user?.id) {
-        setError('Usuário não autenticado');
+        setError(t('adminMercadoLivre.notAuthenticated', 'Usuário não autenticado'));
         return;
       }
 
@@ -73,13 +75,13 @@ export function MercadoLivreConnect() {
       const data = await response.json();
 
       if (!response.ok || !data.authUrl) {
-        setError('Erro ao gerar URL de autorização');
+        setError(t('adminMercadoLivre.authUrlError', 'Erro ao gerar URL de autorização'));
         return;
       }
 
       window.location.href = data.authUrl;
     } catch (err) {
-      setError('Erro ao conectar com Mercado Livre');
+      setError(t('adminMercadoLivre.connectError', 'Erro ao conectar com Mercado Livre'));
       console.error(err);
     }
   };
@@ -87,7 +89,7 @@ export function MercadoLivreConnect() {
   if (isLoading) {
     return (
       <div className="text-center py-4 text-slate-400">
-        Verificando conexão...
+        {t('adminMercadoLivre.checkingConnection', 'Verificando conexão...')}
       </div>
     );
   }
@@ -99,8 +101,8 @@ export function MercadoLivreConnect() {
           <h3 className="text-lg font-semibold mb-1">Mercado Livre</h3>
           <p className="text-sm text-slate-400">
             {isConnected
-              ? '✓ Conectado - Você pode importar produtos'
-              : 'Conecte sua conta do Mercado Livre para importar produtos'}
+              ? t('adminMercadoLivre.connectedMessage', '✓ Conectado - Você pode importar produtos')
+              : t('adminMercadoLivre.connectPrompt', 'Conecte sua conta do Mercado Livre para importar produtos')}
           </p>
         </div>
 
@@ -109,12 +111,12 @@ export function MercadoLivreConnect() {
             onClick={handleConnect}
             className="px-4 py-2 bg-yellow-500 text-black rounded font-medium hover:bg-yellow-600 whitespace-nowrap"
           >
-            Conectar ao ML
+            {t('adminMercadoLivre.connectButton', 'Conectar ao ML')}
           </button>
         )}
 
         {isConnected && (
-          <div className="text-green-400 font-medium">Conectado</div>
+          <div className="text-green-400 font-medium">{t('adminMercadoLivre.connected', 'Conectado')}</div>
         )}
       </div>
 

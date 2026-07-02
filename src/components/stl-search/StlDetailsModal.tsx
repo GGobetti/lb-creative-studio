@@ -42,7 +42,8 @@ export function StlDetailsModal({
 }: StlDetailsModalProps) {
   const { profile } = useAppStore();
   const isAdmin = profile?.role === "sysadmin";
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const locale = language === 'en' ? 'en-US' : language === 'es' ? 'es-ES' : 'pt-BR';
 
   const [activeTab, setActiveTab] = useState<"details" | "comments">("details");
   const [comments, setComments] = useState<any[]>([]);
@@ -77,7 +78,7 @@ export function StlDetailsModal({
 
   const activePhoto = allPhotos[activePhotoIndex] ?? { url: item.imageUrl || "", partTitle: null };
 
-  const formattedDate = new Date(item.addedAt).toLocaleDateString("pt-BR", {
+  const formattedDate = new Date(item.addedAt).toLocaleDateString(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -120,7 +121,7 @@ export function StlDetailsModal({
       setComments((prev) => [...prev, data]);
       setNewComment("");
     } catch (err: any) {
-      alert(err.message || "Falha ao publicar comentário.");
+      alert(err.message || t("stlSearch.errorPostComment", "Falha ao publicar comentário."));
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +136,7 @@ export function StlDetailsModal({
       if (error) throw error;
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (err: any) {
-      alert(err.message || "Falha ao excluir comentário.");
+      alert(err.message || t("stlSearch.errorDeleteComment", "Falha ao excluir comentário."));
     }
   };
 
@@ -161,7 +162,7 @@ export function StlDetailsModal({
       if (onDeleteSuccess) onDeleteSuccess(item.id);
       onClose();
     } catch (err: any) {
-      alert(err.message || "Falha ao excluir modelo.");
+      alert(err.message || t("stlSearch.errorDeleteModel", "Falha ao excluir modelo."));
     } finally {
       setIsDeleting(false);
     }
@@ -178,7 +179,7 @@ export function StlDetailsModal({
       if (onPrinterTypeUpdate) onPrinterTypeUpdate(item.id, newType);
       item.printer_type = newType;
     } catch (err: any) {
-      alert("Falha ao atualizar tipo: " + err.message);
+      alert(t("stlSearch.errorUpdatePrinterType", "Falha ao atualizar tipo: ") + err.message);
     } finally {
       setIsUpdatingPrinterType(false);
     }
@@ -193,7 +194,7 @@ export function StlDetailsModal({
     }
     const photoToDelete = activePhoto.url;
     if (!item.photos.includes(photoToDelete)) {
-      alert("Esta foto pertence a uma parte do modelo. Acesse a parte individualmente para gerenciá-la.");
+      alert(t("stlSearch.photoBelongsToPart", "Esta foto pertence a uma parte do modelo. Acesse a parte individualmente para gerenciá-la."));
       return;
     }
     if (!confirm(t("stlSearch.confirmDeletePhoto", "Tem certeza que deseja excluir esta imagem do modelo?"))) return;
@@ -211,7 +212,7 @@ export function StlDetailsModal({
       if (activePhotoIndex >= updatedPhotos.length) setActivePhotoIndex(Math.max(0, updatedPhotos.length - 1));
       if (onPhotosUpdate) onPhotosUpdate(item.id, updatedPhotos, updatedThumbnailUrl);
     } catch (err: any) {
-      alert(err.message || "Falha ao excluir imagem.");
+      alert(err.message || t("stlSearch.errorDeletePhoto", "Falha ao excluir imagem."));
     }
   };
 
@@ -245,7 +246,7 @@ export function StlDetailsModal({
       
       setActivePhotoIndex(0);
     } catch (err: any) {
-      alert(err.message || "Falha ao definir imagem de capa.");
+      alert(err.message || t("stlSearch.errorSetCoverPhoto", "Falha ao definir imagem de capa."));
     }
   };
 
@@ -263,7 +264,7 @@ export function StlDetailsModal({
       if (onPhotosUpdate) onPhotosUpdate(item.id, updatedPhotos, updatedThumbnailUrl);
       setActivePhotoIndex(allPhotos.length); // jump to new photo
     } catch (err: any) {
-      alert(err.message || "Falha ao adicionar URL da imagem.");
+      alert(err.message || t("stlSearch.errorAddPhotoUrl", "Falha ao adicionar URL da imagem."));
     }
   };
 
@@ -287,7 +288,7 @@ export function StlDetailsModal({
       if (onPhotosUpdate) onPhotosUpdate(item.id, updatedPhotos, updatedThumbnailUrl);
       setActivePhotoIndex(allPhotos.length);
     } catch (err: any) {
-      alert(err.message || "Falha ao fazer upload da imagem.");
+      alert(err.message || t("stlSearch.errorUploadPhoto", "Falha ao fazer upload da imagem."));
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -296,7 +297,7 @@ export function StlDetailsModal({
   // ── Desagrupar partes (admin) ─────────────────────────────────────
   const handleUnmerge = async () => {
     if (!item.parts || item.parts.length === 0) return;
-    if (!confirm(`Deseja desagrupar as ${item.parts.length} partes? Elas voltarão a aparecer individualmente no catálogo.`)) return;
+    if (!confirm(t("stlSearch.confirmUnmerge", `Deseja desagrupar as {count} partes? Elas voltarão a aparecer individualmente no catálogo.`).replace("{count}", String(item.parts.length)))) return;
     try {
       setIsUnmerging(true);
       const supabase = getSupabaseBrowser();
@@ -306,7 +307,7 @@ export function StlDetailsModal({
       if (onUnmergeSuccess) onUnmergeSuccess(item.id);
       onClose();
     } catch (err: any) {
-      alert(err.message || "Falha ao desagrupar.");
+      alert(err.message || t("stlSearch.errorUnmerge", "Falha ao desagrupar."));
     } finally {
       setIsUnmerging(false);
     }
@@ -361,7 +362,7 @@ export function StlDetailsModal({
                   className="absolute w-full h-full flex flex-col items-center justify-center bg-muted/50 text-muted-foreground"
                 >
                   <ImageIcon className="w-12 h-12 mb-3 opacity-50" />
-                  <span className="text-sm font-bold uppercase tracking-wider opacity-50">Sem Foto</span>
+                  <span className="text-sm font-bold uppercase tracking-wider opacity-50">{t("stlSearch.noPhoto", "Sem Foto")}</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -378,7 +379,7 @@ export function StlDetailsModal({
             {hasParts && (
               <div className="absolute top-4 left-4 z-10 bg-primary/90 backdrop-blur-sm text-primary-foreground text-[10px] font-bold px-3 py-1.5 rounded-full border border-primary/30 shadow-lg flex items-center gap-1.5">
                 <Layers className="w-3 h-3" />
-                {(item.parts?.length ?? 0) + 1} partes
+                {t("stlSearch.partsCount", "{count} partes").replace("{count}", String((item.parts?.length ?? 0) + 1))}
               </div>
             )}
 
@@ -388,7 +389,7 @@ export function StlDetailsModal({
                 {activePhoto.url === item.imageUrl ? (
                   <div className="py-1.5 px-3 bg-primary/95 text-primary-foreground rounded-full border border-primary/30 backdrop-blur-md flex items-center gap-1 shadow-lg text-[9px] uppercase tracking-wider font-bold select-none">
                     <Star className="w-3 h-3 fill-current" />
-                    <span>Capa</span>
+                    <span>{t("stlSearch.coverPhoto", "Capa")}</span>
                   </div>
                 ) : (
                   <button
@@ -396,7 +397,7 @@ export function StlDetailsModal({
                     className="py-1.5 px-3 bg-background/90 hover:bg-muted text-foreground rounded-full border border-border backdrop-blur-md transition-all flex items-center gap-1 shadow-lg text-[9px] uppercase tracking-wider font-bold cursor-pointer"
                   >
                     <Star className="w-3 h-3 text-primary" />
-                    <span>Definir Capa</span>
+                    <span>{t("stlSearch.setCoverPhoto", "Definir Capa")}</span>
                   </button>
                 )}
 
@@ -406,7 +407,7 @@ export function StlDetailsModal({
                     className="py-1.5 px-3 bg-destructive hover:opacity-90 text-destructive-foreground rounded-full border border-destructive/20 backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg text-[9px] uppercase tracking-wider font-bold cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Excluir</span>
+                    <span>{t("common.delete", "Excluir")}</span>
                   </button>
                 )}
               </div>
@@ -417,11 +418,11 @@ export function StlDetailsModal({
               <div className={`absolute z-10 flex gap-2 ${hasParts ? "top-14" : "top-4"} right-16`}>
                 <button onClick={handleAddPhotoUrl} className="py-1.5 px-3 bg-background/90 hover:bg-muted text-foreground rounded-full border border-border backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg text-[9px] uppercase tracking-wider font-bold cursor-pointer">
                   <Plus className="w-3 h-3 text-primary" />
-                  <span className="hidden sm:inline">Add URL</span>
+                  <span className="hidden sm:inline">{t("stlSearch.addUrl", "Add URL")}</span>
                 </button>
                 <label className="py-1.5 px-3 bg-background/90 hover:bg-muted text-foreground rounded-full border border-border backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg text-[9px] uppercase tracking-wider font-bold cursor-pointer">
                   {isUploadingPhoto ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3 text-primary" />}
-                  <span className="hidden sm:inline">{isUploadingPhoto ? "Enviando..." : "Upload"}</span>
+                  <span className="hidden sm:inline">{isUploadingPhoto ? t("stlSearch.uploadingPhotoBtn", "Enviando...") : t("stlSearch.uploadPhotoBtn", "Upload")}</span>
                   <input type="file" accept="image/*" onChange={handleUploadPhotoFile} disabled={isUploadingPhoto} className="hidden" />
                 </label>
               </div>
@@ -471,13 +472,13 @@ export function StlDetailsModal({
                     onClick={() => setActiveTab("details")}
                     className={`pb-2 text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 ${activeTab === "details" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                   >
-                    Detalhes
+                    {t("stlSearch.detailsTab", "Detalhes")}
                   </button>
                   <button
                     onClick={() => setActiveTab("comments")}
                     className={`pb-2 text-[10px] uppercase tracking-wider font-bold transition-all border-b-2 flex items-center gap-1.5 ${activeTab === "comments" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
                   >
-                    Comentários <span className="bg-muted px-1.5 py-0.5 rounded-full text-[9px]">{comments.length}</span>
+                    {t("stlSearch.comments", "Comentários")} <span className="bg-muted px-1.5 py-0.5 rounded-full text-[9px]">{comments.length}</span>
                   </button>
                 </div>
               </div>
@@ -537,7 +538,7 @@ export function StlDetailsModal({
                         </span>
                         <span className="text-foreground font-bold text-[11px] flex items-center gap-1.5">
                           {item.downloadCount ?? 0}
-                          <span className="text-[9px] text-muted-foreground uppercase font-semibold">vezes</span>
+                          <span className="text-[9px] text-muted-foreground uppercase font-semibold">{t("stlSearch.timesUnit", "vezes")}</span>
                         </span>
                       </div>
                     </div>
@@ -547,7 +548,7 @@ export function StlDetailsModal({
                       <div className="flex items-start gap-3 pt-4 border-t border-border/50">
                         <MessageSquare className="w-4 h-4 text-primary/70 mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-xs text-muted-foreground font-semibold mb-1">Origem (Telegram)</p>
+                          <p className="text-xs text-muted-foreground font-semibold mb-1">{t("stlSearch.telegramSource", "Origem (Telegram)")}</p>
                           <p className="text-sm text-foreground font-medium">{item.telegramGroupName}</p>
                         </div>
                       </div>
@@ -560,10 +561,10 @@ export function StlDetailsModal({
                           <div className="flex items-center gap-2">
                             <Layers className="w-4 h-4 text-primary" />
                             <span className="text-[11px] font-black uppercase tracking-wider text-foreground">
-                              Partes do Modelo
+                              {t("stlSearch.modelParts", "Partes do Modelo")}
                             </span>
                             <span className="bg-primary/10 text-primary text-[9px] font-bold px-2 py-0.5 rounded-full border border-primary/20">
-                              {(item.parts?.length ?? 0) + 1} arquivos
+                              {t("stlSearch.filesCount", "{count} arquivos").replace("{count}", String((item.parts?.length ?? 0) + 1))}
                             </span>
                           </div>
                           {/* Unmerge button (admin only) */}
@@ -578,7 +579,7 @@ export function StlDetailsModal({
                               ) : (
                                 <Unlink className="w-3 h-3" />
                               )}
-                              Desagrupar
+                              {t("stlSearch.unmerge", "Desagrupar")}
                             </button>
                           )}
                         </div>
@@ -591,10 +592,10 @@ export function StlDetailsModal({
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] font-black text-foreground">{item.title}</p>
                             <p className="text-[10px] text-muted-foreground font-mono truncate">{item.fileName}</p>
-                            <p className="text-[10px] text-muted-foreground">{item.fileSize} · arquivo principal</p>
+                            <p className="text-[10px] text-muted-foreground">{item.fileSize} · {t("stlSearch.mainFile", "arquivo principal")}</p>
                           </div>
                           <span className="text-[8px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 shrink-0">
-                            Principal
+                            {t("stlSearch.main", "Principal")}
                           </span>
                         </div>
 
@@ -629,12 +630,12 @@ export function StlDetailsModal({
                               {acquiredStlIds.includes(part.id) ? (
                                 <>
                                   <Check className="w-3 h-3" />
-                                  Desbloqueado
+                                  {t("stlSearch.unlocked", "Desbloqueado")}
                                 </>
                               ) : (
                                 <>
                                   <Download className="w-3 h-3" />
-                                  Baixar
+                                  {t("stlSearch.downloadShort", "Baixar")}
                                 </>
                               )}
                             </motion.button>
@@ -657,8 +658,8 @@ export function StlDetailsModal({
                         </div>
                       ) : (
                         comments.map((comment) => {
-                          const username = comment.profiles?.email ? comment.profiles.email.split("@")[0] : "Usuário";
-                          const commentDate = new Date(comment.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+                          const username = comment.profiles?.email ? comment.profiles.email.split("@")[0] : t("common.user", "Usuário");
+                          const commentDate = new Date(comment.created_at).toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
                           const canDelete = (profile && profile.id === comment.user_id) || isAdmin;
                           return (
                             <div key={comment.id} className="bg-muted/30 border border-border/50 p-2.5 rounded-xl flex justify-between items-start gap-3">
@@ -705,7 +706,7 @@ export function StlDetailsModal({
                 {/* Printer Type Admin Control */}
                 {isAdmin && (
                   <div className="flex items-center gap-3 bg-muted/30 p-3 rounded-xl border border-border mt-2">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tipo (Admin):</span>
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("stlSearch.printerTypeAdmin", "Tipo (Admin):")}</span>
                     {isUpdatingPrinterType ? (
                       <Loader2 className="w-4 h-4 animate-spin text-primary" />
                     ) : (
@@ -715,8 +716,8 @@ export function StlDetailsModal({
                         className="bg-background border border-border rounded-md px-2 py-1 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary"
                       >
                         <option value="fdm">FDM</option>
-                        <option value="resin">Resina</option>
-                        <option value="all">Ambos</option>
+                        <option value="resin">{t("stlSearch.resin", "Resina")}</option>
+                        <option value="all">{t("stlSearch.both", "Ambos")}</option>
                       </select>
                     )}
                   </div>
@@ -763,15 +764,15 @@ export function StlDetailsModal({
                   ) : hasAccess ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>Desbloqueado</span>
+                      <span>{t("stlSearch.unlocked", "Desbloqueado")}</span>
                     </>
                   ) : hasParts ? (
                     <>
                       <Layers className="w-3.5 h-3.5" />
                       <span>
                         {cost > 0
-                          ? `Baixar Conjunto (${cost} crd)`
-                          : `Baixar Arquivo Principal`}
+                          ? t("stlSearch.downloadSet", "Baixar Conjunto ({cost} crd)").replace("{cost}", String(cost))
+                          : t("stlSearch.downloadMainFile", "Baixar Arquivo Principal")}
                       </span>
                     </>
                   ) : (

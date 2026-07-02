@@ -6,6 +6,7 @@ import { X, Link as LinkIcon, Download, Loader2 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { useAppStore } from '@/store/store'
 import { DotMatrixLoader } from '@/components/ui/DotMatrixLoader'
+import { useTranslation } from '@/lib/translations'
 
 interface MakerWorldImportModalProps {
   open: boolean
@@ -15,6 +16,7 @@ interface MakerWorldImportModalProps {
 
 export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: MakerWorldImportModalProps) {
   const { profile, refreshCredits } = useAppStore()
+  const { t } = useTranslation()
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -70,7 +72,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
 
   const handleFetch = async () => {
     if (!url.includes('makerworld.com')) {
-      setError('Por favor, insira um link válido do MakerWorld.')
+      setError(t('makerWorldImport.invalidLink', 'Por favor, insira um link válido do MakerWorld.'))
       return
     }
     
@@ -89,7 +91,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Erro ao importar')
+        throw new Error(data.error || t('makerWorldImport.importError', 'Erro ao importar'))
       }
 
       setScrapedData(data)
@@ -110,7 +112,12 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
     setError('')
     try {
       if (profile && profile.credits < cost) {
-        throw new Error(`Créditos insuficientes. Esta operação custa ${cost} crédito${cost !== 1 ? 's' : ''}. Saldo atual: ${profile.credits}`)
+        throw new Error(
+          t('makerWorldImport.insufficientCreditsDetail', 'Créditos insuficientes. Esta operação custa {cost} crédito{plural}. Saldo atual: {balance}')
+            .replace('{cost}', String(cost))
+            .replace('{plural}', cost !== 1 ? 's' : '')
+            .replace('{balance}', String(profile.credits))
+        )
       }
       const supabase = getSupabaseBrowser()
       let session = null
@@ -141,7 +148,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
       const accessToken = session?.access_token
       
       if (!userId || !accessToken) {
-        throw new Error('Usuário não autenticado no sistema (tente recarregar a página)')
+        throw new Error(t('makerWorldImport.notAuthenticated', 'Usuário não autenticado no sistema (tente recarregar a página)'))
       }
 
       let weight_g = 0
@@ -170,9 +177,9 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
 
       if (!deductRes.ok) {
         if (deductJson.error === 'INSUFFICIENT_CREDITS') {
-          throw new Error('Créditos insuficientes.')
+          throw new Error(t('makerWorldImport.insufficientCredits', 'Créditos insuficientes.'))
         }
-        throw new Error(deductJson.error || 'Erro ao descontar créditos.')
+        throw new Error(deductJson.error || t('makerWorldImport.deductError', 'Erro ao descontar créditos.'))
       }
 
       refreshCredits(deductJson.remaining)
@@ -181,7 +188,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
       if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Erro de configuração do servidor')
+        throw new Error(t('makerWorldImport.serverConfigError', 'Erro de configuração do servidor'))
       }
 
       const insertData = {
@@ -218,7 +225,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`Erro do banco de dados: ${errorText}`)
+        throw new Error(`${t('makerWorldImport.dbError', 'Erro do banco de dados')}: ${errorText}`)
       }
 
       onOpenChange(false)
@@ -226,7 +233,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
       
     } catch (err: any) {
       console.error('Erro ao salvar no portfolio:', err)
-      setError(err?.message || err?.error_description || String(err) || 'Erro desconhecido ao salvar.')
+      setError(err?.message || err?.error_description || String(err) || t('makerWorldImport.unknownSaveError', 'Erro desconhecido ao salvar.'))
     } finally {
       setLoading(false)
     }
@@ -238,9 +245,9 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
         <Dialog.Overlay className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-2xl">
           <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-            <Dialog.Title className="text-lg font-bold">Importar do MakerWorld</Dialog.Title>
+            <Dialog.Title className="text-lg font-bold">{t('makerWorldImport.title', 'Importar do MakerWorld')}</Dialog.Title>
             <Dialog.Description className="text-sm text-muted-foreground">
-              Cole o link do modelo 3D para puxar as fotos e calcular o preço.
+              {t('makerWorldImport.description', 'Cole o link do modelo 3D para puxar as fotos e calcular o preço.')}
             </Dialog.Description>
           </div>
 
@@ -251,7 +258,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://makerworld.com/en/models/..."
+                placeholder={t('makerWorldImport.urlPlaceholder', 'https://makerworld.com/en/models/...')}
                 className="w-full bg-muted border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
@@ -260,7 +267,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
               disabled={loading || !url}
               className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center min-w-[100px] disabled:opacity-50"
             >
-              {loading && !scrapedData ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+              {loading && !scrapedData ? <Loader2 className="w-4 h-4 animate-spin" /> : t('makerWorldImport.search', 'Buscar')}
             </button>
           </div>
 
@@ -268,7 +275,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
 
           {loading && !scrapedData && (
             <div className="py-8 border border-dashed border-border rounded-xl mt-4">
-              <DotMatrixLoader text="Conectando à Bambu Lab API e extraindo metadados..." />
+              <DotMatrixLoader text={t('makerWorldImport.connecting', 'Conectando à Bambu Lab API e extraindo metadados...')} />
             </div>
           )}
 
@@ -284,7 +291,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
                   />
                 ) : (
                   <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center border border-border">
-                    <span className="text-xs text-muted-foreground">Sem Foto</span>
+                    <span className="text-xs text-muted-foreground">{t('makerWorldImport.noPhoto', 'Sem Foto')}</span>
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -298,7 +305,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
               {/* Profiles Selection Area */}
               <div className="p-4 border-t border-border bg-background">
                 <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                  Perfis de Impressão Encontrados
+                  {t('makerWorldImport.profilesFound', 'Perfis de Impressão Encontrados')}
                 </h5>
                 {scrapedData.printProfiles.length > 0 ? (
                   <div className="space-y-2 max-h-40 overflow-y-auto">
@@ -311,7 +318,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
                           ${selectedProfileIndex === i ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'}
                         `}
                       >
-                        <div className="font-medium">{profile.name || `Perfil ${i + 1}`}</div>
+                        <div className="font-medium">{profile.name || `${t('makerWorldImport.profile', 'Perfil')} ${i + 1}`}</div>
                         <div className="text-xs text-muted-foreground mt-1 flex gap-3">
                           <span>⚖️ {profile.weight || 0}g</span>
                           <span>⏱️ {profile.timeHours || 0}h</span>
@@ -321,7 +328,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground bg-muted p-3 rounded-lg text-center">
-                    Nenhum perfil de impressão extraído automaticamente. Você poderá inserir o peso manualmente.
+                    {t('makerWorldImport.noProfilesExtracted', 'Nenhum perfil de impressão extraído automaticamente. Você poderá inserir o peso manualmente.')}
                   </div>
                 )}
               </div>
@@ -333,7 +340,7 @@ export function MakerWorldImportModal({ open, onOpenChange, onImportSuccess }: M
                   className="bg-foreground text-background px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-foreground/90 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  Salvar no Portfólio
+                  {t('makerWorldImport.saveToPortfolio', 'Salvar no Portfólio')}
                 </button>
               </div>
             </div>

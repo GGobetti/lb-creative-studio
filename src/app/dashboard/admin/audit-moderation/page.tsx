@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, CheckCircle2, XCircle, Eye, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/translations'
 
 interface AuditResult {
   id: string
@@ -28,6 +29,7 @@ interface Vote {
 }
 
 export default function AuditModerationPage() {
+  const { t } = useTranslation()
   const supabase = getSupabaseBrowser()
   const [results, setResults] = useState<AuditResult[]>([])
   const [loading, setLoading] = useState(true)
@@ -263,7 +265,7 @@ export default function AuditModerationPage() {
           >
             <ArrowLeft size={18} />
           </Link>
-          <h1 className="text-heading text-2xl">Moderação de Auditorias</h1>
+          <h1 className="text-heading text-2xl">{t('adminAuditModeration.title', 'Moderação de Auditorias')}</h1>
         </div>
       </div>
 
@@ -278,7 +280,7 @@ export default function AuditModerationPage() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          Auditorias {results.length > 0 && `(${results.length})`}
+          {t('adminAuditModeration.tabAudits', 'Auditorias')} {results.length > 0 && `(${results.length})`}
         </button>
         <button
           onClick={() => setActiveTab('suggestions')}
@@ -289,7 +291,7 @@ export default function AuditModerationPage() {
               : 'border-transparent text-muted-foreground hover:text-foreground'
           )}
         >
-          Sugestões {suggestions.length > 0 && `(${suggestions.length})`}
+          {t('adminAuditModeration.tabSuggestions', 'Sugestões')} {suggestions.length > 0 && `(${suggestions.length})`}
         </button>
       </div>
 
@@ -317,18 +319,18 @@ export default function AuditModerationPage() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">Sem preview</span>
+                            <span className="text-xs text-muted-foreground">{t('adminAuditModeration.noPreview', 'Sem preview')}</span>
                           </div>
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-label text-muted-foreground text-xs">STL Original</p>
+                        <p className="text-label text-muted-foreground text-xs">{t('adminAuditModeration.originalStl', 'STL Original')}</p>
                         <p className="text-heading text-lg font-bold truncate">
                           {suggestion.stl?.title || suggestion.stl_id}
                         </p>
                         <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                          {suggestion.stl?.description || 'Sem descrição'}
+                          {suggestion.stl?.description || t('adminAuditModeration.noDescription', 'Sem descrição')}
                         </p>
                       </div>
                     </div>
@@ -345,18 +347,18 @@ export default function AuditModerationPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                                📝 Título sugerido
+                                📝 {t('adminAuditModeration.suggestedTitle', 'Título sugerido')}
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div className="bg-muted/30 rounded-lg p-3">
-                                <p className="text-xs text-muted-foreground mb-1">Original</p>
+                                <p className="text-xs text-muted-foreground mb-1">{t('adminAuditModeration.original', 'Original')}</p>
                                 <p className="text-sm font-medium text-foreground">
                                   {suggestionDetails?.title || 'N/A'}
                                 </p>
                               </div>
                               <div className="bg-success/10 border border-success/30 rounded-lg p-3">
-                                <p className="text-xs text-success mb-1">Sugestão</p>
+                                <p className="text-xs text-success mb-1">{t('adminAuditModeration.suggestion', 'Sugestão')}</p>
                                 <p className="text-sm font-medium text-foreground">
                                   {suggestion.suggested_title}
                                 </p>
@@ -369,18 +371,18 @@ export default function AuditModerationPage() {
                           <div>
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                                📄 Descrição sugerida
+                                📄 {t('adminAuditModeration.suggestedDescription', 'Descrição sugerida')}
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                               <div className="bg-muted/30 rounded-lg p-3 max-h-32 overflow-y-auto">
-                                <p className="text-xs text-muted-foreground mb-1">Original</p>
+                                <p className="text-xs text-muted-foreground mb-1">{t('adminAuditModeration.original', 'Original')}</p>
                                 <p className="text-xs text-foreground leading-relaxed">
                                   {suggestionDetails?.description || 'N/A'}
                                 </p>
                               </div>
                               <div className="bg-success/10 border border-success/30 rounded-lg p-3 max-h-32 overflow-y-auto">
-                                <p className="text-xs text-success mb-1">Sugestão</p>
+                                <p className="text-xs text-success mb-1">{t('adminAuditModeration.suggestion', 'Sugestão')}</p>
                                 <p className="text-xs text-foreground leading-relaxed">
                                   {suggestion.suggested_description}
                                 </p>
@@ -391,7 +393,7 @@ export default function AuditModerationPage() {
 
                         {suggestion.flagged_issues && (
                           <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-destructive mb-1">⚠️ Motivo da sugestão</p>
+                            <p className="text-xs font-semibold text-destructive mb-1">⚠️ {t('adminAuditModeration.suggestionReason', 'Motivo da sugestão')}</p>
                             <p className="text-sm text-destructive">
                               {suggestion.flagged_issues}
                             </p>
@@ -410,7 +412,7 @@ export default function AuditModerationPage() {
                             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-success/10 text-success hover:bg-success/20 font-semibold text-sm transition-all disabled:opacity-40"
                           >
                             <CheckCircle2 size={16} />
-                            Aprovar
+                            {t('adminAuditModeration.approve', 'Aprovar')}
                           </motion.button>
                           <motion.button
                             onClick={(e) => {
@@ -422,7 +424,7 @@ export default function AuditModerationPage() {
                             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 font-semibold text-sm transition-all disabled:opacity-40"
                           >
                             <XCircle size={16} />
-                            Rejeitar
+                            {t('adminAuditModeration.reject', 'Rejeitar')}
                           </motion.button>
                         </div>
                       </motion.div>
@@ -433,7 +435,7 @@ export default function AuditModerationPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-lg text-muted-foreground">✅ Nenhuma sugestão pendente</p>
+              <p className="text-lg text-muted-foreground">✅ {t('adminAuditModeration.noPendingSuggestions', 'Nenhuma sugestão pendente')}</p>
             </div>
           )}
         </div>
@@ -466,7 +468,7 @@ export default function AuditModerationPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                        Sem preview
+                        {t('adminAuditModeration.noPreview', 'Sem preview')}
                       </div>
                     )}
                   </div>
@@ -477,7 +479,7 @@ export default function AuditModerationPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-foreground truncate">{result.stl_title}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {result.approved_votes}/{result.total_votes} votos • {result.approval_rate?.toFixed(0)}% aprovação
+                          {result.approved_votes}/{result.total_votes} {t('adminAuditModeration.votes', 'votos')} • {result.approval_rate?.toFixed(0)}% {t('adminAuditModeration.approvalRate', 'aprovação')}
                         </p>
                       </div>
                       <span
@@ -492,10 +494,10 @@ export default function AuditModerationPage() {
                                 : 'bg-destructive/20 text-destructive',
                         )}
                       >
-                        {result.final_status === 'contested' && '⚠️ Contestada'}
-                        {result.final_status === 'pending' && '⏳ Pendente'}
-                        {result.final_status === 'approved' && '✓ Aprovada'}
-                        {result.final_status === 'rejected' && '✗ Rejeitada'}
+                        {result.final_status === 'contested' && `⚠️ ${t('adminAuditModeration.statusContested', 'Contestada')}`}
+                        {result.final_status === 'pending' && `⏳ ${t('adminAuditModeration.statusPending', 'Pendente')}`}
+                        {result.final_status === 'approved' && `✓ ${t('adminAuditModeration.statusApproved', 'Aprovada')}`}
+                        {result.final_status === 'rejected' && `✗ ${t('adminAuditModeration.statusRejected', 'Rejeitada')}`}
                       </span>
                     </div>
                   </div>
@@ -504,7 +506,7 @@ export default function AuditModerationPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-lg text-muted-foreground">✅ Nenhuma auditoria para moderar</p>
+              <p className="text-lg text-muted-foreground">✅ {t('adminAuditModeration.noAuditsToModerate', 'Nenhuma auditoria para moderar')}</p>
             </div>
           )}
         </div>
@@ -556,16 +558,16 @@ export default function AuditModerationPage() {
                   statusBg[selectedStl.final_status],
                   statusColor[selectedStl.final_status]
                 )}>
-                  {selectedStl.final_status === 'contested' && '⚠️ Contestada - Aprove ou Rejeite'}
-                  {selectedStl.final_status === 'pending' && '⏳ Aguardando mais votos'}
-                  {selectedStl.final_status === 'approved' && '✓ Aprovada'}
-                  {selectedStl.final_status === 'rejected' && '✗ Rejeitada'}
+                  {selectedStl.final_status === 'contested' && `⚠️ ${t('adminAuditModeration.statusContestedFull', 'Contestada - Aprove ou Rejeite')}`}
+                  {selectedStl.final_status === 'pending' && `⏳ ${t('adminAuditModeration.statusPendingFull', 'Aguardando mais votos')}`}
+                  {selectedStl.final_status === 'approved' && `✓ ${t('adminAuditModeration.statusApproved', 'Aprovada')}`}
+                  {selectedStl.final_status === 'rejected' && `✗ ${t('adminAuditModeration.statusRejected', 'Rejeitada')}`}
                 </div>
 
                 {/* Description e Tags */}
                 {stlDetails?.description && (
                   <div>
-                    <p className="text-label text-muted-foreground mb-2">Descrição</p>
+                    <p className="text-label text-muted-foreground mb-2">{t('adminAuditModeration.description', 'Descrição')}</p>
                     <p className="text-sm text-foreground bg-muted/50 rounded-lg p-3 leading-relaxed">
                       {stlDetails.description}
                     </p>
@@ -574,7 +576,7 @@ export default function AuditModerationPage() {
 
                 {stlDetails?.tags && stlDetails.tags.length > 0 && (
                   <div>
-                    <p className="text-label text-muted-foreground mb-2">Tags</p>
+                    <p className="text-label text-muted-foreground mb-2">{t('adminAuditModeration.tags', 'Tags')}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {stlDetails.tags.map((tag: string) => (
                         <span key={tag} className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full">
@@ -587,10 +589,10 @@ export default function AuditModerationPage() {
 
                 {/* Votos */}
                 <div className="border-t border-border pt-4">
-                  <p className="text-label text-muted-foreground mb-3">Votação</p>
+                  <p className="text-label text-muted-foreground mb-3">{t('adminAuditModeration.voting', 'Votação')}</p>
                   <div className="bg-muted/50 rounded-lg p-3 mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm">Aprovações</span>
+                      <span className="text-sm">{t('adminAuditModeration.approvals', 'Aprovações')}</span>
                       <span className="text-sm font-semibold text-success">
                         {selectedStl.approved_votes}/{selectedStl.total_votes}
                       </span>
@@ -602,11 +604,11 @@ export default function AuditModerationPage() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      {selectedStl.approval_rate?.toFixed(1)}% de consenso (70% = aprovado)
+                      {selectedStl.approval_rate?.toFixed(1)}% {t('adminAuditModeration.consensus', 'de consenso (70% = aprovado)')}
                     </p>
                   </div>
 
-                  <p className="text-label text-muted-foreground mb-2">Votos dos Auditores</p>
+                  <p className="text-label text-muted-foreground mb-2">{t('adminAuditModeration.auditorVotes', 'Votos dos Auditores')}</p>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {votes.length > 0 ? (
                       votes.map((vote) => (
@@ -619,7 +621,7 @@ export default function AuditModerationPage() {
                             )}
                             <div className="flex-1">
                               <span className="font-medium text-foreground">
-                                {vote.approved ? 'Aprovou' : 'Rejeitou'}
+                                {vote.approved ? t('adminAuditModeration.approved', 'Aprovou') : t('adminAuditModeration.rejected', 'Rejeitou')}
                               </span>
                               {vote.rejection_reason && (
                                 <p className="text-muted-foreground mt-1">{vote.rejection_reason}</p>
@@ -629,7 +631,7 @@ export default function AuditModerationPage() {
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-muted-foreground">Nenhum voto registrado</p>
+                      <p className="text-xs text-muted-foreground">{t('adminAuditModeration.noVotesRegistered', 'Nenhum voto registrado')}</p>
                     )}
                   </div>
                 </div>
@@ -647,7 +649,7 @@ export default function AuditModerationPage() {
                       className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-success/10 text-success hover:bg-success/20 font-semibold text-sm transition-all disabled:opacity-40"
                     >
                       <CheckCircle2 size={16} />
-                      Aprovar
+                      {t('adminAuditModeration.approve', 'Aprovar')}
                     </motion.button>
                     <motion.button
                       onClick={() => {
@@ -659,14 +661,14 @@ export default function AuditModerationPage() {
                       className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 font-semibold text-sm transition-all disabled:opacity-40"
                     >
                       <XCircle size={16} />
-                      Rejeitar
+                      {t('adminAuditModeration.reject', 'Rejeitar')}
                     </motion.button>
                   </div>
                 )}
 
                 {selectedStl.moderated_at && (
                   <div className="text-xs text-muted-foreground p-2 bg-muted rounded-lg">
-                    ✓ Já foi moderado
+                    ✓ {t('adminAuditModeration.alreadyModerated', 'Já foi moderado')}
                   </div>
                 )}
               </div>

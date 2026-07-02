@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { getSupabaseBrowser } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { useTranslation } from '@/lib/translations'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,11 +58,12 @@ function QueueCard({ item, selected, onClick }: {
   selected: boolean
   onClick: () => void
 }) {
+  const { t } = useTranslation()
   const signals = [
-    item.marked_for_removal && { icon: Trash2, label: 'Remoção', color: 'text-destructive' },
-    item.pending_suggestions > 0 && { icon: Pencil, label: `${item.pending_suggestions} sugestões`, color: 'text-primary' },
-    item.photo_mismatch_pct >= 0.60 && { icon: Camera, label: `${Math.round(item.photo_mismatch_pct * 100)}% diverge`, color: 'text-warning' },
-    item.tag_irrelevant_count > 0 && { icon: Tag, label: `${item.tag_irrelevant_count} tag(s)`, color: 'text-orange-400' },
+    item.marked_for_removal && { icon: Trash2, label: t('adminAudit.removal', 'Remoção'), color: 'text-destructive' },
+    item.pending_suggestions > 0 && { icon: Pencil, label: `${item.pending_suggestions} ${t('adminAudit.suggestionsLower', 'sugestões')}`, color: 'text-primary' },
+    item.photo_mismatch_pct >= 0.60 && { icon: Camera, label: `${Math.round(item.photo_mismatch_pct * 100)}% ${t('adminAudit.diverges', 'diverge')}`, color: 'text-warning' },
+    item.tag_irrelevant_count > 0 && { icon: Tag, label: `${item.tag_irrelevant_count} ${t('adminAudit.tagsAbbrev', 'tag(s)')}`, color: 'text-orange-400' },
   ].filter(Boolean) as { icon: any; label: string; color: string }[]
 
   return (
@@ -97,6 +99,7 @@ function QueueCard({ item, selected, onClick }: {
 // ─── Signal Sections ──────────────────────────────────────────────────────────
 
 function PhotoSignal({ data, threshold }: { data: Signals['photo']; threshold: number }) {
+  const { t } = useTranslation()
   if (data.total === 0) return null
   const pct = Math.round(data.mismatch_pct * 100)
   const flagged = data.mismatch_pct >= threshold
@@ -107,15 +110,15 @@ function PhotoSignal({ data, threshold }: { data: Signals['photo']; threshold: n
         <Camera size={14} className={flagged ? 'text-destructive' : 'text-muted-foreground'} />
         <p className="text-sm font-semibold">PhotoMatch</p>
         <span className={cn('ml-auto text-xs font-bold', flagged ? 'text-destructive' : 'text-muted-foreground')}>
-          {pct}% divergência
+          {pct}% {t('adminAudit.divergence', 'divergência')}
         </span>
       </div>
       <div className="w-full h-2 bg-border rounded-full overflow-hidden">
         <div className="h-full bg-destructive rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <p className="text-xs text-muted-foreground mt-1">{data.total} votos · {data.correct} corretos</p>
+      <p className="text-xs text-muted-foreground mt-1">{data.total} {t('adminAudit.votes', 'votos')} · {data.correct} {t('adminAudit.correctVotes', 'corretos')}</p>
       {flagged && (
-        <p className="text-xs text-destructive mt-1 font-medium">⚠️ Acima do limite de {Math.round(threshold * 100)}% — a foto pode estar errada</p>
+        <p className="text-xs text-destructive mt-1 font-medium">⚠️ {t('adminAudit.aboveThreshold', 'Acima do limite de')} {Math.round(threshold * 100)}% — {t('adminAudit.photoMightBeWrong', 'a foto pode estar errada')}</p>
       )}
     </div>
   )
@@ -127,6 +130,7 @@ function TagSignals({ tags, threshold, onRemoveTag, loading }: {
   onRemoveTag: (tag: string) => void
   loading: string | null
 }) {
+  const { t: tt } = useTranslation()
   const flagged = tags.filter((t) => t.irrelevant_pct >= threshold)
   const ok = tags.filter((t) => t.irrelevant_pct < threshold)
   if (tags.length === 0) return null
@@ -136,7 +140,7 @@ function TagSignals({ tags, threshold, onRemoveTag, loading }: {
       <div className="flex items-center gap-2 mb-3">
         <Tag size={14} className="text-muted-foreground" />
         <p className="text-sm font-semibold">TagDetective</p>
-        <span className="ml-auto text-xs text-muted-foreground">{tags.length} tags analisadas</span>
+        <span className="ml-auto text-xs text-muted-foreground">{tags.length} {tt('adminAudit.tagsAnalyzed', 'tags analisadas')}</span>
       </div>
       <div className="flex flex-col gap-1.5">
         {[...flagged, ...ok].map((t) => {
@@ -160,7 +164,7 @@ function TagSignals({ tags, threshold, onRemoveTag, loading }: {
                   disabled={loading === t.tag}
                   className="text-xs text-destructive hover:underline disabled:opacity-40 shrink-0"
                 >
-                  {loading === t.tag ? <Loader2 size={10} className="animate-spin" /> : 'remover'}
+                  {loading === t.tag ? <Loader2 size={10} className="animate-spin" /> : tt('adminAudit.remove', 'remover')}
                 </button>
               )}
             </div>
@@ -172,13 +176,14 @@ function TagSignals({ tags, threshold, onRemoveTag, loading }: {
 }
 
 function CategorySignals({ data }: { data: Signals['categories'] }) {
+  const { t } = useTranslation()
   if (data.total_voters === 0) return null
   return (
     <div className="rounded-xl border border-border bg-muted/30 p-4">
       <div className="flex items-center gap-2 mb-3">
         <FolderOpen size={14} className="text-muted-foreground" />
         <p className="text-sm font-semibold">CategorySort</p>
-        <span className="ml-auto text-xs text-muted-foreground">{data.total_voters} votos</span>
+        <span className="ml-auto text-xs text-muted-foreground">{data.total_voters} {t('adminAudit.votes', 'votos')}</span>
       </div>
       <div className="flex flex-col gap-1">
         {data.votes.slice(0, 6).map(({ category, count }) => (
@@ -193,7 +198,7 @@ function CategorySignals({ data }: { data: Signals['categories'] }) {
         ))}
         {data.suggestions.length > 0 && (
           <p className="text-xs text-muted-foreground mt-1">
-            Sugeridas: {data.suggestions.slice(0, 3).map((s) => `${s.category} (${s.count})`).join(' · ')}
+            {t('adminAudit.suggested', 'Sugeridas')}: {data.suggestions.slice(0, 3).map((s) => `${s.category} (${s.count})`).join(' · ')}
           </p>
         )}
       </div>
@@ -207,12 +212,13 @@ function SuggestionCards({ suggestions, onApply, onReject, loading }: {
   onReject: (id: string) => void
   loading: string | null
 }) {
+  const { t } = useTranslation()
   if (suggestions.length === 0) return null
   return (
     <div className="flex flex-col gap-2">
       <p className="text-sm font-semibold flex items-center gap-2">
         <ThumbsUp size={14} className="text-primary" />
-        Sugestões da comunidade ({suggestions.length})
+        {t('adminAudit.communitySuggestions', 'Sugestões da comunidade')} ({suggestions.length})
       </p>
       {suggestions.map((s) => (
         <div key={s.id} className="rounded-xl border border-border bg-card p-3 flex flex-col gap-2">
@@ -223,19 +229,19 @@ function SuggestionCards({ suggestions, onApply, onReject, loading }: {
           )}
           {s.suggested_title && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">Título</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t('adminAudit.titleLabel', 'Título')}</p>
               <p className="text-sm text-foreground">{s.suggested_title}</p>
             </div>
           )}
           {s.suggested_description && (
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">Descrição</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mb-0.5">{t('adminAudit.descriptionLabel', 'Descrição')}</p>
               <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{s.suggested_description}</p>
             </div>
           )}
           {s.suggested_tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold w-full mb-0.5">Tags</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold w-full mb-0.5">{t('adminAudit.tagsLabel', 'Tags')}</p>
               {s.suggested_tags.map((t) => (
                 <span key={t} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t}</span>
               ))}
@@ -243,7 +249,7 @@ function SuggestionCards({ suggestions, onApply, onReject, loading }: {
           )}
           {s.suggested_categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold w-full mb-0.5">Categorias</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-semibold w-full mb-0.5">{t('adminAudit.categoriesLabel', 'Categorias')}</p>
               {s.suggested_categories.map((c) => (
                 <span key={c} className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">{c}</span>
               ))}
@@ -251,7 +257,7 @@ function SuggestionCards({ suggestions, onApply, onReject, loading }: {
           )}
           <div className="flex items-center justify-between pt-1 border-t border-border/40">
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <ThumbsUp size={10} />{s.upvote_count} apoios
+              <ThumbsUp size={10} />{s.upvote_count} {t('adminAudit.upvotes', 'apoios')}
             </span>
             <div className="flex gap-1.5">
               <button
@@ -259,14 +265,14 @@ function SuggestionCards({ suggestions, onApply, onReject, loading }: {
                 disabled={loading === s.id}
                 className="px-2.5 py-1 rounded-lg border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors disabled:opacity-40"
               >
-                Recusar
+                {t('adminAudit.decline', 'Recusar')}
               </button>
               <button
                 onClick={() => onApply(s.id)}
                 disabled={loading === s.id}
                 className="px-2.5 py-1 rounded-lg bg-success/10 text-success border border-success/30 text-xs font-semibold hover:bg-success/20 transition-colors disabled:opacity-40"
               >
-                {loading === s.id ? <Loader2 size={10} className="animate-spin" /> : 'Aplicar'}
+                {loading === s.id ? <Loader2 size={10} className="animate-spin" /> : t('adminAudit.apply', 'Aplicar')}
               </button>
             </div>
           </div>
@@ -294,6 +300,7 @@ interface PreApprovedSuggestion {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function AuditTab() {
+  const { t } = useTranslation()
   const accessTokenRef = useRef<string | null>(null)
   const [queue, setQueue]             = useState<QueueItem[]>([])
   const [queueLoading, setQueueLoading] = useState(true)
@@ -440,11 +447,11 @@ export function AuditTab() {
   })
 
   const filters: { key: FilterType; label: string; count: number }[] = [
-    { key: 'all', label: 'Todos', count: queue.length },
-    { key: 'removal', label: 'Remoção', count: queue.filter((i) => i.marked_for_removal).length },
-    { key: 'suggestions', label: 'Sugestões', count: queue.filter((i) => i.pending_suggestions > 0).length },
-    { key: 'photo', label: 'Foto', count: queue.filter((i) => i.photo_mismatch_pct >= 0.60).length },
-    { key: 'tags', label: 'Tags', count: queue.filter((i) => i.tag_irrelevant_count > 0).length },
+    { key: 'all', label: t('adminAudit.filterAll', 'Todos'), count: queue.length },
+    { key: 'removal', label: t('adminAudit.removal', 'Remoção'), count: queue.filter((i) => i.marked_for_removal).length },
+    { key: 'suggestions', label: t('adminAudit.filterSuggestions', 'Sugestões'), count: queue.filter((i) => i.pending_suggestions > 0).length },
+    { key: 'photo', label: t('adminAudit.filterPhoto', 'Foto'), count: queue.filter((i) => i.photo_mismatch_pct >= 0.60).length },
+    { key: 'tags', label: t('adminAudit.tagsLabel', 'Tags'), count: queue.filter((i) => i.tag_irrelevant_count > 0).length },
   ]
 
   return (
@@ -455,7 +462,7 @@ export function AuditTab() {
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
             <ThumbsUp size={14} className="text-primary" />
-            Títulos Pré-Aprovados pela Comunidade ({preTitleQueue.length})
+            {t('adminAudit.preApprovedTitles', 'Títulos Pré-Aprovados pela Comunidade')} ({preTitleQueue.length})
           </h3>
           <div className="space-y-2">
             {preTitleQueue.map((item) => (
@@ -467,13 +474,13 @@ export function AuditTab() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground truncate">
-                    Atual: <span className="text-foreground">{item.stl?.title}</span>
+                    {t('adminAudit.currentLabel', 'Atual')}: <span className="text-foreground">{item.stl?.title}</span>
                   </p>
                   <p className="text-sm font-medium truncate">
-                    Novo: <span className="text-primary">{item.suggested_title}</span>
+                    {t('adminAudit.newLabel', 'Novo')}: <span className="text-primary">{item.suggested_title}</span>
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                    <ThumbsUp size={10} />{item.upvote_count} apoios
+                    <ThumbsUp size={10} />{item.upvote_count} {t('adminAudit.upvotes', 'apoios')}
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
@@ -483,7 +490,7 @@ export function AuditTab() {
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/30 text-xs font-semibold hover:bg-success/20 transition-colors disabled:opacity-40"
                   >
                     {titleActionLoading === item.id ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                    Aplicar
+                    {t('adminAudit.apply', 'Aplicar')}
                   </button>
                   <button
                     onClick={() => handleTitleAction(item.id, 'reject')}
@@ -491,7 +498,7 @@ export function AuditTab() {
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors disabled:opacity-40"
                   >
                     <XCircle size={12} />
-                    Rejeitar
+                    {t('adminAudit.reject', 'Rejeitar')}
                   </button>
                 </div>
               </div>
@@ -505,7 +512,7 @@ export function AuditTab() {
         <div>
           <h3 className="text-sm font-semibold text-yellow-500 uppercase tracking-wide mb-3 flex items-center gap-2">
             <Clock size={14} />
-            Aguardando Validação ({pendingValidation.length})
+            {t('adminAudit.awaitingValidation', 'Aguardando Validação')} ({pendingValidation.length})
           </h3>
           <div className="space-y-2">
             {pendingValidation.map((stl) => (
@@ -521,7 +528,7 @@ export function AuditTab() {
                   disabled={!!actionLoading}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-success/10 text-success border border-success/30 text-xs font-semibold hover:bg-success/20 transition-colors disabled:opacity-40 shrink-0"
                 >
-                  <CheckCircle2 size={12} /> Validado — Publicar
+                  <CheckCircle2 size={12} /> {t('adminAudit.validatedPublish', 'Validado — Publicar')}
                 </button>
               </div>
             ))}
@@ -560,7 +567,7 @@ export function AuditTab() {
           ) : filteredQueue.length === 0 ? (
             <div className="text-center py-12">
               <CheckCircle2 size={32} className="text-success mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Nenhum item nesta fila</p>
+              <p className="text-sm text-muted-foreground">{t('adminAudit.noItemsInQueue', 'Nenhum item nesta fila')}</p>
             </div>
           ) : (
             filteredQueue.map((item) => (
@@ -580,7 +587,7 @@ export function AuditTab() {
         {!selectedId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-muted-foreground">
             <AlertTriangle size={40} className="mb-3 opacity-30" />
-            <p className="text-sm">Selecione um STL para ver os sinais</p>
+            <p className="text-sm">{t('adminAudit.selectStlToSeeSignals', 'Selecione um STL para ver os sinais')}</p>
           </div>
         ) : signalsLoading ? (
           <div className="flex-1 flex items-center justify-center py-16">
@@ -608,7 +615,7 @@ export function AuditTab() {
                 </div>
                 {signals.stl.marked_for_removal && (
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-destructive font-semibold">
-                    <AlertTriangle size={12} /> Marcado para remoção: {signals.stl.removal_reason}
+                    <AlertTriangle size={12} /> {t('adminAudit.markedForRemoval', 'Marcado para remoção')}: {signals.stl.removal_reason}
                   </div>
                 )}
               </div>
@@ -637,29 +644,29 @@ export function AuditTab() {
                 disabled={!!actionLoading}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-success/10 text-success border border-success/30 text-sm font-semibold hover:bg-success/20 transition-colors disabled:opacity-40"
               >
-                <CheckCircle2 size={15} /> Manter STL
+                <CheckCircle2 size={15} /> {t('adminAudit.keepStl', 'Manter STL')}
               </button>
               <button
                 onClick={() => doAction({ action: 'needs_validation' })}
                 disabled={!!actionLoading}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-yellow-600/10 text-yellow-500 border border-yellow-600/30 text-sm font-semibold hover:bg-yellow-600/20 transition-colors disabled:opacity-40"
-                title="Ocultar da busca até revisão"
+                title={t('adminAudit.hideFromSearchUntilReview', 'Ocultar da busca até revisão')}
               >
-                <Clock size={15} /> Validar Mais Tarde
+                <Clock size={15} /> {t('adminAudit.validateLater', 'Validar Mais Tarde')}
               </button>
               <button
                 onClick={() => doAction({ action: 'remove_stl' })}
                 disabled={!!actionLoading}
                 className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-destructive/10 text-destructive border border-destructive/30 text-sm font-semibold hover:bg-destructive/20 transition-colors disabled:opacity-40"
               >
-                <Trash2 size={15} /> Remover STL
+                <Trash2 size={15} /> {t('adminAudit.removeStl', 'Remover STL')}
               </button>
               <button
                 onClick={() => { loadQueue(); loadSignals(selectedId) }}
                 disabled={!!actionLoading}
                 className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-border text-muted-foreground text-sm hover:bg-muted transition-colors disabled:opacity-40 ml-auto"
               >
-                <RotateCcw size={14} /> Recarregar
+                <RotateCcw size={14} /> {t('adminAudit.reload', 'Recarregar')}
               </button>
             </div>
           </>
