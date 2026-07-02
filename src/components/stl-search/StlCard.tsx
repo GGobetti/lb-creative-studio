@@ -172,6 +172,9 @@ export function StlCard({
             <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
             <span className="font-semibold">{formatDate(item.addedAt, locale)}</span>
           </div>
+          {hasAccess && (
+            <span className="text-green-600 font-semibold text-[10px] uppercase tracking-wider">Desbloqueado</span>
+          )}
         </div>
 
         {/* Source info — visível apenas para admins */}

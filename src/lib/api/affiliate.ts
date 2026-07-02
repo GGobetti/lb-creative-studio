@@ -102,11 +102,16 @@ export async function deleteProduct(
 
 export async function trackClick(
   product_id: string,
-  user_id?: string
+  token?: string
 ): Promise<void> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   await fetch('/api/affiliate/track-click', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ product_id, user_id }),
-  }).catch(() => {}); // Fail silently
+    headers,
+    body: JSON.stringify({ product_id }),
+  }).catch(() => {}) // Fail silently
 }

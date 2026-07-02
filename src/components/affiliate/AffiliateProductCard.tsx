@@ -1,7 +1,8 @@
 'use client';
 
+import { useRef, useEffect } from 'react';
 import { AffiliateProduct, trackClick } from '@/lib/api/affiliate';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { getSupabaseBrowser } from '@/lib/supabase';
 
 interface AffiliateProductCardProps {
   product: AffiliateProduct;
@@ -19,12 +20,18 @@ export function AffiliateProductCard({
   product,
   onSelect,
 }: AffiliateProductCardProps) {
-  const { user } = useAuth();
   const details = product.details;
   const primaryPhoto = product.photos?.find((p) => p.is_primary) || product.photos?.[0];
+  const accessTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    getSupabaseBrowser().auth.getSession().then((res: { data: { session: { access_token: string } | null } }) => {
+      accessTokenRef.current = res.data.session?.access_token ?? null;
+    });
+  }, []);
 
   const handleClick = async () => {
-    await trackClick(product.id, user?.id);
+    await trackClick(product.id, accessTokenRef.current ?? undefined);
     onSelect(product);
   };
 
