@@ -201,11 +201,7 @@ export function StlCard({
           }}
           disabled={isDownloading || hasAccess}
           className={`w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer ${
-            hasAccess
-              ? isDownloading
-                ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
-                : "bg-green-600 border-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md"
-              : isDownloading
+            isDownloading
               ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
               : hasAccess
               ? "bg-green-900/40 border-green-500/50 text-green-200 cursor-default hover:bg-green-900/40"
@@ -225,11 +221,7 @@ export function StlCard({
           ) : (
             <>
               <Download className="w-3.5 h-3.5" />
-              <span>Baixar</span>
-            </>
-          ) : (
-            <>
-              {cost > 0 ? `Comprar ${cost} créditos` : "Grátis"}
+              {cost > 0 ? `Download (${cost} crd)` : "Grátis"}
             </>
           )}
         </button>

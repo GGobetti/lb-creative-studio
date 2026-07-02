@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { stl_id, user_answer, correct_answer } = await request.json()
+    const { stl_id, user_answer, correct_answer, is_correct } = await request.json()
 
     if (!stl_id || typeof user_answer !== 'boolean' || typeof correct_answer !== 'boolean') {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
