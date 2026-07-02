@@ -172,6 +172,9 @@ export function StlCard({
             <Calendar className="w-3.5 h-3.5 text-blue-500/70" />
             <span className="font-semibold">{formatDate(item.addedAt, locale)}</span>
           </div>
+          {hasAccess && (
+            <span className="text-green-600 font-semibold text-[10px] uppercase tracking-wider">Desbloqueado</span>
+          )}
         </div>
 
         {/* Source info — visível apenas para admins */}
@@ -198,7 +201,11 @@ export function StlCard({
           }}
           disabled={isDownloading || hasAccess}
           className={`w-full flex items-center justify-center gap-1.5 py-2 px-4 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border cursor-pointer ${
-            isDownloading
+            hasAccess
+              ? isDownloading
+                ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
+                : "bg-green-600 border-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md"
+              : isDownloading
               ? "bg-muted text-muted-foreground border-border cursor-not-allowed"
               : hasAccess
               ? "bg-green-900/40 border-green-500/50 text-green-200 cursor-default hover:bg-green-900/40"
@@ -218,7 +225,11 @@ export function StlCard({
           ) : (
             <>
               <Download className="w-3.5 h-3.5" />
-              {cost > 0 ? `Download (${cost} crd)` : "Grátis"}
+              <span>Baixar</span>
+            </>
+          ) : (
+            <>
+              {cost > 0 ? `Comprar ${cost} créditos` : "Grátis"}
             </>
           )}
         </button>
